@@ -8,128 +8,413 @@
   :root {
     --bg: #080c10;
     --surface: #0d1520;
+    --surface2: #111e2e;
     --border: #1a2d45;
+    --border2: #243d58;
     --accent: #00d4ff;
     --accent3: #39ff14;
+    --danger: #ff4d4d;
     --text: #c8dde8;
     --dim: #4a6070;
     --mono: 'Share Tech Mono', 'Courier New', monospace;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
-    margin: 0; padding: 0; height: 100%;
+    height: 100%;
     background: var(--bg); color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
   }
-  .wrap {
-    max-width: 920px; margin: 0 auto;
-    padding: 48px 32px;
-  }
-  h1 {
-    font-size: 28px; font-weight: 700; letter-spacing: 2px;
-    color: var(--accent); margin: 0 0 4px;
-  }
-  .sub {
-    font-family: var(--mono); font-size: 12px;
-    color: var(--dim); letter-spacing: 2px;
-    text-transform: uppercase;
-  }
-  .card {
+
+  /* ── layout ── */
+  .topbar {
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px 24px;
-    margin: 24px 0;
+    border-bottom: 1px solid var(--border);
+    padding: 14px 32px;
+    display: flex; align-items: center; gap: 16px;
   }
-  .card h2 {
-    font-size: 13px; font-weight: 700; letter-spacing: 2px;
-    color: var(--accent); margin: 0 0 12px;
-    text-transform: uppercase;
+  .topbar h1 {
+    font-size: 18px; font-weight: 700; letter-spacing: 3px;
+    color: var(--accent); white-space: nowrap;
   }
-  .row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
-    font-family: var(--mono); font-size: 12px;
+  .topbar .sub {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--dim); letter-spacing: 2px; text-transform: uppercase;
   }
-  .row:last-child { border-bottom: none; }
-  .row span:first-child { color: var(--dim); letter-spacing: 1px; }
-  .row span:last-child { color: var(--accent3); }
+  .topbar .spacer { flex: 1; }
+
+  .main { padding: 32px; max-width: 1100px; margin: 0 auto; }
+
+  /* ── toolbar ── */
+  .toolbar {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+  }
+  .toolbar input[type="search"] {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-size: 13px; font-family: var(--mono);
+    padding: 8px 12px; border-radius: 4px; width: 240px;
+    outline: none;
+  }
+  .toolbar input[type="search"]:focus { border-color: var(--accent); }
+  .toolbar input[type="search"]::placeholder { color: var(--dim); }
+
+  /* ── buttons ── */
   .btn {
-    display: inline-block;
     background: transparent;
     border: 1px solid var(--accent);
     color: var(--accent);
-    font-family: var(--mono); font-size: 12px; letter-spacing: 2px;
-    padding: 10px 20px; border-radius: 4px;
-    text-decoration: none; cursor: pointer;
-    text-transform: uppercase;
-    transition: all .15s;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+    text-transform: uppercase; transition: background .12s;
+    white-space: nowrap;
   }
-  .btn:hover { background: rgba(0,212,255,0.12); }
-  .banner {
-    background: rgba(57,255,20,0.06);
-    border: 1px solid rgba(57,255,20,0.3);
-    color: var(--accent3);
-    padding: 10px 14px;
-    border-radius: 4px;
+  .btn:hover { background: rgba(0,212,255,0.1); }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .btn.danger:hover { background: rgba(255,77,77,0.1); }
+  .btn.sm { padding: 5px 10px; font-size: 10px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── sessions table ── */
+  .sessions-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .sessions-header {
+    display: grid;
+    grid-template-columns: 140px 1fr 130px 200px 160px;
+    padding: 10px 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .session-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 130px 200px 160px;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+  .session-row:last-child { border-bottom: none; }
+  .session-row:hover { background: rgba(0,212,255,0.03); }
+
+  .lid {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--accent); letter-spacing: 1px;
+  }
+  .session-name {
+    font-size: 13px; color: var(--text);
+    cursor: pointer; padding: 3px 6px; border-radius: 3px;
+    border: 1px solid transparent; outline: none;
+    background: transparent; font-family: inherit;
+    transition: border-color .1s;
+    width: 100%;
+  }
+  .session-name:hover { border-color: var(--border2); }
+  .session-name:focus {
+    border-color: var(--accent);
+    background: var(--surface2);
+  }
+  .date { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+
+  .log-badge {
+    display: flex; align-items: center; gap: 6px;
     font-family: var(--mono); font-size: 11px;
-    margin: 16px 0;
   }
-  .err {
-    background: rgba(255,107,53,0.08);
-    border-color: rgba(255,107,53,0.4);
-    color: #ff6b35;
+  .log-badge .dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
   }
-  code {
-    font-family: var(--mono);
-    background: rgba(0,212,255,0.08);
-    padding: 1px 6px; border-radius: 3px;
-    color: var(--accent);
+  .log-badge .dot.ok { background: var(--accent3); }
+  .log-badge .dot.none { background: var(--dim); }
+  .log-info { color: var(--dim); }
+  .log-info span { color: var(--text); }
+
+  .row-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+  .import-label {
+    display: inline-block;
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--dim);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    padding: 5px 10px; border-radius: 4px; cursor: pointer;
+    text-transform: uppercase; transition: all .12s;
+    white-space: nowrap;
+  }
+  .import-label:hover { border-color: var(--accent); color: var(--accent); }
+  .import-label input { display: none; }
+
+  .empty {
+    padding: 48px; text-align: center;
+    font-family: var(--mono); font-size: 12px; color: var(--dim);
+    letter-spacing: 2px;
+  }
+
+  /* ── modal ── */
+  .overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 8px; padding: 28px 32px;
+    width: 400px; max-width: 90vw;
+  }
+  .modal h2 {
+    font-size: 12px; font-weight: 700; letter-spacing: 2px;
+    color: var(--accent); text-transform: uppercase; margin-bottom: 20px;
+  }
+  .modal label {
+    display: block; font-family: var(--mono); font-size: 10px;
+    letter-spacing: 2px; color: var(--dim); text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .modal input[type="text"] {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border2); color: var(--text);
+    font-size: 14px; padding: 10px 12px; border-radius: 4px;
+    outline: none; margin-bottom: 20px;
+  }
+  .modal input[type="text"]:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ── status banner ── */
+  .banner {
+    padding: 8px 16px; border-radius: 4px;
+    font-family: var(--mono); font-size: 11px;
+    margin-bottom: 16px; display: none;
+  }
+  .banner.err { display: block; background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.3); color: #ff6b35; }
+  .banner.ok  { display: block; background: rgba(57,255,20,0.06); border: 1px solid rgba(57,255,20,0.3); color: var(--accent3); }
+
+  /* ── spinner ── */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid var(--border2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .6s linear infinite;
+    vertical-align: middle;
   }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>🚁 DEDAL STUDIO</h1>
+
+<div class="topbar">
+  <h1>DEDAL STUDIO</h1>
   <div class="sub">Flight analysis &amp; HUD generation</div>
+  <div class="spacer"></div>
+</div>
 
-  <div id="status" class="banner">Connexion au serveur…</div>
+<div class="main">
+  <div id="banner" class="banner"></div>
 
-  <div class="card">
-    <h2>État</h2>
-    <div class="row"><span>Version</span><span id="version">—</span></div>
-    <div class="row"><span>Dossier flights</span><span id="flights-root">—</span></div>
+  <div class="toolbar">
+    <button class="btn" onclick="openNewSession()">+ Nouvelle session</button>
+    <input type="search" id="search" placeholder="Filtrer…" oninput="renderSessions()">
   </div>
 
-  <div class="card">
-    <h2>Étape 1 — Squelette</h2>
-    <p style="color: var(--dim); font-size: 13px; line-height: 1.5;">
-      Cette page de prévisualisation sera remplacée à l'étape 2 par la
-      page d'accueil des sessions (liste, recherche, import de log).
-    </p>
-    <p style="color: var(--dim); font-size: 13px; line-height: 1.5;">
-      Tu peux déjà vérifier que l'app lance le serveur, que la fenêtre
-      native (PyWebView) s'affiche, et que les endpoints API répondent.
-    </p>
-    <a class="btn" href="/api/health" target="_blank">Tester /api/health</a>
+  <div class="sessions-wrap">
+    <div class="sessions-header">
+      <div>LID</div>
+      <div>Nom</div>
+      <div>Date</div>
+      <div>Log</div>
+      <div></div>
+    </div>
+    <div id="session-list"><div class="empty"><span class="spinner"></span></div></div>
+  </div>
+</div>
+
+<!-- new session modal -->
+<div class="overlay" id="modal-new" onclick="closeModal(event)">
+  <div class="modal">
+    <h2>Nouvelle session</h2>
+    <label for="new-name">Nom (optionnel)</label>
+    <input type="text" id="new-name" placeholder="Ex : Mission Alpha" autocomplete="off"
+           onkeydown="if(event.key==='Enter') confirmNew()">
+    <div class="modal-actions">
+      <button class="btn" style="border-color:var(--dim);color:var(--dim)" onclick="document.getElementById('modal-new').classList.remove('open')">Annuler</button>
+      <button class="btn" onclick="confirmNew()">Créer</button>
+    </div>
   </div>
 </div>
 
 <script>
-(async () => {
-  const statusEl = document.getElementById('status');
-  try {
-    const r = await fetch('/api/health');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const j = await r.json();
-    statusEl.textContent = '✓ Serveur connecté — ' + j.status.toUpperCase();
-    document.getElementById('version').textContent = j.version || '—';
-    document.getElementById('flights-root').textContent = j.flights_root || '—';
-  } catch (e) {
-    statusEl.className = 'banner err';
-    statusEl.textContent = '✗ Serveur inaccessible : ' + e.message;
+let sessions = [];
+
+// ── API helpers ────────────────────────────────────────────────────────────
+
+async function api(method, path, body) {
+  const opts = { method, headers: {} };
+  if (body !== undefined) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
   }
-})();
+  const r = await fetch(path, opts);
+  if (r.status === 204) return null;
+  return r.json();
+}
+
+// ── sessions ──────────────────────────────────────────────────────────────
+
+async function loadSessions() {
+  try {
+    sessions = await api('GET', '/api/sessions');
+    renderSessions();
+  } catch (e) {
+    showBanner('err', 'Impossible de charger les sessions : ' + e.message);
+  }
+}
+
+function renderSessions() {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const list = document.getElementById('session-list');
+  const filtered = q
+    ? sessions.filter(s => s.lid.includes(q) || s.name.toLowerCase().includes(q))
+    : sessions;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty">Aucune session — créez-en une avec le bouton ci-dessus.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(s => `
+    <div class="session-row" id="row-${s.lid}">
+      <div class="lid">${s.lid}</div>
+      <div>
+        <input class="session-name" type="text" value="${escHtml(s.name)}"
+          placeholder="Sans nom"
+          onblur="renameSession('${s.lid}', this)"
+          onkeydown="if(event.key==='Enter') this.blur(); if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">
+      </div>
+      <div class="date">${fmtDate(s.created_at)}</div>
+      <div class="log-badge">${logBadge(s.log)}</div>
+      <div class="row-actions">
+        <label class="import-label" title="Importer un fichier CSV">
+          CSV
+          <input type="file" accept=".csv" onchange="importLog('${s.lid}', this)">
+        </label>
+        <button class="btn sm danger" onclick="deleteSession('${s.lid}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function logBadge(log) {
+  if (!log) {
+    return '<div class="dot none"></div><span class="log-info">—</span>';
+  }
+  const dur = log.duration_s > 0 ? `<span>${log.duration_s}s</span>` : '';
+  const rows = log.row_count > 0 ? `<span style="color:var(--dim)"> · ${log.row_count} pts</span>` : '';
+  return `<div class="dot ok"></div><span class="log-info"><span>${escHtml(log.filename)}</span>${dur}${rows}</span>`;
+}
+
+// ── create ─────────────────────────────────────────────────────────────────
+
+function openNewSession() {
+  document.getElementById('new-name').value = '';
+  document.getElementById('modal-new').classList.add('open');
+  setTimeout(() => document.getElementById('new-name').focus(), 50);
+}
+
+function closeModal(e) {
+  if (e.target.classList.contains('overlay'))
+    e.target.classList.remove('open');
+}
+
+async function confirmNew() {
+  document.getElementById('modal-new').classList.remove('open');
+  const name = document.getElementById('new-name').value.trim();
+  try {
+    const s = await api('POST', '/api/sessions', { name });
+    sessions.push(s);
+    renderSessions();
+  } catch (e) {
+    showBanner('err', 'Erreur création : ' + e.message);
+  }
+}
+
+// ── rename ─────────────────────────────────────────────────────────────────
+
+async function renameSession(lid, input) {
+  const newName = input.value.trim();
+  const s = sessions.find(x => x.lid === lid);
+  if (!s || newName === s.name) return;
+  try {
+    const updated = await api('PATCH', `/api/sessions/${lid}`, { name: newName });
+    Object.assign(s, updated);
+    input.defaultValue = updated.name;
+  } catch (e) {
+    showBanner('err', 'Erreur renommage : ' + e.message);
+    input.value = s.name;
+  }
+}
+
+// ── delete ─────────────────────────────────────────────────────────────────
+
+async function deleteSession(lid) {
+  if (!confirm(`Supprimer la session ${lid} et tous ses fichiers ?`)) return;
+  try {
+    await api('DELETE', `/api/sessions/${lid}`);
+    sessions = sessions.filter(s => s.lid !== lid);
+    renderSessions();
+  } catch (e) {
+    showBanner('err', 'Erreur suppression : ' + e.message);
+  }
+}
+
+// ── import log ─────────────────────────────────────────────────────────────
+
+async function importLog(lid, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const r = await fetch(`/api/sessions/${lid}/log`, { method: 'POST', body: fd });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const updated = await r.json();
+    const idx = sessions.findIndex(s => s.lid === lid);
+    if (idx !== -1) sessions[idx] = updated;
+    renderSessions();
+    showBanner('ok', `Log importé dans ${lid} : ${updated.log?.filename}`);
+  } catch (e) {
+    showBanner('err', 'Erreur import : ' + e.message);
+  } finally {
+    input.value = '';
+  }
+}
+
+// ── utils ──────────────────────────────────────────────────────────────────
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit' })
+       + ' ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+}
+
+let _bannerTimer;
+function showBanner(type, msg) {
+  const el = document.getElementById('banner');
+  el.className = 'banner ' + type;
+  el.textContent = msg;
+  clearTimeout(_bannerTimer);
+  _bannerTimer = setTimeout(() => { el.className = 'banner'; }, 4000);
+}
+
+// ── boot ───────────────────────────────────────────────────────────────────
+
+loadSessions();
 </script>
 </body>
 </html>
