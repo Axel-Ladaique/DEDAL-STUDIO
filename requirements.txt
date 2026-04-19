@@ -1,0 +1,14 @@
+# DEDAL Studio — step 2 (sessions)
+#
+# Install with:   pip install -r requirements.txt
+#
+# PyWebView is optional: if missing, app.py falls back to the default browser.
+# On macOS, pywebview uses the system WebKit (no Chromium download).
+
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pywebview>=5.0
+
+# testing
+pytest>=8.0
+httpx>=0.26

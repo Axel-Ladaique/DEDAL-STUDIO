@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEDAL Studio</title>
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0d1520;
+    --border: #1a2d45;
+    --accent: #00d4ff;
+    --accent3: #39ff14;
+    --text: #c8dde8;
+    --dim: #4a6070;
+    --mono: 'Share Tech Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .wrap {
+    max-width: 920px; margin: 0 auto;
+    padding: 48px 32px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 700; letter-spacing: 2px;
+    color: var(--accent); margin: 0 0 4px;
+  }
+  .sub {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--dim); letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .card h2 {
+    font-size: 13px; font-weight: 700; letter-spacing: 2px;
+    color: var(--accent); margin: 0 0 12px;
+    text-transform: uppercase;
+  }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-family: var(--mono); font-size: 12px;
+  }
+  .row:last-child { border-bottom: none; }
+  .row span:first-child { color: var(--dim); letter-spacing: 1px; }
+  .row span:last-child { color: var(--accent3); }
+  .btn {
+    display: inline-block;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--mono); font-size: 12px; letter-spacing: 2px;
+    padding: 10px 20px; border-radius: 4px;
+    text-decoration: none; cursor: pointer;
+    text-transform: uppercase;
+    transition: all .15s;
+  }
+  .btn:hover { background: rgba(0,212,255,0.12); }
+  .banner {
+    background: rgba(57,255,20,0.06);
+    border: 1px solid rgba(57,255,20,0.3);
+    color: var(--accent3);
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-family: var(--mono); font-size: 11px;
+    margin: 16px 0;
+  }
+  .err {
+    background: rgba(255,107,53,0.08);
+    border-color: rgba(255,107,53,0.4);
+    color: #ff6b35;
+  }
+  code {
+    font-family: var(--mono);
+    background: rgba(0,212,255,0.08);
+    padding: 1px 6px; border-radius: 3px;
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🚁 DEDAL STUDIO</h1>
+  <div class="sub">Flight analysis &amp; HUD generation</div>
+
+  <div id="status" class="banner">Connexion au serveur…</div>
+
+  <div class="card">
+    <h2>État</h2>
+    <div class="row"><span>Version</span><span id="version">—</span></div>
+    <div class="row"><span>Dossier flights</span><span id="flights-root">—</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Étape 1 — Squelette</h2>
+    <p style="color: var(--dim); font-size: 13px; line-height: 1.5;">
+      Cette page de prévisualisation sera remplacée à l'étape 2 par la
+      page d'accueil des sessions (liste, recherche, import de log).
+    </p>
+    <p style="color: var(--dim); font-size: 13px; line-height: 1.5;">
+      Tu peux déjà vérifier que l'app lance le serveur, que la fenêtre
+      native (PyWebView) s'affiche, et que les endpoints API répondent.
+    </p>
+    <a class="btn" href="/api/health" target="_blank">Tester /api/health</a>
+  </div>
+</div>
+
+<script>
+(async () => {
+  const statusEl = document.getElementById('status');
+  try {
+    const r = await fetch('/api/health');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    statusEl.textContent = '✓ Serveur connecté — ' + j.status.toUpperCase();
+    document.getElementById('version').textContent = j.version || '—';
+    document.getElementById('flights-root').textContent = j.flights_root || '—';
+  } catch (e) {
+    statusEl.className = 'banner err';
+    statusEl.textContent = '✗ Serveur inaccessible : ' + e.message;
+  }
+})();
+</script>
+</body>
+</html>
