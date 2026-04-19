@@ -1,13 +1,15 @@
 """FastAPI app factory."""
 from __future__ import annotations
 
+import asyncio
 import json
 import shutil
 import tempfile
 from pathlib import Path
+from queue import Empty, Queue
 
 from fastapi import APIRouter, FastAPI, Query, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -192,6 +194,94 @@ def session_put_sync(lid: str, body: _SyncBody, request: Request) -> JSONRespons
     tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
     tmp.replace(sync_file)
     return JSONResponse(data)
+
+
+class _HudParams(BaseModel):
+    fps: int = 25
+    width: int = 1920
+    height: int = 1080
+    cells: int = 6
+    min_gps_sats: int = 0
+
+
+@_sessions.post("/{lid}/hud")
+async def session_generate_hud(
+    lid: str, body: _HudParams, request: Request
+) -> StreamingResponse:
+    """Generate a transparent PNG HUD sequence via SSE progress stream.
+
+    Requires flight_pack.json to exist (produced by the viewer HTML).
+    Output goes to session_dir/hud_output/.
+    """
+    s = get_session(request.app.state.cfg.flights_root, lid)
+    if s is None:
+        return JSONResponse({"error": f"session '{lid}' not found"}, status_code=404)
+    pack_file = s.dir_path / "flight_pack.json"
+    if not pack_file.exists():
+        return JSONResponse(
+            {"error": "flight_pack.json missing — export from the viewer first"},
+            status_code=400,
+        )
+
+    try:
+        from .hud.generator import generate_hud
+    except ImportError as exc:
+        return JSONResponse({"error": f"HUD module unavailable: {exc}"}, status_code=500)
+
+    output_dir = s.dir_path / "hud_output"
+    q: Queue = Queue()
+
+    def _progress(current: int, total: int) -> None:
+        q.put(("progress", current, total))
+
+    def _run() -> None:
+        try:
+            n = generate_hud(
+                pack_file, output_dir,
+                fps=body.fps, width=body.width, height=body.height,
+                cells=body.cells, min_gps_sats=body.min_gps_sats,
+                progress_cb=_progress,
+            )
+            q.put(("done", n))
+        except Exception as exc:
+            q.put(("error", str(exc)))
+
+    async def _stream():
+        loop = asyncio.get_event_loop()
+        fut = loop.run_in_executor(None, _run)
+
+        # Emit started event once generator is kicked off
+        yield _sse({"status": "started"})
+
+        while True:
+            await asyncio.sleep(0.05)
+            while True:
+                try:
+                    msg = q.get_nowait()
+                except Empty:
+                    break
+                kind = msg[0]
+                if kind == "progress":
+                    _, cur, tot = msg
+                    pct = round(cur / tot * 100) if tot else 0
+                    yield _sse({"status": "progress", "frame": cur, "total": tot, "pct": pct})
+                elif kind == "done":
+                    yield _sse({"status": "done", "frames": msg[1], "output_dir": "hud_output/"})
+                    return
+                elif kind == "error":
+                    yield _sse({"status": "error", "message": msg[1]})
+                    return
+            if fut.done():
+                # Drain any remaining messages
+                while not q.empty():
+                    pass
+                break
+
+    return StreamingResponse(_stream(), media_type="text/event-stream")
+
+
+def _sse(data: dict) -> str:
+    return f"data: {json.dumps(data)}\n\n"
 
 
 @_sessions.post("/{lid}/video")

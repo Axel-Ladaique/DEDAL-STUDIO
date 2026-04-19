@@ -148,6 +148,7 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 | PATCH | `/api/sessions/{lid}` | Modifier nickname / tags |
 | DELETE | `/api/sessions/{lid}` | Supprimer session + dossier |
 | POST | `/api/sessions/{lid}/video` | Attacher une vidéo |
+| POST | `/api/sessions/{lid}/hud` | Générer séquence PNG HUD (SSE progress) |
 | GET | `/api/sessions/{lid}/log` | Servir le CSV brut de la session |
 | GET | `/api/sessions/{lid}/sync` | Lire sync.json |
 | PUT | `/api/sessions/{lid}/sync` | Écrire offset vidéo dans sync.json |
@@ -168,8 +169,8 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 | 2d | Reverse-géocodage Nominatim avec cache dans session.json | ⬜ |
 | 3 | Viewer HTML intégré + player vidéo + sync manuel 2 curseurs | ✅ |
 | 4 | Flight pack JSON (export HTML → endpoint serveur) | ✅ |
-| 5 | HUD Python refactoré (lit flight_pack, widgets, progression SSE) | ← next |
-| 6 | Carte Leaflet sur home page | ⬜ |
+| 5 | HUD Python refactoré (lit flight_pack, widgets, progression SSE) | ✅ |
+| 6 | Carte Leaflet sur home page | ← next |
 | 7 | Sync vidéo automatique | ⬜ |
 
 ---
