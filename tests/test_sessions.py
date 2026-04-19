@@ -1,0 +1,227 @@
+"""Unit tests for the sessions model (step 2)."""
+from __future__ import annotations
+
+import time
+from pathlib import Path
+
+import pytest
+
+from dedal.sessions import (
+    Session,
+    _parse_log_meta,
+    create_empty_session,
+    delete_session,
+    generate_lid,
+    get_session,
+    import_log,
+    load_session,
+    save_session,
+    scan_sessions,
+)
+
+_CSV_CONTENT = """\
+timestamp_us,dt_us,armed
+# ========================================
+# CONFIG_NAME = VTOL_CONFIG_v0.49
+# FW_VERSION  = Beta 1.3
+# ========================================
+1000000,1000000,0
+2000000,1000000,1
+3500000,1500000,1
+"""
+
+
+def _write_csv(path: Path, content: str = _CSV_CONTENT) -> Path:
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+# ── generate_lid ──────────────────────────────────────────────────────────
+
+
+def test_generate_lid_format(tmp_path: Path) -> None:
+    csv = _write_csv(tmp_path / "log.csv")
+    lid = generate_lid(csv, tmp_path / "flights")
+    assert lid.startswith("DEDAL-")
+    parts = lid.split("-")
+    assert len(parts) == 3
+    assert parts[2] == "001"
+
+
+def test_generate_lid_increments(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    csv = _write_csv(tmp_path / "log.csv")
+    lid1 = generate_lid(csv, flights)
+    # Simulate the first session folder existing
+    from dedal.sessions import _lid_to_folder
+    (flights / _lid_to_folder(lid1)).mkdir(parents=True)
+    lid2 = generate_lid(csv, flights)
+    assert lid1 != lid2
+    assert int(lid2.split("-")[2]) == int(lid1.split("-")[2]) + 1
+
+
+# ── import_log ────────────────────────────────────────────────────────────
+
+
+def test_import_log_copies_not_moves(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    source = _write_csv(tmp_path / "LOG_017.csv")
+    import_log(source, flights, nickname="test")
+    assert source.exists(), "source CSV must not be moved"
+
+
+def test_import_log_creates_folder_and_json(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    source = _write_csv(tmp_path / "log.csv")
+    s = import_log(source, flights)
+    assert s.dir_path.is_dir()
+    assert (s.dir_path / "session.json").exists()
+    assert (s.dir_path / "log.csv").exists()
+
+
+def test_import_log_sets_log_meta(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    source = _write_csv(tmp_path / "log.csv")
+    s = import_log(source, flights)
+    assert s.log_meta is not None
+    assert s.log_meta["config_name"] == "VTOL_CONFIG_v0.49"
+    assert s.log_meta["fw_version"] == "Beta 1.3"
+    assert s.log_meta["row_count"] == 3
+    assert s.log_meta["duration_s"] == 2.5
+
+
+def test_import_log_lid_format(tmp_path: Path) -> None:
+    source = _write_csv(tmp_path / "log.csv")
+    s = import_log(source, tmp_path / "flights")
+    assert s.lid.startswith("DEDAL-")
+
+
+# ── save / load roundtrip ─────────────────────────────────────────────────
+
+
+def test_save_load_roundtrip(tmp_path: Path) -> None:
+    from datetime import datetime
+    folder = tmp_path / "flight_20260419_001"
+    folder.mkdir()
+    s = Session(
+        lid="DEDAL-20260419-001",
+        nickname="Alpha",
+        created_at=datetime(2026, 4, 19, 14, 0, 0),
+        dir_path=folder,
+        log_file="log.csv",
+        tags=["hover", "windy"],
+        location={"lat": 48.8566, "lon": 2.3522, "place_name": "Paris"},
+        log_meta={"row_count": 42, "duration_s": 10.0},
+    )
+    save_session(s)
+
+    loaded = load_session(folder)
+    assert loaded.lid == s.lid
+    assert loaded.nickname == s.nickname
+    assert loaded.created_at == s.created_at
+    assert loaded.tags == s.tags
+    assert loaded.location == s.location
+    assert loaded.log_meta == s.log_meta
+
+
+def test_save_is_atomic(tmp_path: Path) -> None:
+    """Atomic write leaves no .tmp on success."""
+    from datetime import datetime
+    folder = tmp_path / "flight_20260419_001"
+    folder.mkdir()
+    s = Session(lid="DEDAL-20260419-001", nickname="",
+                created_at=datetime(2026, 4, 19), dir_path=folder)
+    save_session(s)
+    assert not list(folder.glob("*.tmp"))
+
+
+# ── scan_sessions ─────────────────────────────────────────────────────────
+
+
+def test_scan_sessions_orders_desc(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    csv = _write_csv(tmp_path / "log.csv")
+    s1 = import_log(csv, flights, nickname="first")
+    time.sleep(0.01)
+    s2 = import_log(csv, flights, nickname="second")
+    time.sleep(0.01)
+    s3 = import_log(csv, flights, nickname="third")
+
+    sessions = scan_sessions(flights)
+    assert len(sessions) == 3
+    dates = [s.created_at for s in sessions]
+    assert dates == sorted(dates, reverse=True)
+
+
+def test_scan_sessions_ignores_broken(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    flights.mkdir()
+    # Valid session
+    csv = _write_csv(tmp_path / "log.csv")
+    import_log(csv, flights, nickname="real")
+    # Broken folder (has session.json with invalid JSON)
+    broken = flights / "flight_20260419_999"
+    broken.mkdir()
+    (broken / "session.json").write_text("NOT JSON", encoding="utf-8")
+
+    sessions = scan_sessions(flights)
+    assert len(sessions) == 1
+    assert sessions[0].nickname == "real"
+
+
+def test_scan_sessions_ignores_no_json(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    flights.mkdir()
+    (flights / "flight_20260419_001").mkdir()  # no session.json
+    csv = _write_csv(tmp_path / "log.csv")
+    import_log(csv, flights)
+    assert len(scan_sessions(flights)) == 1
+
+
+# ── get / delete ──────────────────────────────────────────────────────────
+
+
+def test_get_session_found(tmp_path: Path) -> None:
+    csv = _write_csv(tmp_path / "log.csv")
+    s = import_log(csv, tmp_path / "flights")
+    found = get_session(tmp_path / "flights", s.lid)
+    assert found is not None and found.lid == s.lid
+
+
+def test_get_session_not_found(tmp_path: Path) -> None:
+    assert get_session(tmp_path / "flights", "DEDAL-20260419-999") is None
+
+
+def test_get_session_bad_lid(tmp_path: Path) -> None:
+    assert get_session(tmp_path / "flights", "bad-lid") is None
+
+
+def test_delete_session(tmp_path: Path) -> None:
+    csv = _write_csv(tmp_path / "log.csv")
+    s = import_log(csv, tmp_path / "flights")
+    assert delete_session(tmp_path / "flights", s.lid) is True
+    assert not s.dir_path.exists()
+
+
+def test_delete_session_not_found(tmp_path: Path) -> None:
+    assert delete_session(tmp_path / "flights", "DEDAL-20260419-999") is False
+
+
+# ── _parse_log_meta ───────────────────────────────────────────────────────
+
+
+def test_parse_log_meta(tmp_path: Path) -> None:
+    f = _write_csv(tmp_path / "LOG_TEST.csv")
+    meta = _parse_log_meta(f)
+    assert meta["config_name"] == "VTOL_CONFIG_v0.49"
+    assert meta["fw_version"] == "Beta 1.3"
+    assert meta["row_count"] == 3
+    assert meta["duration_s"] == 2.5
+
+
+def test_parse_log_meta_empty(tmp_path: Path) -> None:
+    f = tmp_path / "empty.csv"
+    f.write_text("timestamp_us,dt_us\n", encoding="utf-8")
+    meta = _parse_log_meta(f)
+    assert meta["row_count"] == 0
+    assert meta["duration_s"] == 0.0
