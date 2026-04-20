@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VTOL Flight Analyzer</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -13,19 +13,28 @@
 
 <style>
 :root {
-  --bg:       #080c10;
-  --surface:  #0d1520;
-  --border:   #1a2d45;
-  --accent:   #00d4ff;
-  --accent2:  #ff6b35;
-  --accent3:  #39ff14;
-  --warn:     #ffcc00;
-  --text:     #c8dde8;
-  --dim:      #4a6070;
-  --hover:    #00a8cc;
-  --trans:    rgba(0,212,255,0.08);
+  --bg:        #050810;
+  --surface:   #080d1a;
+  --surface2:  #0c1220;
+  --border:    rgba(255,255,255,0.06);
+  --border2:   rgba(255,255,255,0.12);
+  --accent:    #00ff9d;
+  --accent2:   #ffb340;
+  --accent3:   #00d4ff;
+  --warn:      #ffb340;
+  --red:       #ff453a;
+  --text:      #c8d8f0;
+  --dim:       #3a4a60;
+  --dim2:      #5a6a80;
+  --font-hud:  'Orbitron', monospace;
   --font-mono: 'Share Tech Mono', monospace;
-  --font-ui:   'Rajdhani', sans-serif;
+  --font-ui:   'DM Mono', monospace;
+  --glow-g:    0 0 8px rgba(0,255,157,0.4);
+  --glow-a:    0 0 8px rgba(255,179,64,0.4);
+  --r:         6px;
+  /* legacy compat */
+  --hover:     #00cc7a;
+  --trans:     rgba(0,255,157,0.08);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -47,6 +56,33 @@ body::before {
   pointer-events: none;
   z-index: 9999;
 }
+
+/* ── TAB BAR ── */
+#tab-bar {
+  display: flex; align-items: flex-end; gap: 2px;
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: sticky; top: 0; z-index: 99;
+}
+.vtab {
+  padding: 8px 16px 7px;
+  font-family: var(--font-hud); font-size: 9px; letter-spacing: 2px; font-weight: 600;
+  color: var(--dim); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color .2s, border-color .2s;
+  user-select: none; white-space: nowrap;
+}
+.vtab:hover { color: var(--dim2); }
+.vtab.active { color: var(--accent); border-color: var(--accent); }
+.vtab.disabled { opacity: 0.25; pointer-events: none; font-style: italic; }
+
+/* ── TAB PANES ── */
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+#pane-graphs.active { display: flex; flex-direction: column; height: calc(100vh - 84px); overflow: hidden; }
+#pane-analyse.active { display: flex; flex-direction: column; height: calc(100vh - 84px); overflow: hidden; }
 
 /* ---- HEADER ---- */
 header {
