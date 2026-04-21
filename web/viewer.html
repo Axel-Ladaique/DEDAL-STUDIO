@@ -10258,6 +10258,62 @@ setTimeout(setupAllPanels, 1800);
 #ds-export-btn.busy { opacity: 0.4; cursor: wait; }
 #ds-export-btn.ok   { border-color: #39ff14; color: #39ff14; }
 
+#ds-hud-btn {
+  background: transparent; border: 1px solid #1a2d45;
+  color: #4a6070; font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 4px; cursor: pointer;
+  transition: all .15s; margin-left: 6px; white-space: nowrap;
+}
+#ds-hud-btn:hover { border-color: #ffcc00; color: #ffcc00; }
+#ds-hud-btn.busy { opacity: 0.4; cursor: wait; }
+#ds-hud-btn.ok   { border-color: #39ff14; color: #39ff14; }
+#ds-hud-btn.err  { border-color: #ff4d4d; color: #ff4d4d; }
+
+#ds-hud-progress {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 1600;
+  background: #0a1018; border-top: 1px solid #1a2d45;
+  font-family: 'Share Tech Mono', monospace; font-size: 11px;
+  color: #c8dde8; padding: 10px 24px;
+  display: none; align-items: center; gap: 16px;
+}
+#ds-hud-progress.open { display: flex; }
+#ds-hud-bar-wrap { flex: 1; background: #1a2d45; border-radius: 2px; height: 6px; }
+#ds-hud-bar { background: #ffcc00; height: 6px; border-radius: 2px; width: 0%; transition: width .3s; }
+
+#ds-hud-modal-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
+  display: none; align-items: center; justify-content: center;
+}
+#ds-hud-modal-overlay.open { display: flex; }
+#ds-hud-modal {
+  background: #0d1520; border: 1px solid #1a2d45; border-radius: 8px;
+  padding: 24px 28px; min-width: 360px; max-width: 480px; width: 100%;
+  font-family: 'Share Tech Mono', monospace; color: #c8dde8;
+}
+#ds-hud-modal h3 { font-size: 13px; letter-spacing: 3px; text-transform: uppercase; color: #ffcc00; margin-bottom: 20px; }
+.ds-hud-field { margin-bottom: 14px; }
+.ds-hud-field label { display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #4a6070; margin-bottom: 5px; }
+.ds-hud-field input, .ds-hud-field select {
+  width: 100%; background: #080c10; border: 1px solid #1a2d45;
+  color: #c8dde8; font-family: 'Share Tech Mono', monospace;
+  font-size: 12px; padding: 7px 10px; border-radius: 4px; outline: none;
+}
+.ds-hud-field input:focus, .ds-hud-field select:focus { border-color: #00d4ff; }
+.ds-hud-field .ds-row { display: flex; gap: 10px; }
+.ds-hud-field .ds-row input { flex: 1; }
+.ds-hud-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.ds-hud-modal-actions button {
+  background: transparent; border: 1px solid #1a2d45;
+  color: #4a6070; font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 7px 16px; border-radius: 4px; cursor: pointer; transition: all .15s;
+}
+.ds-hud-modal-actions button:hover { border-color: #00d4ff; color: #00d4ff; }
+.ds-hud-modal-actions button.primary { border-color: #ffcc00; color: #ffcc00; }
+.ds-hud-modal-actions button.primary:hover { background: rgba(255,204,0,0.1); }
+
 #ds-vid-toggle {
   position: fixed; bottom: 0; right: 24px; z-index: 1500;
   background: #0d1520; border: 1px solid #1a2d45;
@@ -10366,6 +10422,88 @@ setTimeout(setupAllPanels, 1800);
     exportBtn.onclick = dsExportPack;
     if (hdrStats) hdrStats.appendChild(exportBtn);
     else document.body.appendChild(exportBtn);
+  }
+
+  // ── HUD modal ─────────────────────────────────────────────────────────
+  var hudModalEl = document.createElement('div');
+  hudModalEl.id = 'ds-hud-modal-overlay';
+  hudModalEl.innerHTML = [
+    '<div id="ds-hud-modal">',
+    '  <h3>Options HUD</h3>',
+    '  <div class="ds-hud-field">',
+    '    <label>FPS</label>',
+    '    <select id="ds-hud-fps">',
+    '      <option value="24">24</option>',
+    '      <option value="25" selected>25</option>',
+    '      <option value="30">30</option>',
+    '      <option value="50">50</option>',
+    '      <option value="60">60</option>',
+    '    </select>',
+    '  </div>',
+    '  <div class="ds-hud-field">',
+    '    <label>Résolution</label>',
+    '    <select id="ds-hud-res">',
+    '      <option value="1280x720">1280 × 720</option>',
+    '      <option value="1920x1080" selected>1920 × 1080</option>',
+    '      <option value="2560x1440">2560 × 1440</option>',
+    '      <option value="3840x2160">3840 × 2160</option>',
+    '    </select>',
+    '  </div>',
+    '  <div class="ds-hud-field">',
+    '    <label>Plage temporelle (secondes depuis t0)</label>',
+    '    <div class="ds-row">',
+    '      <input type="number" id="ds-hud-tstart" placeholder="Début (0)" min="0" step="0.1">',
+    '      <input type="number" id="ds-hud-tend"   placeholder="Fin (tout)" min="0" step="0.1">',
+    '    </div>',
+    '  </div>',
+    '  <div class="ds-hud-field">',
+    '    <label>Dossier de sortie (vide = hud_output/ dans la session)</label>',
+    '    <input type="text" id="ds-hud-outpath" placeholder="/chemin/vers/dossier">',
+    '  </div>',
+    '  <div class="ds-hud-modal-actions">',
+    '    <button id="ds-hud-modal-cancel">Annuler</button>',
+    '    <button class="primary" id="ds-hud-modal-launch">Lancer</button>',
+    '  </div>',
+    '</div>',
+  ].join('');
+  document.body.appendChild(hudModalEl);
+  hudModalEl.addEventListener('click', function(e) {
+    if (e.target === hudModalEl) hudModalEl.classList.remove('open');
+  });
+  document.getElementById('ds-hud-modal-cancel').addEventListener('click', function() {
+    hudModalEl.classList.remove('open');
+  });
+  document.getElementById('ds-hud-modal-launch').addEventListener('click', function() {
+    hudModalEl.classList.remove('open');
+    var res = (document.getElementById('ds-hud-res').value || '1920x1080').split('x');
+    var tStartVal = parseFloat(document.getElementById('ds-hud-tstart').value);
+    var tEndVal   = parseFloat(document.getElementById('ds-hud-tend').value);
+    dsGenerateHUD({
+      fps:         parseInt(document.getElementById('ds-hud-fps').value, 10) || 25,
+      width:       parseInt(res[0], 10) || 1920,
+      height:      parseInt(res[1], 10) || 1080,
+      t_start_s:   isNaN(tStartVal) ? 0 : tStartVal,
+      t_end_s:     isNaN(tEndVal)   ? null : tEndVal,
+      output_path: document.getElementById('ds-hud-outpath').value.trim() || null,
+    });
+  });
+
+  // ── HUD button + progress bar ─────────────────────────────────────────
+  if (LID) {
+    const hudBtn = document.createElement('button');
+    hudBtn.id = 'ds-hud-btn';
+    hudBtn.textContent = '🎬 Générer HUD';
+    hudBtn.onclick = function() { hudModalEl.classList.add('open'); };
+    if (hdrStats) hdrStats.appendChild(hudBtn);
+    else document.body.appendChild(hudBtn);
+
+    var progEl = document.createElement('div');
+    progEl.id = 'ds-hud-progress';
+    progEl.innerHTML =
+      '<span id="ds-hud-prog-label">HUD</span>' +
+      '<div id="ds-hud-bar-wrap"><div id="ds-hud-bar"></div></div>' +
+      '<span id="ds-hud-prog-pct">0%</span>';
+    document.body.appendChild(progEl);
   }
 
   // ── Auto-load CSV from session ─────────────────────────────────────────
@@ -10661,6 +10799,88 @@ setTimeout(setupAllPanels, 1800);
       if (btn) { btn.classList.remove('busy'); btn.textContent = '⬆ Export Studio'; }
       if (typeof showToast === 'function') showToast('Erreur export : ' + err.message, 'warn');
     });
+  }
+
+  // ── HUD generation via SSE ─────────────────────────────────────────────
+  function dsGenerateHUD(opts) {
+    if (!LID) return;
+    var hudBtn  = document.getElementById('ds-hud-btn');
+    var progEl  = document.getElementById('ds-hud-progress');
+    var bar     = document.getElementById('ds-hud-bar');
+    var pctEl   = document.getElementById('ds-hud-prog-pct');
+    var lblEl   = document.getElementById('ds-hud-prog-label');
+
+    if (hudBtn) { hudBtn.classList.add('busy'); hudBtn.textContent = '⏳ Génération…'; }
+    if (progEl) progEl.classList.add('open');
+    if (bar)    bar.style.width = '0%';
+    if (pctEl)  pctEl.textContent = '0%';
+    if (lblEl)  lblEl.textContent = 'HUD';
+
+    var body = {
+      fps:         opts.fps    || 25,
+      width:       opts.width  || 1920,
+      height:      opts.height || 1080,
+      cells:       12,
+      min_gps_sats: 6,
+    };
+    if (opts.t_start_s != null) body.t_start_s = opts.t_start_s;
+    if (opts.t_end_s   != null) body.t_end_s   = opts.t_end_s;
+    if (opts.output_path)       body.output_path = opts.output_path;
+
+    fetch('/api/sessions/' + LID + '/hud', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder();
+      var buf = '';
+      function pump() {
+        return reader.read().then(function(chunk) {
+          if (chunk.done) {
+            finish(true);
+            return;
+          }
+          buf += decoder.decode(chunk.value, { stream: true });
+          var lines = buf.split('\n');
+          buf = lines.pop();
+          lines.forEach(function(line) {
+            if (!line.startsWith('data:')) return;
+            try {
+              var msg = JSON.parse(line.slice(5).trim());
+              if (msg.pct != null && bar) {
+                bar.style.width = msg.pct + '%';
+                if (pctEl) pctEl.textContent = Math.round(msg.pct) + '%';
+              }
+              if (msg.status === 'done') { finish(true); return; }
+              if (msg.status === 'error') { finish(false, msg.message); return; }
+            } catch(e) {}
+          });
+          return pump();
+        });
+      }
+      pump().catch(function(err) { finish(false, err.message); });
+    }).catch(function(err) { finish(false, err.message); });
+
+    function finish(ok, errMsg) {
+      if (hudBtn) {
+        hudBtn.classList.remove('busy');
+        if (ok) {
+          hudBtn.classList.add('ok');
+          hudBtn.textContent = '✓ HUD généré';
+          setTimeout(function() { hudBtn.classList.remove('ok'); hudBtn.textContent = '🎬 Générer HUD'; }, 4000);
+        } else {
+          hudBtn.classList.add('err');
+          hudBtn.textContent = '✕ Erreur';
+          setTimeout(function() { hudBtn.classList.remove('err'); hudBtn.textContent = '🎬 Générer HUD'; }, 4000);
+          if (typeof showToast === 'function') showToast('Erreur HUD : ' + (errMsg || '?'), 'warn');
+        }
+      }
+      if (progEl) {
+        setTimeout(function() { progEl.classList.remove('open'); }, ok ? 2000 : 0);
+      }
+    }
   }
 
 })();
