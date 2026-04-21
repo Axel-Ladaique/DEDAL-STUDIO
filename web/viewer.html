@@ -145,7 +145,8 @@ body::before {
   font-family:var(--font-mono); font-size:10px;
   border:1px solid transparent;
   transition:background .15s, border-color .15s;
-  user-select:none; white-space:nowrap; overflow:hidden;
+  user-select:none; -webkit-user-select:none;
+  white-space:nowrap; overflow:hidden;
 }
 .sig-item:hover { background:var(--surface2); border-color:var(--border2); }
 .sig-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
@@ -9798,6 +9799,56 @@ var gCharts = {};
 var gTool   = 'pan';
 var gMapPanelVisible = true;
 var gDragSig = null;
+var gMouseDrag = null; // { key, color, ghost }
+
+function sigDragStart(e, key, color) {
+  e.preventDefault();
+  var ghost = document.createElement('div');
+  ghost.id = 'sig-drag-ghost';
+  ghost.textContent = key;
+  ghost.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;' +
+    'background:var(--surface2);border:1px solid ' + color + ';color:' + color + ';' +
+    'font-family:var(--font-mono);font-size:10px;padding:3px 8px;border-radius:4px;' +
+    'box-shadow:0 0 8px ' + color + '44;opacity:0.9;';
+  ghost.style.left = (e.clientX + 12) + 'px';
+  ghost.style.top  = (e.clientY - 10) + 'px';
+  document.body.appendChild(ghost);
+  gMouseDrag = { key: key, color: color, ghost: ghost };
+
+  function onMove(ev) {
+    ghost.style.left = (ev.clientX + 12) + 'px';
+    ghost.style.top  = (ev.clientY - 10) + 'px';
+    // Highlight panel under cursor
+    document.querySelectorAll('.g-panel').forEach(function(p) {
+      var r = p.getBoundingClientRect();
+      var over = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+      p.style.outline = over ? '1px solid ' + color : '';
+    });
+  }
+
+  function onUp(ev) {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    ghost.remove();
+    document.querySelectorAll('.g-panel').forEach(function(p) { p.style.outline = ''; });
+    // Find panel under cursor (skip map panel)
+    var target = null;
+    gPanels.forEach(function(p) {
+      if (p.isMap) return;
+      var el = document.getElementById(p.id);
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
+        target = p.id;
+      }
+    });
+    gMouseDrag = null;
+    if (target) addCurveToPanel(target, key, color);
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
 var gZoomRange = null;
 var gPanelCounter = 0;
 
@@ -9816,15 +9867,13 @@ function buildSignalSidebar() {
       if (typeof flightData !== 'undefined' && flightData.length && !(sig.key in flightData[0])) return;
       var el = document.createElement('div');
       el.className = 'sig-item';
-      el.draggable = true;
       el.dataset.key = sig.key;
       el.dataset.color = sig.color;
       el.innerHTML = '<div class="sig-dot" style="background:' + sig.color + '"></div>' + sig.key;
-      el.addEventListener('dragstart', function(e) {
-        gDragSig = { key: sig.key, color: sig.color };
-        e.dataTransfer.effectAllowed = 'copy';
+      el.addEventListener('mousedown', function(e) {
+        if (e.button !== 0) return;
+        sigDragStart(e, sig.key, sig.color);
       });
-      el.addEventListener('dragend', function() { gDragSig = null; });
       list.appendChild(el);
     });
   });
@@ -9840,7 +9889,7 @@ function buildPanelDOM(pid) {
   panel.className = 'g-panel';
   panel.id = pid;
   panel.innerHTML = '<div class="g-panel-header">' +
-    '<div class="g-curve-tags" id="' + pid + '-tags"><div class="g-drop-hint">↕ drop signal</div></div>' +
+    '<div class="g-curve-tags" id="' + pid + '-tags"><div class="g-drop-hint">↕ glisser un signal ici</div></div>' +
     '<div class="g-panel-btns">' +
     '<button class="g-pbtn" title="Dupliquer" onclick="duplicateGraphPanel(\'' + pid + '\')">⊕</button>' +
     '<button class="g-pbtn close" title="Fermer" onclick="removeGraphPanel(\'' + pid + '\')">✕</button>' +
@@ -9850,12 +9899,6 @@ function buildPanelDOM(pid) {
     '<div class="g-shared-cursor" id="' + pid + '-cursor"></div>' +
     '<div class="g-cursor-tip" id="' + pid + '-tip" style="display:none;"></div>' +
     '</div>';
-  // Drop zone covers entire panel (header + canvas area)
-  panel.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
-  panel.addEventListener('drop', function(e) {
-    e.preventDefault();
-    if (gDragSig) addCurveToPanel(pid, gDragSig.key, gDragSig.color);
-  });
   return panel;
 }
 
