@@ -9981,6 +9981,56 @@ function setupGraphCursorSync() {
     }
   });
   grid.addEventListener('mouseleave', hideGraphCursor);
+
+  // Zoom par scroll molette
+  grid.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    if (!flightData.length) return;
+    var total = (gZoomRange ? gZoomRange.maxIdx - gZoomRange.minIdx : viewEnd - viewStart);
+    if (total < 2) return;
+    var factor = e.deltaY > 0 ? 1.2 : 0.833;
+    var rect = grid.getBoundingClientRect();
+    var pct  = (e.clientX - rect.left) / rect.width;
+    var base = gZoomRange ? gZoomRange.minIdx : viewStart;
+    var center = base + Math.round(pct * total);
+    var half   = Math.round((total * factor) / 2);
+    var newStart = Math.max(0, center - half);
+    var newEnd   = Math.min(flightData.length - 1, center + half);
+    if (newEnd - newStart < 10) return;
+    gZoomRange = { minIdx: newStart, maxIdx: newEnd };
+    refreshAllPanelCharts();
+  }, { passive: false });
+
+  // Pan par drag
+  var gDragPan = null;
+
+  grid.addEventListener('mousedown', function(e) {
+    if (gTool !== 'pan') return;
+    var base = gZoomRange ? gZoomRange.minIdx : viewStart;
+    var top  = gZoomRange ? gZoomRange.maxIdx : viewEnd;
+    gDragPan = { x: e.clientX, startMin: base, startMax: top };
+    grid.style.cursor = 'grabbing';
+  });
+
+  grid.addEventListener('mouseup', function() {
+    gDragPan = null;
+    grid.style.cursor = '';
+  });
+
+  grid.addEventListener('mousemove', function(e) {
+    if (!gDragPan || !flightData.length) return;
+    var rect  = grid.getBoundingClientRect();
+    var dx    = e.clientX - gDragPan.x;
+    var total = gDragPan.startMax - gDragPan.startMin;
+    var shift = -Math.round((dx / rect.width) * total);
+    var newMin = gDragPan.startMin + shift;
+    var newMax = gDragPan.startMax + shift;
+    if (newMin < 0) { newMax -= newMin; newMin = 0; }
+    if (newMax >= flightData.length) { newMin -= (newMax - flightData.length + 1); newMax = flightData.length - 1; }
+    if (newMin < 0) newMin = 0;
+    gZoomRange = { minIdx: newMin, maxIdx: newMax };
+    refreshAllPanelCharts();
+  });
 }
 
 function initGraphExplorer() {
