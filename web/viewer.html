@@ -9727,8 +9727,10 @@ if (typeof _origInit === 'function') {
           refreshAllPanelCharts();
           if (gMapLeaflet) {
             gMapLeaflet.invalidateSize();
+          } else if (gMapPanelVisible) {
+            addMapPanel();
           }
-        }, 50);
+        }, 80);
       }
       if (t.dataset.tab === 'analyse') {
         renderAnalysisPanels();
@@ -9848,9 +9850,9 @@ function buildPanelDOM(pid) {
     '<div class="g-shared-cursor" id="' + pid + '-cursor"></div>' +
     '<div class="g-cursor-tip" id="' + pid + '-tip" style="display:none;"></div>' +
     '</div>';
-  var wrap = panel.querySelector('.g-canvas-wrap');
-  wrap.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
-  wrap.addEventListener('drop', function(e) {
+  // Drop zone covers entire panel (header + canvas area)
+  panel.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  panel.addEventListener('drop', function(e) {
     e.preventDefault();
     if (gDragSig) addCurveToPanel(pid, gDragSig.key, gDragSig.color);
   });
@@ -10035,6 +10037,7 @@ function addMapPanel() {
 
 function buildGraphMapTrack() {
   if (!gMapLeaflet || typeof flightData === 'undefined' || !flightData.length) return;
+  gMapLeaflet.eachLayer(function(l) { if (l instanceof L.Polyline || l instanceof L.Marker) gMapLeaflet.removeLayer(l); });
   var pts = flightData
     .filter(function(r) { return r.gps_valid == 1 && r.gps_lat && r.gps_lon; })
     .map(function(r) { return [parseFloat(r.gps_lat), parseFloat(r.gps_lon)]; });
@@ -10159,7 +10162,6 @@ function initGraphExplorer() {
   addCurveToPanel(pid2, 'm3_PWM', '#ff6b35');
   setGraphLayout('2x1');
   setupGraphCursorSync();
-  addMapPanel();
 }
 
 // ── ANALYSE TAB CHIP SELECTOR ──
