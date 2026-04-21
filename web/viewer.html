@@ -108,6 +108,131 @@ body::before {
 }
 .telem-cell-body { flex: 1; overflow: hidden; position: relative; }
 
+/* ── NEW GRAPH EXPLORER ── */
+#graphs-pane-inner { display:flex; height:100%; }
+
+/* Sidebar signaux */
+#sig-sidebar {
+  width:130px; flex-shrink:0;
+  background:var(--surface); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; overflow:hidden;
+  transition:width .25s ease;
+}
+#sig-sidebar.collapsed { width:32px; }
+.sig-sidebar-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:7px 10px; border-bottom:1px solid var(--border);
+  cursor:pointer; flex-shrink:0;
+}
+.sig-sidebar-title {
+  font-family:var(--font-hud); font-size:8px; letter-spacing:2px; color:var(--accent);
+  overflow:hidden; white-space:nowrap;
+}
+#sig-sidebar.collapsed .sig-sidebar-title { opacity:0; }
+.sig-sidebar-toggle { color:var(--dim2); font-size:10px; flex-shrink:0; transition:transform .25s; }
+#sig-sidebar.collapsed .sig-sidebar-toggle { transform:rotate(180deg); }
+
+.sig-list { flex:1; overflow-y:auto; padding:5px; display:flex; flex-direction:column; gap:2px; }
+.sig-list::-webkit-scrollbar { width:3px; }
+.sig-list::-webkit-scrollbar-thumb { background:var(--dim); border-radius:2px; }
+.sig-group-lbl {
+  font-family:var(--font-hud); font-size:7px; letter-spacing:2px; color:var(--dim);
+  padding:5px 3px 2px;
+}
+.sig-item {
+  display:flex; align-items:center; gap:6px;
+  padding:4px 6px; border-radius:4px; cursor:grab;
+  font-family:var(--font-mono); font-size:10px;
+  border:1px solid transparent;
+  transition:background .15s, border-color .15s;
+  user-select:none; white-space:nowrap; overflow:hidden;
+}
+.sig-item:hover { background:var(--surface2); border-color:var(--border2); }
+.sig-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+
+/* Graphs main area */
+#graphs-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+/* Toolbar */
+#graphs-toolbar {
+  display:flex; align-items:center; gap:4px; flex-shrink:0;
+  padding:5px 10px; background:var(--surface); border-bottom:1px solid var(--border);
+}
+.g-tlabel { font-family:var(--font-hud); font-size:7px; letter-spacing:2px; color:var(--dim); margin-right:2px; }
+.g-tbtn {
+  padding:3px 8px; border-radius:4px;
+  font-family:var(--font-hud); font-size:7px; letter-spacing:1px;
+  background:var(--surface2); color:var(--dim2); border:1px solid var(--border);
+  cursor:pointer; transition:all .15s; white-space:nowrap;
+}
+.g-tbtn:hover { border-color:var(--border2); color:var(--text); }
+.g-tbtn.g-active { background:rgba(0,255,157,0.1); border-color:rgba(0,255,157,0.3); color:var(--accent); }
+.g-tbtn.g-map-on { background:rgba(0,212,255,0.1); border-color:rgba(0,212,255,0.3); color:var(--accent3); }
+.g-tsep { width:1px; height:16px; background:var(--border); margin:0 3px; }
+.g-tadd {
+  margin-left:auto; padding:3px 10px; border-radius:4px;
+  font-family:var(--font-mono); font-size:11px;
+  background:rgba(0,255,157,0.08); color:var(--accent);
+  border:1px solid rgba(0,255,157,0.2); cursor:pointer;
+}
+
+/* Panels grid */
+#panels-grid {
+  flex:1; display:grid; gap:5px; padding:6px; overflow:hidden;
+}
+
+/* Individual panel */
+.g-panel {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+  display:flex; flex-direction:column; overflow:hidden; position:relative;
+  transition:border-color .2s;
+}
+.g-panel:hover { border-color:var(--border2); }
+.g-panel-header {
+  display:flex; align-items:center; gap:4px;
+  padding:3px 7px; border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.g-curve-tags { display:flex; align-items:center; gap:3px; flex:1; flex-wrap:wrap; overflow:hidden; }
+.g-ctag {
+  display:flex; align-items:center; gap:3px;
+  background:var(--surface2); border:1px solid var(--border2);
+  border-radius:10px; padding:2px 7px 2px 5px; font-family:var(--font-mono); font-size:9px;
+}
+.g-ctag-x { color:var(--dim); cursor:pointer; margin-left:1px; font-size:8px; }
+.g-ctag-x:hover { color:var(--red); }
+.g-drop-hint {
+  font-family:var(--font-mono); font-size:8px; color:var(--dim);
+  border:1px dashed var(--border2); border-radius:8px; padding:1px 7px; cursor:default;
+}
+.g-panel-btns { display:flex; gap:2px; flex-shrink:0; }
+.g-pbtn {
+  width:18px; height:18px; border-radius:3px; background:none; border:none;
+  cursor:pointer; color:var(--dim); font-size:9px;
+  display:flex; align-items:center; justify-content:center; transition:all .15s;
+}
+.g-pbtn:hover { background:var(--surface2); color:var(--text); }
+.g-pbtn.close:hover { color:var(--red); }
+
+/* Panel canvas area */
+.g-canvas-wrap { flex:1; position:relative; overflow:hidden; }
+.g-shared-cursor {
+  position:absolute; top:0; bottom:0; width:1px;
+  background:var(--accent2); opacity:0.75;
+  box-shadow:0 0 5px var(--accent2);
+  pointer-events:none; z-index:4;
+  display:none;
+}
+.g-cursor-tip {
+  position:absolute; top:3px;
+  background:var(--bg); border:1px solid var(--accent2);
+  border-radius:3px; padding:2px 5px;
+  font-family:var(--font-mono); font-size:8px; color:var(--accent2);
+  white-space:nowrap; pointer-events:none; z-index:5;
+}
+
+/* Map panel body */
+.g-map-body { width:100%; height:100%; position:relative; }
+
 /* ---- HEADER ---- */
 header {
   display: flex; align-items: center; justify-content: space-between;
@@ -1434,77 +1559,43 @@ canvas.chart { width: 100%; height: 100%; }
 
 <!-- ══ TAB GRAPHES ══ -->
 <div class="tab-pane" id="pane-graphs">
-  <!-- CHART EXPLORER -->
-  <div style="padding: 0 20px 20px;">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">📈 EXPLORATEUR DE COURBES</span>
-        <div style="display:flex;gap:8px;">
-          <button class="btn" style="font-size:10px;padding:3px 10px;" onclick="openChartModal()" title="Ouvrir en plein écran">⛶ EXPAND</button>
-          <button class="btn" style="font-size:10px;padding:3px 10px;" onclick="exportChartPNG()" title="Exporter le graphe en PNG">🖼 PNG</button>
-          <button class="btn" style="font-size:10px;padding:3px 10px;" onclick="clearAllCharts()">✕ VIDER</button>
-          <span class="panel-badge" id="chart-count-badge">0 courbe(s)</span>
-        </div>
+  <div id="graphs-pane-inner">
+
+    <!-- Sidebar signaux -->
+    <div id="sig-sidebar">
+      <div class="sig-sidebar-head" onclick="sigSidebarToggle()">
+        <span class="sig-sidebar-title">SIGNAUX</span>
+        <span class="sig-sidebar-toggle">◀</span>
       </div>
-      <div class="panel-body">
-
-        <!-- Column groups selector -->
-        <div class="col-groups" id="col-groups-container"></div>
-
-        <!-- Chart controls -->
-        <div class="chart-controls">
-          <label style="color:var(--dim);font-size:11px;letter-spacing:1px;font-family:var(--font-mono);">FENÊTRE</label>
-          <select id="chart-window" onchange="redrawExplorerChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px;">
-            <option value="all">Tout le vol</option>
-            <option value="10">±10 s</option>
-            <option value="30">±30 s</option>
-            <option value="60">±60 s</option>
-          </select>
-          <label style="color:var(--dim);font-size:11px;letter-spacing:1px;font-family:var(--font-mono);">DÉCIMATION</label>
-          <select id="chart-decimate" onchange="redrawExplorerChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px;">
-            <option value="1">×1 (tous)</option>
-            <option value="2">×2</option>
-            <option value="5" selected>×5</option>
-            <option value="10">×10</option>
-          </select>
-          <label style="color:var(--dim);font-size:11px;letter-spacing:1px;font-family:var(--font-mono);">AXES Y</label>
-          <select id="chart-yscale" onchange="redrawExplorerChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px;">
-            <option value="auto">Auto</option>
-            <option value="shared">Partagé</option>
-          </select>
-          <span class="chart-y-info" id="chart-hover-vals"></span>
-        </div>
-
-        <!-- Canvas -->
-        <div class="chart-explorer-canvas-wrap" id="chart-wrap">
-          <canvas id="explorer-canvas"></canvas>
-          <div class="chart-cursor-line" id="chart-cursor" style="display:none;left:50%"></div>
-          <div class="chart-explorer-empty" id="chart-empty">← SÉLECTIONNER DES COLONNES CI-DESSUS</div>
-        </div>
-
-        <!-- Minimap -->
-        <div id="chart-minimap-wrap" title="Cliquez ou glissez pour naviguer dans l'aperçu global">
-          <canvas id="chart-minimap-canvas" height="36"></canvas>
-          <div id="chart-minimap-viewport"></div>
-        </div>
-        <!-- Interaction hint -->
-        <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);padding:4px 4px 0;display:flex;gap:16px;flex-wrap:wrap;">
-          <span>🖱 Survol → curseur</span>
-          <span>Clic → seek</span>
-          <span>Drag → pan</span>
-          <span>⇧+Drag → zoom sélection</span>
-          <span>Ctrl+Molette → zoom</span>
-          <span>Dbl-clic → reset</span>
-          <span>Clic droit → menu</span>
-        </div>
-
-        <!-- Legend -->
-        <div id="chart-legend"></div>
-
+      <div class="sig-list" id="sig-list">
+        <!-- Populated by buildSignalSidebar() -->
       </div>
     </div>
-  </div>
 
+    <!-- Zone principale -->
+    <div id="graphs-main">
+      <!-- Toolbar -->
+      <div id="graphs-toolbar">
+        <span class="g-tlabel">LAYOUT</span>
+        <button class="g-tbtn g-active" id="btn-layout-2x1" onclick="setGraphLayout('2x1')">2×1</button>
+        <button class="g-tbtn" id="btn-layout-1x1" onclick="setGraphLayout('1x1')">1×1</button>
+        <button class="g-tbtn" id="btn-layout-2x2" onclick="setGraphLayout('2x2')">2×2</button>
+        <button class="g-tbtn" id="btn-layout-3x2" onclick="setGraphLayout('3x2')">3×2</button>
+        <div class="g-tsep"></div>
+        <button class="g-tbtn g-map-on" id="btn-map-toggle" onclick="toggleMapPanel()">🗺 CARTE</button>
+        <div class="g-tsep"></div>
+        <button class="g-tbtn" id="btn-zoom" onclick="setGraphTool('zoom')">🔍 ZOOM</button>
+        <button class="g-tbtn g-active" id="btn-pan" onclick="setGraphTool('pan')">✋ PAN</button>
+        <button class="g-tbtn" onclick="resetGraphZoom()">↺ RESET</button>
+        <button class="g-tadd" onclick="addGraphPanel()">＋ PANEL</button>
+      </div>
+      <!-- Panels grid -->
+      <div id="panels-grid" style="grid-template-columns:1fr;grid-template-rows:1fr 1fr;">
+        <!-- Populated by initGraphExplorer() -->
+      </div>
+    </div>
+
+  </div>
 </div><!-- /pane-graphs -->
 
 <!-- ══ TAB ANALYSE ══ -->
@@ -9502,6 +9593,11 @@ if (typeof _origInit === 'function') {
       updateTimeRangePlaceholders();
       refreshPanelManager();
     }, 700);
+    setTimeout(function() {
+      buildSignalSidebar();
+      refreshAllPanelCharts();
+      if (gMapLeaflet) buildGraphMapTrack();
+    }, 800);
   };
 }
 
@@ -9513,9 +9609,392 @@ if (typeof _origInit === 'function') {
       document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
       t.classList.add('active');
       document.getElementById('pane-' + t.dataset.tab).classList.add('active');
+      if (t.dataset.tab === 'graphs') {
+        setTimeout(function() {
+          refreshAllPanelCharts();
+          if (gMapLeaflet) {
+            gMapLeaflet.invalidateSize();
+          }
+        }, 50);
+      }
     });
   });
 })();
+
+// ================================================================
+//  NEW GRAPH EXPLORER
+// ================================================================
+
+var SIG_GROUPS = [
+  { label: 'ATTITUDE', sigs: [
+    { key:'roll_IMU',   color:'#00ff9d' },
+    { key:'pitch_IMU',  color:'#00d4ff' },
+    { key:'yaw_IMU',    color:'#bf5af2' },
+    { key:'roll_des',   color:'#ffb340' },
+    { key:'pitch_des',  color:'#ff6b35' },
+    { key:'yaw_des',    color:'#ff453a' },
+  ]},
+  { label: 'PID', sigs: [
+    { key:'roll_PID',   color:'#00ff9d' },
+    { key:'pitch_PID',  color:'#00d4ff' },
+    { key:'yaw_PID',    color:'#bf5af2' },
+  ]},
+  { label: 'MOTEURS', sigs: [
+    { key:'m1_PWM',     color:'#ff453a' },
+    { key:'m3_PWM',     color:'#ff6b35' },
+    { key:'m2_PWM',     color:'#ffb340' },
+    { key:'m4_PWM',     color:'#ffd700' },
+  ]},
+  { label: 'SERVOS', sigs: [
+    { key:'s1_PWM',     color:'#00d4ff' },
+    { key:'s2_PWM',     color:'#bf5af2' },
+    { key:'s3_PWM',     color:'#00ff9d' },
+    { key:'s4_PWM',     color:'#ffb340' },
+    { key:'s5_PWM',     color:'#ff6b35' },
+  ]},
+  { label: 'IMU', sigs: [
+    { key:'AccX',       color:'#ff453a' },
+    { key:'AccY',       color:'#00ff9d' },
+    { key:'AccZ',       color:'#00d4ff' },
+    { key:'GyroX',      color:'#ff453a' },
+    { key:'GyroY',      color:'#00ff9d' },
+    { key:'GyroZ',      color:'#00d4ff' },
+  ]},
+  { label: 'GPS / BAT', sigs: [
+    { key:'gps_alt_m',  color:'#00d4ff' },
+    { key:'gps_speed_ms',color:'#00ff9d'},
+    { key:'vbat_V',     color:'#ffb340' },
+    { key:'home_dist_m',color:'#ff453a' },
+  ]},
+  { label: 'RC', sigs: [
+    { key:'ch1',        color:'#00ff9d' },
+    { key:'ch2',        color:'#00d4ff' },
+    { key:'ch3',        color:'#ffb340' },
+    { key:'ch4',        color:'#bf5af2' },
+    { key:'thro_des',   color:'#ff453a' },
+  ]},
+];
+
+var gPanels = [];
+var gCharts = {};
+var gTool   = 'pan';
+var gMapPanelVisible = true;
+var gDragSig = null;
+var gZoomRange = null;
+var gPanelCounter = 0;
+
+function newPanelId() { return 'gp-' + (++gPanelCounter); }
+
+function buildSignalSidebar() {
+  var list = document.getElementById('sig-list');
+  if (!list) return;
+  list.innerHTML = '';
+  SIG_GROUPS.forEach(function(group) {
+    var lbl = document.createElement('div');
+    lbl.className = 'sig-group-lbl';
+    lbl.textContent = group.label;
+    list.appendChild(lbl);
+    group.sigs.forEach(function(sig) {
+      if (typeof flightData !== 'undefined' && flightData.length && !(sig.key in flightData[0])) return;
+      var el = document.createElement('div');
+      el.className = 'sig-item';
+      el.draggable = true;
+      el.dataset.key = sig.key;
+      el.dataset.color = sig.color;
+      el.innerHTML = '<div class="sig-dot" style="background:' + sig.color + '"></div>' + sig.key;
+      el.addEventListener('dragstart', function(e) {
+        gDragSig = { key: sig.key, color: sig.color };
+        e.dataTransfer.effectAllowed = 'copy';
+      });
+      el.addEventListener('dragend', function() { gDragSig = null; });
+      list.appendChild(el);
+    });
+  });
+}
+
+function sigSidebarToggle() {
+  var sb = document.getElementById('sig-sidebar');
+  if (sb) sb.classList.toggle('collapsed');
+}
+
+function buildPanelDOM(pid) {
+  var panel = document.createElement('div');
+  panel.className = 'g-panel';
+  panel.id = pid;
+  panel.innerHTML = '<div class="g-panel-header">' +
+    '<div class="g-curve-tags" id="' + pid + '-tags"><div class="g-drop-hint">↕ drop signal</div></div>' +
+    '<div class="g-panel-btns">' +
+    '<button class="g-pbtn" title="Dupliquer" onclick="duplicateGraphPanel(\'' + pid + '\')">⊕</button>' +
+    '<button class="g-pbtn close" title="Fermer" onclick="removeGraphPanel(\'' + pid + '\')">✕</button>' +
+    '</div></div>' +
+    '<div class="g-canvas-wrap" id="' + pid + '-wrap">' +
+    '<canvas id="' + pid + '-canvas"></canvas>' +
+    '<div class="g-shared-cursor" id="' + pid + '-cursor"></div>' +
+    '<div class="g-cursor-tip" id="' + pid + '-tip" style="display:none;"></div>' +
+    '</div>';
+  var wrap = panel.querySelector('.g-canvas-wrap');
+  wrap.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  wrap.addEventListener('drop', function(e) {
+    e.preventDefault();
+    if (gDragSig) addCurveToPanel(pid, gDragSig.key, gDragSig.color);
+  });
+  return panel;
+}
+
+function addGraphPanel(curves) {
+  var pid = newPanelId();
+  gPanels.push({ id: pid, curves: curves || [] });
+  var grid = document.getElementById('panels-grid');
+  var panel = buildPanelDOM(pid);
+  grid.appendChild(panel);
+  initPanelChart(pid);
+  if (curves) curves.forEach(function(c) { addCurveToPanel(pid, c.key, c.color, false); });
+  refreshPanelGridLayout();
+  return pid;
+}
+
+function removeGraphPanel(pid) {
+  if (gCharts[pid]) { gCharts[pid].destroy(); delete gCharts[pid]; }
+  gPanels = gPanels.filter(function(p) { return p.id !== pid; });
+  var el = document.getElementById(pid);
+  if (el) el.remove();
+  refreshPanelGridLayout();
+}
+
+function duplicateGraphPanel(pid) {
+  var src = gPanels.find(function(p) { return p.id === pid; });
+  if (!src) return;
+  addGraphPanel(src.curves.map(function(c) { return { key: c.key, color: c.color }; }));
+}
+
+function initPanelChart(pid) {
+  var canvas = document.getElementById(pid + '-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var chart = new Chart(ctx, {
+    type: 'line',
+    data: { datasets: [] },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          type: 'linear',
+          ticks: { color: '#3a4a60', font: { family: "'Share Tech Mono'", size: 9 },
+            callback: function(v) { return v.toFixed(1) + 's'; } },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+        },
+        y: {
+          ticks: { color: '#3a4a60', font: { family: "'Share Tech Mono'", size: 9 } },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+        },
+      },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    },
+  });
+  gCharts[pid] = chart;
+}
+
+function addCurveToPanel(pid, key, color, redraw) {
+  if (redraw === undefined) redraw = true;
+  var panel = gPanels.find(function(p) { return p.id === pid; });
+  if (!panel || panel.curves.find(function(c) { return c.key === key; })) return;
+  panel.curves.push({ key: key, color: color });
+  var tagsEl = document.getElementById(pid + '-tags');
+  if (tagsEl) {
+    var hint = tagsEl.querySelector('.g-drop-hint');
+    var tag = document.createElement('div');
+    tag.className = 'g-ctag';
+    tag.dataset.key = key;
+    tag.innerHTML = '<div class="sig-dot" style="background:' + color + '"></div>' + key +
+      '<span class="g-ctag-x" onclick="removeCurveFromPanel(\'' + pid + '\',\'' + key + '\')">×</span>';
+    tagsEl.insertBefore(tag, hint);
+  }
+  if (redraw) refreshPanelChart(pid);
+}
+
+function removeCurveFromPanel(pid, key) {
+  var panel = gPanels.find(function(p) { return p.id === pid; });
+  if (!panel) return;
+  panel.curves = panel.curves.filter(function(c) { return c.key !== key; });
+  var tagsEl = document.getElementById(pid + '-tags');
+  if (tagsEl) {
+    var tag = tagsEl.querySelector('[data-key="' + key + '"]');
+    if (tag) tag.remove();
+  }
+  refreshPanelChart(pid);
+}
+
+function refreshPanelChart(pid) {
+  var chart = gCharts[pid];
+  var panel = gPanels.find(function(p) { return p.id === pid; });
+  if (!chart || !panel || typeof flightData === 'undefined' || !flightData.length) return;
+  var t0 = flightData[0].timestamp_us;
+  var decimate = 5;
+  var start = gZoomRange ? gZoomRange.minIdx : viewStart;
+  var end   = gZoomRange ? gZoomRange.maxIdx : viewEnd;
+  chart.data.datasets = panel.curves.map(function(c) {
+    var pts = [];
+    for (var i = start; i <= end; i += decimate) {
+      var r = flightData[i];
+      var t = (r.timestamp_us - t0) / 1e6;
+      var v = parseFloat(r[c.key]);
+      if (!isNaN(v)) pts.push({ x: t, y: v });
+    }
+    return {
+      data: pts,
+      borderColor: c.color,
+      borderWidth: 1.5,
+      pointRadius: 0,
+      tension: 0,
+    };
+  });
+  chart.update('none');
+}
+
+function refreshAllPanelCharts() {
+  gPanels.forEach(function(p) { refreshPanelChart(p.id); });
+}
+
+function setGraphLayout(mode) {
+  var grid = document.getElementById('panels-grid');
+  document.querySelectorAll('#graphs-toolbar .g-tbtn').forEach(function(b) {
+    if (b.id && b.id.indexOf('btn-layout') === 0) b.classList.remove('g-active');
+  });
+  var btn = document.getElementById('btn-layout-' + mode);
+  if (btn) btn.classList.add('g-active');
+  if (mode === '1x1') { grid.style.gridTemplateColumns = '1fr'; grid.style.gridTemplateRows = '1fr'; }
+  if (mode === '2x1') { grid.style.gridTemplateColumns = '1fr'; grid.style.gridTemplateRows = '1fr 1fr'; }
+  if (mode === '2x2') { grid.style.gridTemplateColumns = '1fr 1fr'; grid.style.gridTemplateRows = '1fr 1fr'; }
+  if (mode === '3x2') { grid.style.gridTemplateColumns = '1fr 1fr 1fr'; grid.style.gridTemplateRows = '1fr 1fr'; }
+}
+
+function refreshPanelGridLayout() {
+  var active = document.querySelector('#graphs-toolbar .g-tbtn.g-active[id^="btn-layout"]');
+  var mode = active ? active.id.replace('btn-layout-','') : '2x1';
+  setGraphLayout(mode);
+}
+
+var gMapLeaflet = null;
+
+function toggleMapPanel() {
+  gMapPanelVisible = !gMapPanelVisible;
+  var btn = document.getElementById('btn-map-toggle');
+  btn.classList.toggle('g-map-on', gMapPanelVisible);
+  var existing = document.getElementById('gp-map');
+  if (gMapPanelVisible && !existing) {
+    addMapPanel();
+  } else if (!gMapPanelVisible && existing) {
+    existing.remove();
+    gPanels = gPanels.filter(function(p) { return p.id !== 'gp-map'; });
+    refreshPanelGridLayout();
+  }
+}
+
+function addMapPanel() {
+  var panel = document.createElement('div');
+  panel.className = 'g-panel';
+  panel.id = 'gp-map';
+  panel.innerHTML = '<div class="g-panel-header">' +
+    '<div class="g-curve-tags"><span style="font-family:var(--font-hud);font-size:8px;letter-spacing:1px;color:var(--accent3);">🗺 CARTE GPS</span>' +
+    '<span style="font-size:8px;color:var(--dim2);margin-left:6px;">synchronisée avec curseur</span></div>' +
+    '<div class="g-panel-btns"><button class="g-pbtn close" onclick="toggleMapPanel()">✕</button></div>' +
+    '</div>' +
+    '<div class="g-canvas-wrap">' +
+    '<div id="g-map-div" style="width:100%;height:100%;"></div>' +
+    '</div>';
+  document.getElementById('panels-grid').appendChild(panel);
+  gPanels.push({ id: 'gp-map', curves: [], isMap: true });
+  refreshPanelGridLayout();
+  if (!gMapLeaflet) {
+    setTimeout(function() {
+      gMapLeaflet = L.map('g-map-div', { zoomControl: true, attributionControl: false });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(gMapLeaflet);
+      if (typeof flightData !== 'undefined' && flightData.length) buildGraphMapTrack();
+    }, 50);
+  }
+}
+
+function buildGraphMapTrack() {
+  if (!gMapLeaflet || typeof flightData === 'undefined' || !flightData.length) return;
+  var pts = flightData
+    .filter(function(r) { return r.gps_valid == 1 && r.gps_lat && r.gps_lon; })
+    .map(function(r) { return [parseFloat(r.gps_lat), parseFloat(r.gps_lon)]; });
+  if (pts.length < 2) return;
+  L.polyline(pts, { color: '#00ff9d', weight: 1.5, opacity: 0.7 }).addTo(gMapLeaflet);
+  gMapLeaflet.fitBounds(L.latLngBounds(pts));
+}
+
+function showGraphCursor(pct, tSec) {
+  gPanels.forEach(function(p) {
+    var cursor = document.getElementById(p.id + '-cursor');
+    var tip    = document.getElementById(p.id + '-tip');
+    if (cursor) { cursor.style.display = 'block'; cursor.style.left = pct + '%'; }
+    if (tip) {
+      tip.style.display = 'block';
+      tip.style.left = 'calc(' + pct + '% + 4px)';
+      tip.textContent = 't = ' + tSec.toFixed(2) + ' s';
+    }
+  });
+}
+
+function hideGraphCursor() {
+  gPanels.forEach(function(p) {
+    var cursor = document.getElementById(p.id + '-cursor');
+    var tip    = document.getElementById(p.id + '-tip');
+    if (cursor) cursor.style.display = 'none';
+    if (tip) tip.style.display = 'none';
+  });
+}
+
+function setGraphTool(tool) {
+  gTool = tool;
+  var btnZoom = document.getElementById('btn-zoom');
+  var btnPan  = document.getElementById('btn-pan');
+  if (btnZoom) btnZoom.classList.toggle('g-active', tool === 'zoom');
+  if (btnPan)  btnPan.classList.toggle('g-active', tool === 'pan');
+}
+
+function resetGraphZoom() {
+  gZoomRange = null;
+  refreshAllPanelCharts();
+}
+
+function setupGraphCursorSync() {
+  var grid = document.getElementById('panels-grid');
+  if (!grid) return;
+  grid.addEventListener('mousemove', function(e) {
+    var rect = grid.getBoundingClientRect();
+    var pct = (e.clientX - rect.left) / rect.width * 100;
+    var t0  = (typeof flightData !== 'undefined' && flightData.length) ? flightData[0].timestamp_us : 0;
+    var tEnd = (typeof flightData !== 'undefined' && flightData.length) ? flightData[flightData.length-1].timestamp_us : 0;
+    var tMax = (tEnd - t0) / 1e6;
+    var tSec = pct / 100 * tMax;
+    showGraphCursor(pct, tSec);
+    if (typeof flightData !== 'undefined' && flightData.length) {
+      var targetUs = t0 + tSec * 1e6;
+      var idx = viewStart;
+      while (idx < viewEnd && flightData[idx].timestamp_us < targetUs) idx++;
+      if (typeof seekTo === 'function') seekTo(idx);
+    }
+  });
+  grid.addEventListener('mouseleave', hideGraphCursor);
+}
+
+function initGraphExplorer() {
+  buildSignalSidebar();
+  var pid1 = addGraphPanel();
+  addCurveToPanel(pid1, 'roll_IMU', '#00ff9d');
+  addCurveToPanel(pid1, 'roll_des', '#ffb340');
+  var pid2 = addGraphPanel();
+  addCurveToPanel(pid2, 'm1_PWM', '#ff453a');
+  addCurveToPanel(pid2, 'm3_PWM', '#ff6b35');
+  setGraphLayout('2x1');
+  setupGraphCursorSync();
+  addMapPanel();
+}
 
 // ════════════════════════════════════════════════════
 //  BOOT
@@ -9523,6 +10002,7 @@ if (typeof _origInit === 'function') {
 function boot() {
   setupAllPanels();
   setupResizeObserver();
+  initGraphExplorer();
 }
 
 if (document.readyState === 'loading') {
