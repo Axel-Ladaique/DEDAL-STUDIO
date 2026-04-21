@@ -3555,6 +3555,7 @@ const COL_GROUPS = [
 
 function buildColGroups() {
   const container = document.getElementById('col-groups-container');
+  if (!container) return;
   container.innerHTML = '';
   COL_GROUPS.forEach(group => {
     // Filter to only columns that exist in data
@@ -3587,16 +3588,20 @@ function toggleColumn(col, chipEl) {
     activeColumns.add(col);
     chipEl.classList.add('active');
   }
-  document.getElementById('chart-count-badge').textContent = activeColumns.size+' courbe(s)';
-  document.getElementById('chart-empty').style.display = activeColumns.size ? 'none' : 'flex';
+  const badge = document.getElementById('chart-count-badge');
+  if (badge) badge.textContent = activeColumns.size+' courbe(s)';
+  const empty = document.getElementById('chart-empty');
+  if (empty) empty.style.display = activeColumns.size ? 'none' : 'flex';
   redrawExplorerChart();
 }
 
 function clearAllCharts() {
   activeColumns.clear();
   document.querySelectorAll('.chip.active').forEach(c => c.classList.remove('active'));
-  document.getElementById('chart-count-badge').textContent = '0 courbe(s)';
-  document.getElementById('chart-empty').style.display = 'flex';
+  const badge = document.getElementById('chart-count-badge');
+  if (badge) badge.textContent = '0 courbe(s)';
+  const empty = document.getElementById('chart-empty');
+  if (empty) empty.style.display = 'flex';
   redrawExplorerChart();
 }
 
@@ -3626,6 +3631,7 @@ function getChartData() {
 function redrawExplorerChart() {
   const canvas = document.getElementById('explorer-canvas');
   const wrap = document.getElementById('chart-wrap');
+  if (!canvas || !wrap) return;
 
   // Force correct canvas dimensions — handle hidden panels
   let W = wrap.offsetWidth - 16;
