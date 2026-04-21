@@ -1649,6 +1649,12 @@ canvas.chart { width: 100%; height: 100%; }
 <div class="tab-pane" id="pane-graphs">
   <div id="graphs-pane-inner">
 
+    <!-- Sidebar carte (togglable, resizable) — à gauche en premier -->
+    <div id="graph-map-sidebar">
+      <div id="graph-map-div"></div>
+      <div id="graph-map-resize"></div>
+    </div>
+
     <!-- Sidebar signaux -->
     <div id="sig-sidebar">
       <div class="sig-sidebar-head" onclick="sigSidebarToggle()">
@@ -1656,12 +1662,6 @@ canvas.chart { width: 100%; height: 100%; }
         <span class="sig-sidebar-toggle">◀</span>
       </div>
       <div class="sig-list" id="sig-list"></div>
-    </div>
-
-    <!-- Sidebar carte (togglable, resizable) -->
-    <div id="graph-map-sidebar">
-      <div id="graph-map-div"></div>
-      <div id="graph-map-resize"></div>
     </div>
 
     <!-- Zone principale -->
@@ -10140,11 +10140,13 @@ function refreshPanelGridLayout() {
 }
 
 var gMapLeaflet = null;
+var gMapCursorMarker = null;
 
 
 function buildGraphMapTrack() {
   if (!gMapLeaflet || typeof flightData === 'undefined' || !flightData.length) return;
-  gMapLeaflet.eachLayer(function(l) { if (l instanceof L.Polyline || l instanceof L.Marker) gMapLeaflet.removeLayer(l); });
+  gMapCursorMarker = null;
+  gMapLeaflet.eachLayer(function(l) { if (l instanceof L.Polyline || l instanceof L.Marker || l instanceof L.CircleMarker) gMapLeaflet.removeLayer(l); });
   var pts = flightData
     .filter(function(r) { return r.gps_valid == 1 && r.gps_lat && r.gps_lon; })
     .map(function(r) { return [parseFloat(r.gps_lat), parseFloat(r.gps_lon)]; });
@@ -10164,6 +10166,28 @@ function showGraphCursor(pct, tSec) {
       tip.textContent = 't = ' + tSec.toFixed(2) + ' s';
     }
   });
+  // Synchroniser le marker GPS sur la carte sidebar
+  if (gMapLeaflet && typeof flightData !== 'undefined' && flightData.length) {
+    var t0 = flightData[0].timestamp_us;
+    var targetUs = t0 + tSec * 1e6;
+    // Recherche binaire du row le plus proche
+    var lo = 0, hi = flightData.length - 1;
+    while (lo < hi) { var mid = (lo + hi) >> 1; if (flightData[mid].timestamp_us < targetUs) lo = mid + 1; else hi = mid; }
+    var r = flightData[lo];
+    if (r && (r.gps_valid == 1 || r.gps_valid === '1') && r.gps_lat && r.gps_lon) {
+      var lat = parseFloat(r.gps_lat), lon = parseFloat(r.gps_lon);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        if (!gMapCursorMarker) {
+          gMapCursorMarker = L.circleMarker([lat, lon], {
+            radius: 7, color: '#ffb340', fillColor: '#ffb340', fillOpacity: 0.95, weight: 2,
+            zIndexOffset: 1000
+          }).addTo(gMapLeaflet);
+        } else {
+          gMapCursorMarker.setLatLng([lat, lon]);
+        }
+      }
+    }
+  }
 }
 
 function hideGraphCursor() {
