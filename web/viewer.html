@@ -2511,6 +2511,10 @@ function initFlight(data) {
   applyViewFilter();
   seekTo(viewStart);
   showLoading(false);
+  // Refresh new graph explorer after data load
+  if (typeof buildSignalSidebar === 'function') buildSignalSidebar();
+  if (typeof refreshAllPanelCharts === 'function') refreshAllPanelCharts();
+  if (typeof buildGraphMapTrack === 'function') buildGraphMapTrack();
 }
 
 function formatTime(s) {
@@ -10231,6 +10235,23 @@ if (document.readyState === 'loading') {
 }
 setTimeout(setupAllPanels, 400);
 setTimeout(setupAllPanels, 1800);
+
+// ── Expose graph explorer + analyse functions to global scope (used by onclick= attributes) ──
+window.sigSidebarToggle     = sigSidebarToggle;
+window.addGraphPanel        = addGraphPanel;
+window.removeGraphPanel     = removeGraphPanel;
+window.duplicateGraphPanel  = duplicateGraphPanel;
+window.addCurveToPanel      = addCurveToPanel;
+window.removeCurveFromPanel = removeCurveFromPanel;
+window.setGraphLayout       = setGraphLayout;
+window.toggleMapPanel       = toggleMapPanel;
+window.setGraphTool         = setGraphTool;
+window.resetGraphZoom       = resetGraphZoom;
+window.selectAnalysis       = selectAnalysis;
+window.renderAnalysisPanels = renderAnalysisPanels;
+window.buildSignalSidebar   = buildSignalSidebar;
+window.refreshAllPanelCharts = refreshAllPanelCharts;
+window.buildGraphMapTrack   = buildGraphMapTrack;
 
 })();
 </script>
