@@ -231,8 +231,56 @@ body::before {
   white-space:nowrap; pointer-events:none; z-index:5;
 }
 
-/* Map panel body */
-.g-map-body { width:100%; height:100%; position:relative; }
+/* ── MAP SIDEBAR (graphs tab) ── */
+#graph-map-sidebar {
+  display:none; flex-shrink:0; width:280px; position:relative;
+  background:var(--surface); border-right:1px solid var(--border);
+  overflow:hidden;
+}
+#graph-map-sidebar.visible { display:block; }
+#graph-map-div { width:100%; height:100%; }
+#graph-map-resize {
+  position:absolute; top:0; right:0; bottom:0; width:6px;
+  cursor:col-resize; z-index:10;
+  transition:background .15s;
+}
+#graph-map-resize:hover { background:rgba(0,212,255,0.25); }
+
+/* ── ARMED BAR ── */
+#graphs-armed-bar {
+  display:flex; align-items:center; gap:4px; flex-wrap:wrap; flex-shrink:0;
+  padding:4px 10px; background:var(--surface); border-bottom:1px solid var(--border);
+  font-family:var(--font-hud); font-size:7px; letter-spacing:1px;
+}
+.g-arm-label { color:var(--dim); margin-right:2px; }
+.g-arm-btn {
+  padding:2px 7px; border-radius:3px; cursor:pointer;
+  font-family:var(--font-hud); font-size:7px; letter-spacing:1px;
+  background:var(--surface2); color:var(--dim2); border:1px solid var(--border);
+  transition:all .15s; white-space:nowrap;
+}
+.g-arm-btn:hover { border-color:var(--border2); color:var(--text); }
+.g-arm-btn.g-active { background:rgba(255,179,64,0.12); border-color:rgba(255,179,64,0.4); color:var(--accent2); }
+
+/* ── HELP PANEL ── */
+#g-help-panel {
+  display:none; position:absolute; right:10px; top:30px; z-index:50;
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:var(--r); padding:10px 14px; min-width:280px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.5);
+}
+#g-help-panel.visible { display:block; }
+.g-help-row {
+  display:flex; align-items:center; gap:8px;
+  padding:3px 0; font-family:var(--font-mono); font-size:10px;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.g-help-row:last-child { border:none; }
+.g-help-key {
+  min-width:140px; color:var(--accent3);
+  font-family:var(--font-mono); font-size:9px;
+}
+.g-help-desc { color:var(--dim2); font-size:9px; }
 
 /* ── ANALYSE TAB ── */
 #analyse-selector {
@@ -1607,13 +1655,25 @@ canvas.chart { width: 100%; height: 100%; }
         <span class="sig-sidebar-title">SIGNAUX</span>
         <span class="sig-sidebar-toggle">◀</span>
       </div>
-      <div class="sig-list" id="sig-list">
-        <!-- Populated by buildSignalSidebar() -->
-      </div>
+      <div class="sig-list" id="sig-list"></div>
+    </div>
+
+    <!-- Sidebar carte (togglable, resizable) -->
+    <div id="graph-map-sidebar">
+      <div id="graph-map-div"></div>
+      <div id="graph-map-resize"></div>
     </div>
 
     <!-- Zone principale -->
-    <div id="graphs-main">
+    <div id="graphs-main" style="position:relative;">
+
+      <!-- Barre phases armées -->
+      <div id="graphs-armed-bar">
+        <span class="g-arm-label">ARMÉ</span>
+        <button class="g-arm-btn g-active" id="g-arm-all" onclick="gSetArmedRange('all')">TOUT</button>
+        <div id="g-arm-phases" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+      </div>
+
       <!-- Toolbar -->
       <div id="graphs-toolbar">
         <span class="g-tlabel">LAYOUT</span>
@@ -1622,16 +1682,30 @@ canvas.chart { width: 100%; height: 100%; }
         <button class="g-tbtn" id="btn-layout-2x2" onclick="setGraphLayout('2x2')">2×2</button>
         <button class="g-tbtn" id="btn-layout-3x2" onclick="setGraphLayout('3x2')">3×2</button>
         <div class="g-tsep"></div>
-        <button class="g-tbtn g-map-on" id="btn-map-toggle" onclick="toggleMapPanel()">🗺 CARTE</button>
+        <button class="g-tbtn" id="btn-map-toggle" onclick="toggleMapPanel()">🗺 CARTE</button>
         <div class="g-tsep"></div>
         <button class="g-tbtn" id="btn-zoom-lock" onclick="toggleZoomLock()" title="Verrouiller mode zoom (ou tenir Shift)">⊡ ZOOM</button>
         <button class="g-tbtn" onclick="resetGraphZoom()" title="Vue complète (ou double-clic)">↺ RESET</button>
+        <div class="g-tsep"></div>
+        <button class="g-tbtn" onclick="toggleHelpPanel()" title="Aide navigation">? AIDE</button>
         <button class="g-tadd" onclick="addGraphPanel()">＋ PANEL</button>
       </div>
+
       <!-- Panels grid -->
-      <div id="panels-grid" style="grid-template-columns:1fr;grid-template-rows:1fr 1fr;">
-        <!-- Populated by initGraphExplorer() -->
+      <div id="panels-grid" style="grid-template-columns:1fr;grid-template-rows:1fr 1fr;"></div>
+
+      <!-- Help panel (déroulant) -->
+      <div id="g-help-panel">
+        <div style="font-family:var(--font-hud);font-size:8px;letter-spacing:2px;color:var(--accent);margin-bottom:8px;">NAVIGATION GRAPHES</div>
+        <div class="g-help-row"><span class="g-help-key">Clic + glisser</span><span class="g-help-desc">Pan (déplacer la vue)</span></div>
+        <div class="g-help-row"><span class="g-help-key">Shift + glisser</span><span class="g-help-desc">Zoom-box (sélection rectangulaire)</span></div>
+        <div class="g-help-row"><span class="g-help-key">Bouton ⊡ ZOOM</span><span class="g-help-desc">Verrouille mode zoom-box</span></div>
+        <div class="g-help-row"><span class="g-help-key">⌘/Ctrl + molette</span><span class="g-help-desc">Zoom X centré curseur</span></div>
+        <div class="g-help-row"><span class="g-help-key">Double-clic</span><span class="g-help-desc">Reset vue complète</span></div>
+        <div class="g-help-row"><span class="g-help-key">↺ RESET</span><span class="g-help-desc">Reset vue complète</span></div>
+        <div class="g-help-row"><span class="g-help-key">Glisser signal → panel</span><span class="g-help-desc">Ajouter une courbe</span></div>
       </div>
+
     </div>
 
   </div>
@@ -2515,6 +2589,7 @@ function initFlight(data) {
   if (typeof buildSignalSidebar === 'function') buildSignalSidebar();
   if (typeof refreshAllPanelCharts === 'function') refreshAllPanelCharts();
   if (typeof buildGraphMapTrack === 'function') buildGraphMapTrack();
+  if (typeof buildArmedBar === 'function') buildArmedBar();
 }
 
 function formatTime(s) {
@@ -9725,11 +9800,7 @@ if (typeof _origInit === 'function') {
       if (t.dataset.tab === 'graphs') {
         setTimeout(function() {
           refreshAllPanelCharts();
-          if (gMapLeaflet) {
-            gMapLeaflet.invalidateSize();
-          } else if (gMapPanelVisible) {
-            addMapPanel();
-          }
+          if (gMapLeaflet) gMapLeaflet.invalidateSize();
         }, 80);
       }
       if (t.dataset.tab === 'analyse') {
@@ -9756,12 +9827,21 @@ var SIG_GROUPS = [
     { key:'roll_PID',   color:'#00ff9d' },
     { key:'pitch_PID',  color:'#00d4ff' },
     { key:'yaw_PID',    color:'#bf5af2' },
+    { key:'roll_P',     color:'#00ff9d' },
+    { key:'roll_I',     color:'#ffb340' },
+    { key:'roll_D',     color:'#ff453a' },
+    { key:'pitch_P',    color:'#00d4ff' },
+    { key:'pitch_I',    color:'#ff6b35' },
+    { key:'pitch_D',    color:'#bf5af2' },
   ]},
   { label: 'MOTEURS', sigs: [
     { key:'m1_PWM',     color:'#ff453a' },
     { key:'m3_PWM',     color:'#ff6b35' },
     { key:'m2_PWM',     color:'#ffb340' },
     { key:'m4_PWM',     color:'#ffd700' },
+    { key:'m5_PWM',     color:'#00ff9d' },
+    { key:'m6_PWM',     color:'#00d4ff' },
+    { key:'thro_des',   color:'#bf5af2' },
   ]},
   { label: 'SERVOS', sigs: [
     { key:'s1_PWM',     color:'#00d4ff' },
@@ -9769,6 +9849,8 @@ var SIG_GROUPS = [
     { key:'s3_PWM',     color:'#00ff9d' },
     { key:'s4_PWM',     color:'#ffb340' },
     { key:'s5_PWM',     color:'#ff6b35' },
+    { key:'s6_PWM',     color:'#ff453a' },
+    { key:'s7_PWM',     color:'#ffd700' },
   ]},
   { label: 'IMU', sigs: [
     { key:'AccX',       color:'#ff453a' },
@@ -9777,26 +9859,46 @@ var SIG_GROUPS = [
     { key:'GyroX',      color:'#ff453a' },
     { key:'GyroY',      color:'#00ff9d' },
     { key:'GyroZ',      color:'#00d4ff' },
+    { key:'MagX',       color:'#bf5af2' },
+    { key:'MagY',       color:'#ffd700' },
+    { key:'MagZ',       color:'#ff6b35' },
   ]},
-  { label: 'GPS / BAT', sigs: [
+  { label: 'GPS / NAV', sigs: [
     { key:'gps_alt_m',  color:'#00d4ff' },
     { key:'gps_speed_ms',color:'#00ff9d'},
-    { key:'vbat_V',     color:'#ffb340' },
+    { key:'gps_lat',    color:'#ffb340' },
+    { key:'gps_lon',    color:'#ff6b35' },
     { key:'home_dist_m',color:'#ff453a' },
+    { key:'gps_sats',   color:'#bf5af2' },
+    { key:'gps_valid',  color:'#ffd700' },
+  ]},
+  { label: 'BATTERIE', sigs: [
+    { key:'vbat_V',     color:'#ffb340' },
+    { key:'current_A',  color:'#ff453a' },
+    { key:'mAh',        color:'#bf5af2' },
+    { key:'vbat_filt',  color:'#ffd700' },
   ]},
   { label: 'RC', sigs: [
     { key:'ch1',        color:'#00ff9d' },
     { key:'ch2',        color:'#00d4ff' },
     { key:'ch3',        color:'#ffb340' },
     { key:'ch4',        color:'#bf5af2' },
-    { key:'thro_des',   color:'#ff453a' },
+    { key:'ch5',        color:'#ff453a' },
+    { key:'ch6',        color:'#ff6b35' },
+    { key:'ch7',        color:'#ffd700' },
+    { key:'ch8',        color:'#00ff9d' },
+  ]},
+  { label: 'VOL', sigs: [
+    { key:'armed',      color:'#ff453a' },
+    { key:'flight_mode',color:'#00d4ff' },
+    { key:'dt_us',      color:'#bf5af2' },
+    { key:'loop_time',  color:'#ffd700' },
   ]},
 ];
 
 var gPanels = [];
 var gCharts = {};
 var gZoomLocked = false;
-var gMapPanelVisible = true;
 var gDragSig = null;
 var gMouseDrag = null; // { key, color, ghost }
 
@@ -10039,43 +10141,6 @@ function refreshPanelGridLayout() {
 
 var gMapLeaflet = null;
 
-function toggleMapPanel() {
-  gMapPanelVisible = !gMapPanelVisible;
-  var btn = document.getElementById('btn-map-toggle');
-  btn.classList.toggle('g-map-on', gMapPanelVisible);
-  var existing = document.getElementById('gp-map');
-  if (gMapPanelVisible && !existing) {
-    addMapPanel();
-  } else if (!gMapPanelVisible && existing) {
-    existing.remove();
-    gPanels = gPanels.filter(function(p) { return p.id !== 'gp-map'; });
-    refreshPanelGridLayout();
-  }
-}
-
-function addMapPanel() {
-  var panel = document.createElement('div');
-  panel.className = 'g-panel';
-  panel.id = 'gp-map';
-  panel.innerHTML = '<div class="g-panel-header">' +
-    '<div class="g-curve-tags"><span style="font-family:var(--font-hud);font-size:8px;letter-spacing:1px;color:var(--accent3);">🗺 CARTE GPS</span>' +
-    '<span style="font-size:8px;color:var(--dim2);margin-left:6px;">synchronisée avec curseur</span></div>' +
-    '<div class="g-panel-btns"><button class="g-pbtn close" onclick="toggleMapPanel()">✕</button></div>' +
-    '</div>' +
-    '<div class="g-canvas-wrap">' +
-    '<div id="g-map-div" style="width:100%;height:100%;"></div>' +
-    '</div>';
-  document.getElementById('panels-grid').appendChild(panel);
-  gPanels.push({ id: 'gp-map', curves: [], isMap: true });
-  refreshPanelGridLayout();
-  if (!gMapLeaflet) {
-    setTimeout(function() {
-      gMapLeaflet = L.map('g-map-div', { zoomControl: true, attributionControl: false });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(gMapLeaflet);
-      if (typeof flightData !== 'undefined' && flightData.length) buildGraphMapTrack();
-    }, 50);
-  }
-}
 
 function buildGraphMapTrack() {
   if (!gMapLeaflet || typeof flightData === 'undefined' || !flightData.length) return;
@@ -10123,38 +10188,158 @@ function resetGraphZoom() {
   refreshAllPanelCharts();
 }
 
+function toggleHelpPanel() {
+  var p = document.getElementById('g-help-panel');
+  if (p) p.classList.toggle('visible');
+}
+
+// ── Armed phases bar ──
+function buildArmedBar() {
+  var phases = document.getElementById('g-arm-phases');
+  if (!phases || typeof flightData === 'undefined' || !flightData.length) return;
+  phases.innerHTML = '';
+  // Detect armed segments
+  var segments = [];
+  var inArmed = false, segStart = 0;
+  for (var i = 0; i < flightData.length; i++) {
+    var a = flightData[i].armed == 1 || flightData[i].armed === '1';
+    if (a && !inArmed) { segStart = i; inArmed = true; }
+    if (!a && inArmed) { segments.push({ start: segStart, end: i - 1 }); inArmed = false; }
+  }
+  if (inArmed) segments.push({ start: segStart, end: flightData.length - 1 });
+  if (!segments.length) return;
+  var t0 = flightData[0].timestamp_us;
+  segments.forEach(function(seg, idx) {
+    var tStart = (flightData[seg.start].timestamp_us - t0) / 1e6;
+    var tEnd   = (flightData[seg.end].timestamp_us   - t0) / 1e6;
+    var label  = 'A' + (idx + 1) + ' ' + tStart.toFixed(0) + '-' + tEnd.toFixed(0) + 's';
+    var btn = document.createElement('button');
+    btn.className = 'g-arm-btn';
+    btn.textContent = label;
+    btn.title = 'Phase armée ' + (idx+1) + ' ±10s';
+    (function(s) { btn.addEventListener('click', function() { gSetArmedRange(s); }); })(seg);
+    phases.appendChild(btn);
+  });
+}
+
+function gSetArmedRange(seg) {
+  // Update active button
+  document.querySelectorAll('#graphs-armed-bar .g-arm-btn').forEach(function(b) { b.classList.remove('g-active'); });
+  if (seg === 'all') {
+    gZoomRange = null;
+    document.getElementById('g-arm-all').classList.add('g-active');
+  } else {
+    if (typeof flightData === 'undefined' || !flightData.length) return;
+    var PAD = Math.round(10 * 500); // ±10s à 500Hz
+    var start = Math.max(0, seg.start - PAD);
+    var end   = Math.min(flightData.length - 1, seg.end + PAD);
+    gZoomRange = { minIdx: start, maxIdx: end };
+    // Mark clicked button active
+    event.target.classList.add('g-active');
+  }
+  refreshAllPanelCharts();
+}
+
+// ── Map sidebar ──
+function toggleMapPanel() {
+  var sidebar = document.getElementById('graph-map-sidebar');
+  var btn     = document.getElementById('btn-map-toggle');
+  if (!sidebar) return;
+  var visible = sidebar.classList.toggle('visible');
+  if (btn) btn.classList.toggle('g-map-on', visible);
+  if (visible && !gMapLeaflet) {
+    setTimeout(function() {
+      gMapLeaflet = L.map('graph-map-div', { zoomControl: true, attributionControl: false });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(gMapLeaflet);
+      if (typeof flightData !== 'undefined' && flightData.length) buildGraphMapTrack();
+    }, 80);
+  } else if (visible && gMapLeaflet) {
+    setTimeout(function() { gMapLeaflet.invalidateSize(); }, 80);
+  }
+  refreshPanelGridLayout();
+}
+
+function setupMapResize() {
+  var handle  = document.getElementById('graph-map-resize');
+  var sidebar = document.getElementById('graph-map-sidebar');
+  if (!handle || !sidebar) return;
+  var resizing = false, startX = 0, startW = 0;
+  handle.addEventListener('mousedown', function(e) {
+    resizing = true; startX = e.clientX; startW = sidebar.offsetWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!resizing) return;
+    var newW = Math.max(160, Math.min(600, startW + (e.clientX - startX)));
+    sidebar.style.width = newW + 'px';
+    if (gMapLeaflet) gMapLeaflet.invalidateSize();
+  });
+  document.addEventListener('mouseup', function() {
+    if (!resizing) return;
+    resizing = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+}
+
 function setupGraphCursorSync() {
   var grid = document.getElementById('panels-grid');
   if (!grid) return;
   grid.style.position = 'relative';
   grid.style.cursor = 'grab';
 
-  // Overlay zoom-box
+  // Overlay zoom-box (span full grid height, constrained X per panel)
   var zoomBox = document.createElement('div');
   zoomBox.style.cssText = 'position:absolute;top:0;bottom:0;pointer-events:none;display:none;z-index:20;' +
     'background:rgba(0,212,255,0.10);border-left:1.5px solid rgba(0,212,255,0.8);border-right:1.5px solid rgba(0,212,255,0.8);';
   grid.appendChild(zoomBox);
 
-  // Curseur partagé + seekTo
-  grid.addEventListener('mousemove', function(e) {
-    var rect = grid.getBoundingClientRect();
-    var pct = (e.clientX - rect.left) / rect.width * 100;
-    var t0   = (typeof flightData !== 'undefined' && flightData.length) ? flightData[0].timestamp_us : 0;
-    var tEnd = (typeof flightData !== 'undefined' && flightData.length) ? flightData[flightData.length-1].timestamp_us : 0;
-    var tSec = (pct / 100) * ((tEnd - t0) / 1e6);
-    showGraphCursor(pct, tSec);
-    if (typeof flightData !== 'undefined' && flightData.length) {
-      var targetUs = t0 + tSec * 1e6;
-      var idx = viewStart;
-      while (idx < viewEnd && flightData[idx].timestamp_us < targetUs) idx++;
-      if (typeof seekTo === 'function') seekTo(idx);
+  // Helper: find data panel under mouse, return { pct, panel }
+  function panelUnderMouse(clientX, clientY) {
+    for (var i = 0; i < gPanels.length; i++) {
+      var p = gPanels[i];
+      if (p.isMap) continue;
+      var el = document.getElementById(p.id);
+      if (!el) continue;
+      var pr = el.getBoundingClientRect();
+      if (clientX >= pr.left && clientX <= pr.right && clientY >= pr.top && clientY <= pr.bottom) {
+        return { pct: (clientX - pr.left) / pr.width, rect: pr, panelId: p.id };
+      }
     }
-    // Curseur crosshair quand Shift tenu
+    return null;
+  }
+
+  // Compute tSec from panel-local pct and visible range
+  function pctToTSec(pct) {
+    if (typeof flightData === 'undefined' || !flightData.length) return 0;
+    var minIdx = gZoomRange ? Math.max(0, gZoomRange.minIdx) : viewStart;
+    var maxIdx = gZoomRange ? Math.min(flightData.length-1, gZoomRange.maxIdx) : viewEnd;
+    var t0vis = flightData[minIdx].timestamp_us;
+    var t1vis = flightData[maxIdx].timestamp_us;
+    return (t0vis + pct * (t1vis - t0vis)) / 1e6;
+  }
+
+  // Curseur partagé + seekTo — pct calculé dans le panel sous la souris
+  grid.addEventListener('mousemove', function(e) {
+    var hit = panelUnderMouse(e.clientX, e.clientY);
+    if (!hit) { hideGraphCursor(); return; }
+    var tSec = pctToTSec(hit.pct);
+    showGraphCursor(hit.pct * 100, tSec);
+    if (typeof flightData !== 'undefined' && flightData.length && typeof seekTo === 'function') {
+      var minIdx = gZoomRange ? Math.max(0, gZoomRange.minIdx) : viewStart;
+      var maxIdx = gZoomRange ? Math.min(flightData.length-1, gZoomRange.maxIdx) : viewEnd;
+      var targetUs = flightData[minIdx].timestamp_us + hit.pct * (flightData[maxIdx].timestamp_us - flightData[minIdx].timestamp_us);
+      var idx = minIdx;
+      while (idx < maxIdx && flightData[idx].timestamp_us < targetUs) idx++;
+      seekTo(idx);
+    }
     if (!gZoomLocked) grid.style.cursor = e.shiftKey ? 'crosshair' : 'grab';
   });
   grid.addEventListener('mouseleave', hideGraphCursor);
 
-  // Ctrl/Cmd + scroll → zoom X centré curseur
+  // Ctrl/Cmd + scroll → zoom X smooth, centré sur panel sous curseur
   grid.addEventListener('wheel', function(e) {
     if (!e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
@@ -10163,29 +10348,35 @@ function setupGraphCursorSync() {
     var top   = gZoomRange ? gZoomRange.maxIdx : viewEnd;
     var total = top - base;
     if (total < 2) return;
-    var factor = e.deltaY > 0 ? 1.08 : 0.926;
-    var rect   = grid.getBoundingClientRect();
-    var pct    = (e.clientX - rect.left) / rect.width;
+    // Smooth factor: 1.04 per tick
+    var factor = e.deltaY > 0 ? 1.04 : 0.962;
+    // Anchor on panel under cursor
+    var hit = panelUnderMouse(e.clientX, e.clientY);
+    var pct = hit ? hit.pct : 0.5;
     var center = base + Math.round(pct * total);
-    var half   = Math.round((total * factor) / 2);
-    var newStart = Math.max(0, center - half);
-    var newEnd   = Math.min(flightData.length - 1, center + half);
+    var newTotal = Math.round(total * factor);
+    var newStart = Math.max(0, center - Math.round(pct * newTotal));
+    var newEnd   = Math.min(flightData.length - 1, newStart + newTotal);
     if (newEnd - newStart < 10) return;
     gZoomRange = { minIdx: newStart, maxIdx: newEnd };
     refreshAllPanelCharts();
   }, { passive: false });
 
-  // Mousedown : pan OU zoom-box selon Shift / gZoomLocked
-  var dragState = null; // { mode: 'pan'|'zoombox', ... }
+  // Mousedown : pan OU zoom-box (Shift ou gZoomLocked)
+  var dragState = null;
 
   grid.addEventListener('mousedown', function(e) {
     if (e.button !== 0) return;
     var isZoom = e.shiftKey || gZoomLocked;
-    var rect = grid.getBoundingClientRect();
+    var hit = panelUnderMouse(e.clientX, e.clientY);
     if (isZoom) {
-      var x0 = e.clientX - rect.left;
-      dragState = { mode: 'zoombox', x0: x0, rect: rect };
-      zoomBox.style.left  = x0 + 'px';
+      var gridRect = grid.getBoundingClientRect();
+      var panelRect = hit ? hit.rect : gridRect;
+      var x0InPanel = e.clientX - panelRect.left;
+      var panelLeftInGrid = panelRect.left - gridRect.left;
+      dragState = { mode: 'zoombox', panelRect: panelRect, panelLeftInGrid: panelLeftInGrid,
+                    gridRect: gridRect, x0: x0InPanel };
+      zoomBox.style.left = (panelLeftInGrid + x0InPanel) + 'px';
       zoomBox.style.width = '0px';
       zoomBox.style.display = 'block';
       grid.style.cursor = 'crosshair';
@@ -10193,7 +10384,9 @@ function setupGraphCursorSync() {
       if (typeof flightData === 'undefined' || !flightData.length) return;
       var base = gZoomRange ? gZoomRange.minIdx : viewStart;
       var top  = gZoomRange ? gZoomRange.maxIdx : viewEnd;
-      dragState = { mode: 'pan', x: e.clientX, startMin: base, startMax: top, rect: rect };
+      var panelRect2 = hit ? hit.rect : grid.getBoundingClientRect();
+      dragState = { mode: 'pan', x: e.clientX, startMin: base, startMax: top,
+                    panelWidth: panelRect2.width };
       grid.style.cursor = 'grabbing';
     }
     e.preventDefault();
@@ -10201,18 +10394,18 @@ function setupGraphCursorSync() {
 
   document.addEventListener('mousemove', function(e) {
     if (!dragState) return;
-    var rect = dragState.rect;
     if (dragState.mode === 'zoombox') {
-      var curX = e.clientX - rect.left;
+      var pr = dragState.panelRect;
+      var curX = Math.max(0, Math.min(e.clientX - pr.left, pr.width));
       var x1 = Math.min(dragState.x0, curX);
       var x2 = Math.max(dragState.x0, curX);
-      zoomBox.style.left  = x1 + 'px';
+      zoomBox.style.left  = (dragState.panelLeftInGrid + x1) + 'px';
       zoomBox.style.width = (x2 - x1) + 'px';
     } else {
       if (typeof flightData === 'undefined' || !flightData.length) return;
       var dx    = e.clientX - dragState.x;
       var total = dragState.startMax - dragState.startMin;
-      var shift = -Math.round((dx / rect.width) * total);
+      var shift = -Math.round((dx / dragState.panelWidth) * total);
       var newMin = dragState.startMin + shift;
       var newMax = dragState.startMax + shift;
       if (newMin < 0) { newMax -= newMin; newMin = 0; }
@@ -10225,12 +10418,12 @@ function setupGraphCursorSync() {
 
   document.addEventListener('mouseup', function(e) {
     if (!dragState) return;
-    var rect = dragState.rect;
     if (dragState.mode === 'zoombox') {
       zoomBox.style.display = 'none';
-      var curX  = e.clientX - rect.left;
-      var x1pct = Math.min(dragState.x0, curX) / rect.width;
-      var x2pct = Math.max(dragState.x0, curX) / rect.width;
+      var pr = dragState.panelRect;
+      var curX = Math.max(0, Math.min(e.clientX - pr.left, pr.width));
+      var x1pct = Math.min(dragState.x0, curX) / pr.width;
+      var x2pct = Math.max(dragState.x0, curX) / pr.width;
       if (x2pct - x1pct > 0.01 && typeof flightData !== 'undefined' && flightData.length) {
         var base  = gZoomRange ? gZoomRange.minIdx : viewStart;
         var top   = gZoomRange ? gZoomRange.maxIdx : viewEnd;
@@ -10247,10 +10440,8 @@ function setupGraphCursorSync() {
     grid.style.cursor = gZoomLocked ? 'crosshair' : 'grab';
   });
 
-  // Double-clic → reset vue complète
-  grid.addEventListener('dblclick', function() {
-    resetGraphZoom();
-  });
+  // Double-clic → reset
+  grid.addEventListener('dblclick', resetGraphZoom);
 }
 
 function initGraphExplorer() {
@@ -10328,6 +10519,7 @@ function boot() {
   setupAllPanels();
   setupResizeObserver();
   initGraphExplorer();
+  setupMapResize();
   renderAnalysisPanels();
 }
 
@@ -10355,6 +10547,9 @@ window.renderAnalysisPanels = renderAnalysisPanels;
 window.buildSignalSidebar   = buildSignalSidebar;
 window.refreshAllPanelCharts = refreshAllPanelCharts;
 window.buildGraphMapTrack   = buildGraphMapTrack;
+window.buildArmedBar        = buildArmedBar;
+window.gSetArmedRange       = gSetArmedRange;
+window.toggleHelpPanel      = toggleHelpPanel;
 
 })();
 </script>
