@@ -233,6 +233,45 @@ body::before {
 /* Map panel body */
 .g-map-body { width:100%; height:100%; position:relative; }
 
+/* ── ANALYSE TAB ── */
+#analyse-selector {
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  padding:6px 12px; background:var(--surface); border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.an-slot-lbl { font-family:var(--font-hud); font-size:7px; letter-spacing:2px; }
+.an-slot-a { color:var(--accent); }
+.an-slot-b { color:var(--accent3); }
+.an-chip {
+  padding:3px 10px; border-radius:12px;
+  font-family:var(--font-hud); font-size:7px; letter-spacing:1px;
+  cursor:pointer; border:1px solid var(--border);
+  background:var(--surface2); color:var(--dim2);
+  transition:all .15s; white-space:nowrap;
+}
+.an-chip:hover { border-color:var(--border2); color:var(--text); }
+.an-chip.an-sel-a { background:rgba(0,255,157,0.1); border-color:rgba(0,255,157,0.3); color:var(--accent); }
+.an-chip.an-sel-b { background:rgba(0,212,255,0.1); border-color:rgba(0,212,255,0.3); color:var(--accent3); }
+.an-slot-sep { width:1px; height:18px; background:var(--border); margin:0 4px; }
+#analyse-panels { flex:1; display:flex; gap:6px; padding:8px; overflow:hidden; }
+.an-panel-wrap {
+  flex:1; background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+  display:flex; flex-direction:column; overflow:hidden; min-width:0;
+}
+.an-panel-header {
+  padding:5px 10px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:8px; flex-shrink:0;
+}
+.an-panel-title { font-family:var(--font-hud); font-size:9px; letter-spacing:2px; }
+.an-panel-title.a { color:var(--accent); }
+.an-panel-title.b { color:var(--accent3); }
+.an-panel-body { flex:1; overflow:auto; }
+.an-empty {
+  flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;
+  gap:8px; color:var(--dim); border:1px dashed var(--border); border-radius:var(--r);
+  font-family:var(--font-mono); font-size:11px;
+}
+
 /* ---- HEADER ---- */
 header {
   display: flex; align-items: center; justify-content: space-between;
@@ -1601,7 +1640,34 @@ canvas.chart { width: 100%; height: 100%; }
 <!-- ══ TAB ANALYSE ══ -->
 <div class="tab-pane" id="pane-analyse">
 
-  <!-- PID ANALYSE -->
+  <!-- Sélecteur chips -->
+  <div id="analyse-selector">
+    <span class="an-slot-lbl an-slot-a">A</span>
+    <div id="an-chips-a" style="display:flex;gap:4px;">
+      <span class="an-chip an-sel-a" data-slot="a" data-val="pid"    onclick="selectAnalysis('a','pid')">📐 PID</span>
+      <span class="an-chip"          data-slot="a" data-val="fft"    onclick="selectAnalysis('a','fft')">〰 VIBRATIONS</span>
+      <span class="an-chip"          data-slot="a" data-val="ekf"    onclick="selectAnalysis('a','ekf')">🧭 EKF</span>
+      <span class="an-chip"          data-slot="a" data-val="traj"   onclick="selectAnalysis('a','traj')">🌐 TRAJECTOIRE</span>
+      <span class="an-chip"          data-slot="a" data-val="energy" onclick="selectAnalysis('a','energy')">⚡ ÉNERGIE</span>
+      <span class="an-chip"          data-slot="a" data-val="motor"  onclick="selectAnalysis('a','motor')">🔧 MOTEUR</span>
+    </div>
+    <div class="an-slot-sep"></div>
+    <span class="an-slot-lbl an-slot-b">B</span>
+    <div id="an-chips-b" style="display:flex;gap:4px;">
+      <span class="an-chip"          data-slot="b" data-val="pid"    onclick="selectAnalysis('b','pid')">📐 PID</span>
+      <span class="an-chip an-sel-b" data-slot="b" data-val="fft"    onclick="selectAnalysis('b','fft')">〰 VIBRATIONS</span>
+      <span class="an-chip"          data-slot="b" data-val="ekf"    onclick="selectAnalysis('b','ekf')">🧭 EKF</span>
+      <span class="an-chip"          data-slot="b" data-val="traj"   onclick="selectAnalysis('b','traj')">🌐 TRAJECTOIRE</span>
+      <span class="an-chip"          data-slot="b" data-val="energy" onclick="selectAnalysis('b','energy')">⚡ ÉNERGIE</span>
+      <span class="an-chip"          data-slot="b" data-val="motor"  onclick="selectAnalysis('b','motor')">🔧 MOTEUR</span>
+    </div>
+  </div>
+
+  <!-- Source panels (hidden, used as cloning source) -->
+  <div id="an-sources" style="display:none;">
+
+    <!-- PID ANALYSE -->
+    <div id="an-src-pid">
   <div style="padding: 0 20px 20px;">
     <div class="panel">
       <div class="panel-header">
@@ -1723,8 +1789,10 @@ canvas.chart { width: 100%; height: 100%; }
       </div>
     </div>
   </div>
+    </div><!-- /an-src-pid -->
 
-  <!-- 3D GPS TRAJECTORY -->
+    <div id="an-src-traj">
+    <!-- 3D GPS TRAJECTORY -->
   <div style="padding: 0 20px 20px;">
     <div class="panel">
       <div class="panel-header">
@@ -1773,8 +1841,9 @@ canvas.chart { width: 100%; height: 100%; }
       </div>
     </div>
   </div>
+    </div><!-- /an-src-traj -->
 
-
+    <div id="an-src-ekf">
   <!-- EKF VELOCITY ESTIMATION -->
   <div style="padding: 0 20px 20px;">
     <div class="panel">
@@ -1828,6 +1897,9 @@ canvas.chart { width: 100%; height: 100%; }
       </div>
     </div>
   </div>
+    </div><!-- /an-src-ekf -->
+
+    <div id="an-src-energy">
   <!-- ENERGY & BATTERY -->
   <div style="padding: 0 20px 20px;">
     <div class="panel">
@@ -1846,7 +1918,9 @@ canvas.chart { width: 100%; height: 100%; }
       </div>
     </div>
   </div>
+    </div><!-- /an-src-energy -->
 
+    <div id="an-src-fft">
   <!-- VIBRATION ANALYSIS -->
   <div style="padding: 0 20px 20px;">
     <div class="panel">
@@ -1902,7 +1976,9 @@ canvas.chart { width: 100%; height: 100%; }
       </div>
     </div>
   </div>
+    </div><!-- /an-src-fft -->
 
+    <div id="an-src-motor">
   <!-- MOTOR PERFORMANCE -->
   <div style="padding: 0 20px 20px;">
     <div class="panel">
@@ -1986,6 +2062,33 @@ canvas.chart { width: 100%; height: 100%; }
         </div>
 
       </div>
+    </div>
+  </div>
+    </div><!-- /an-src-motor -->
+
+  </div><!-- /an-sources -->
+
+  <!-- Panels display area -->
+  <div id="analyse-panels">
+    <div id="an-empty" class="an-empty" style="display:flex;">
+      <div style="font-size:24px;opacity:0.3">🔬</div>
+      Sélectionne une analyse ci-dessus
+    </div>
+    <!-- Panel A -->
+    <div class="an-panel-wrap" id="an-panel-a" style="display:none;">
+      <div class="an-panel-header">
+        <span class="an-panel-title a" id="an-title-a">—</span>
+        <span style="font-size:9px;color:var(--dim2);margin-left:auto;" id="an-meta-a"></span>
+      </div>
+      <div class="an-panel-body" id="an-body-a"></div>
+    </div>
+    <!-- Panel B -->
+    <div class="an-panel-wrap" id="an-panel-b" style="display:none;">
+      <div class="an-panel-header">
+        <span class="an-panel-title b" id="an-title-b">—</span>
+        <span style="font-size:9px;color:var(--dim2);margin-left:auto;" id="an-meta-b"></span>
+      </div>
+      <div class="an-panel-body" id="an-body-b"></div>
     </div>
   </div>
 
@@ -9617,6 +9720,9 @@ if (typeof _origInit === 'function') {
           }
         }, 50);
       }
+      if (t.dataset.tab === 'analyse') {
+        renderAnalysisPanels();
+      }
     });
   });
 })();
@@ -10046,6 +10152,62 @@ function initGraphExplorer() {
   addMapPanel();
 }
 
+// ── ANALYSE TAB CHIP SELECTOR ──
+var AN_DEFS = {
+  pid:    { title: '📐 ANALYSE PID',      meta: 'roll · pitch · yaw',   srcId: 'an-src-pid' },
+  fft:    { title: '〰 VIBRATIONS FFT',   meta: 'AccX · AccY · AccZ',   srcId: 'an-src-fft' },
+  ekf:    { title: '🧭 ANALYSE EKF',      meta: 'vélocité estimée',      srcId: 'an-src-ekf' },
+  traj:   { title: '🌐 TRAJECTOIRE 3D',   meta: 'GPS lat/lon/alt',       srcId: 'an-src-traj' },
+  energy: { title: '⚡ ÉNERGIE',           meta: 'batterie · puissance',  srcId: 'an-src-energy' },
+  motor:  { title: '🔧 MOTEUR',            meta: 'point de fonctionnement', srcId: 'an-src-motor' },
+};
+
+var anSlotA = 'pid';
+var anSlotB = 'fft';
+
+function selectAnalysis(slot, val) {
+  if (slot === 'a') {
+    anSlotA = (anSlotA === val) ? null : val;
+  } else {
+    anSlotB = (anSlotB === val) ? null : val;
+  }
+  ['a','b'].forEach(function(s) {
+    var cur = s === 'a' ? anSlotA : anSlotB;
+    document.querySelectorAll('#an-chips-' + s + ' .an-chip').forEach(function(c) {
+      c.classList.remove('an-sel-a', 'an-sel-b');
+      if (c.dataset.val === cur) c.classList.add('an-sel-' + s);
+    });
+  });
+  renderAnalysisPanels();
+}
+
+function renderAnalysisPanels() {
+  var empty = document.getElementById('an-empty');
+  var panA  = document.getElementById('an-panel-a');
+  var panB  = document.getElementById('an-panel-b');
+  var hasA  = !!anSlotA;
+  var hasB  = !!anSlotB;
+  if (!empty || !panA || !panB) return;
+  empty.style.display = (!hasA && !hasB) ? 'flex' : 'none';
+  panA.style.display  = hasA ? 'flex' : 'none';
+  panB.style.display  = hasB ? 'flex' : 'none';
+  if (hasA) injectAnalysisPanel('a', anSlotA);
+  if (hasB) injectAnalysisPanel('b', anSlotB);
+}
+
+function injectAnalysisPanel(slot, val) {
+  var def = AN_DEFS[val];
+  if (!def) return;
+  document.getElementById('an-title-' + slot).textContent = def.title;
+  document.getElementById('an-meta-'  + slot).textContent = def.meta;
+  var body = document.getElementById('an-body-' + slot);
+  var src  = document.getElementById(def.srcId);
+  if (body && src) {
+    body.innerHTML = '';
+    body.appendChild(src.cloneNode(true));
+  }
+}
+
 // ════════════════════════════════════════════════════
 //  BOOT
 // ════════════════════════════════════════════════════
@@ -10053,6 +10215,7 @@ function boot() {
   setupAllPanels();
   setupResizeObserver();
   initGraphExplorer();
+  renderAnalysisPanels();
 }
 
 if (document.readyState === 'loading') {
