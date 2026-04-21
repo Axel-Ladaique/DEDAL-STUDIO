@@ -1624,9 +1624,8 @@ canvas.chart { width: 100%; height: 100%; }
         <div class="g-tsep"></div>
         <button class="g-tbtn g-map-on" id="btn-map-toggle" onclick="toggleMapPanel()">🗺 CARTE</button>
         <div class="g-tsep"></div>
-        <button class="g-tbtn" id="btn-zoom" onclick="setGraphTool('zoom')">🔍 ZOOM</button>
-        <button class="g-tbtn g-active" id="btn-pan" onclick="setGraphTool('pan')">✋ PAN</button>
-        <button class="g-tbtn" onclick="resetGraphZoom()">↺ RESET</button>
+        <button class="g-tbtn" id="btn-zoom-lock" onclick="toggleZoomLock()" title="Verrouiller mode zoom (ou tenir Shift)">⊡ ZOOM</button>
+        <button class="g-tbtn" onclick="resetGraphZoom()" title="Vue complète (ou double-clic)">↺ RESET</button>
         <button class="g-tadd" onclick="addGraphPanel()">＋ PANEL</button>
       </div>
       <!-- Panels grid -->
@@ -9796,7 +9795,7 @@ var SIG_GROUPS = [
 
 var gPanels = [];
 var gCharts = {};
-var gTool   = 'pan';
+var gZoomLocked = false;
 var gMapPanelVisible = true;
 var gDragSig = null;
 var gMouseDrag = null; // { key, color, ghost }
@@ -10111,12 +10110,12 @@ function hideGraphCursor() {
   });
 }
 
-function setGraphTool(tool) {
-  gTool = tool;
-  var btnZoom = document.getElementById('btn-zoom');
-  var btnPan  = document.getElementById('btn-pan');
-  if (btnZoom) btnZoom.classList.toggle('g-active', tool === 'zoom');
-  if (btnPan)  btnPan.classList.toggle('g-active', tool === 'pan');
+function toggleZoomLock() {
+  gZoomLocked = !gZoomLocked;
+  var btn = document.getElementById('btn-zoom-lock');
+  if (btn) btn.classList.toggle('g-active', gZoomLocked);
+  var grid = document.getElementById('panels-grid');
+  if (grid) grid.style.cursor = gZoomLocked ? 'crosshair' : 'grab';
 }
 
 function resetGraphZoom() {
@@ -10127,13 +10126,22 @@ function resetGraphZoom() {
 function setupGraphCursorSync() {
   var grid = document.getElementById('panels-grid');
   if (!grid) return;
+  grid.style.position = 'relative';
+  grid.style.cursor = 'grab';
+
+  // Overlay zoom-box
+  var zoomBox = document.createElement('div');
+  zoomBox.style.cssText = 'position:absolute;top:0;bottom:0;pointer-events:none;display:none;z-index:20;' +
+    'background:rgba(0,212,255,0.10);border-left:1.5px solid rgba(0,212,255,0.8);border-right:1.5px solid rgba(0,212,255,0.8);';
+  grid.appendChild(zoomBox);
+
+  // Curseur partagé + seekTo
   grid.addEventListener('mousemove', function(e) {
     var rect = grid.getBoundingClientRect();
     var pct = (e.clientX - rect.left) / rect.width * 100;
-    var t0  = (typeof flightData !== 'undefined' && flightData.length) ? flightData[0].timestamp_us : 0;
+    var t0   = (typeof flightData !== 'undefined' && flightData.length) ? flightData[0].timestamp_us : 0;
     var tEnd = (typeof flightData !== 'undefined' && flightData.length) ? flightData[flightData.length-1].timestamp_us : 0;
-    var tMax = (tEnd - t0) / 1e6;
-    var tSec = pct / 100 * tMax;
+    var tSec = (pct / 100) * ((tEnd - t0) / 1e6);
     showGraphCursor(pct, tSec);
     if (typeof flightData !== 'undefined' && flightData.length) {
       var targetUs = t0 + tSec * 1e6;
@@ -10141,19 +10149,23 @@ function setupGraphCursorSync() {
       while (idx < viewEnd && flightData[idx].timestamp_us < targetUs) idx++;
       if (typeof seekTo === 'function') seekTo(idx);
     }
+    // Curseur crosshair quand Shift tenu
+    if (!gZoomLocked) grid.style.cursor = e.shiftKey ? 'crosshair' : 'grab';
   });
   grid.addEventListener('mouseleave', hideGraphCursor);
 
-  // Zoom par scroll molette
+  // Ctrl/Cmd + scroll → zoom X centré curseur
   grid.addEventListener('wheel', function(e) {
+    if (!e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
-    if (!flightData.length) return;
-    var total = (gZoomRange ? gZoomRange.maxIdx - gZoomRange.minIdx : viewEnd - viewStart);
+    if (typeof flightData === 'undefined' || !flightData.length) return;
+    var base  = gZoomRange ? gZoomRange.minIdx : viewStart;
+    var top   = gZoomRange ? gZoomRange.maxIdx : viewEnd;
+    var total = top - base;
     if (total < 2) return;
-    var factor = e.deltaY > 0 ? 1.2 : 0.833;
-    var rect = grid.getBoundingClientRect();
-    var pct  = (e.clientX - rect.left) / rect.width;
-    var base = gZoomRange ? gZoomRange.minIdx : viewStart;
+    var factor = e.deltaY > 0 ? 1.08 : 0.926;
+    var rect   = grid.getBoundingClientRect();
+    var pct    = (e.clientX - rect.left) / rect.width;
     var center = base + Math.round(pct * total);
     var half   = Math.round((total * factor) / 2);
     var newStart = Math.max(0, center - half);
@@ -10163,35 +10175,81 @@ function setupGraphCursorSync() {
     refreshAllPanelCharts();
   }, { passive: false });
 
-  // Pan par drag
-  var gDragPan = null;
+  // Mousedown : pan OU zoom-box selon Shift / gZoomLocked
+  var dragState = null; // { mode: 'pan'|'zoombox', ... }
 
   grid.addEventListener('mousedown', function(e) {
-    if (gTool !== 'pan') return;
-    var base = gZoomRange ? gZoomRange.minIdx : viewStart;
-    var top  = gZoomRange ? gZoomRange.maxIdx : viewEnd;
-    gDragPan = { x: e.clientX, startMin: base, startMax: top };
-    grid.style.cursor = 'grabbing';
+    if (e.button !== 0) return;
+    var isZoom = e.shiftKey || gZoomLocked;
+    var rect = grid.getBoundingClientRect();
+    if (isZoom) {
+      var x0 = e.clientX - rect.left;
+      dragState = { mode: 'zoombox', x0: x0, rect: rect };
+      zoomBox.style.left  = x0 + 'px';
+      zoomBox.style.width = '0px';
+      zoomBox.style.display = 'block';
+      grid.style.cursor = 'crosshair';
+    } else {
+      if (typeof flightData === 'undefined' || !flightData.length) return;
+      var base = gZoomRange ? gZoomRange.minIdx : viewStart;
+      var top  = gZoomRange ? gZoomRange.maxIdx : viewEnd;
+      dragState = { mode: 'pan', x: e.clientX, startMin: base, startMax: top, rect: rect };
+      grid.style.cursor = 'grabbing';
+    }
+    e.preventDefault();
   });
 
-  grid.addEventListener('mouseup', function() {
-    gDragPan = null;
-    grid.style.cursor = '';
+  document.addEventListener('mousemove', function(e) {
+    if (!dragState) return;
+    var rect = dragState.rect;
+    if (dragState.mode === 'zoombox') {
+      var curX = e.clientX - rect.left;
+      var x1 = Math.min(dragState.x0, curX);
+      var x2 = Math.max(dragState.x0, curX);
+      zoomBox.style.left  = x1 + 'px';
+      zoomBox.style.width = (x2 - x1) + 'px';
+    } else {
+      if (typeof flightData === 'undefined' || !flightData.length) return;
+      var dx    = e.clientX - dragState.x;
+      var total = dragState.startMax - dragState.startMin;
+      var shift = -Math.round((dx / rect.width) * total);
+      var newMin = dragState.startMin + shift;
+      var newMax = dragState.startMax + shift;
+      if (newMin < 0) { newMax -= newMin; newMin = 0; }
+      if (newMax >= flightData.length) { newMin -= (newMax - flightData.length + 1); newMax = flightData.length - 1; }
+      if (newMin < 0) newMin = 0;
+      gZoomRange = { minIdx: newMin, maxIdx: newMax };
+      refreshAllPanelCharts();
+    }
   });
 
-  grid.addEventListener('mousemove', function(e) {
-    if (!gDragPan || !flightData.length) return;
-    var rect  = grid.getBoundingClientRect();
-    var dx    = e.clientX - gDragPan.x;
-    var total = gDragPan.startMax - gDragPan.startMin;
-    var shift = -Math.round((dx / rect.width) * total);
-    var newMin = gDragPan.startMin + shift;
-    var newMax = gDragPan.startMax + shift;
-    if (newMin < 0) { newMax -= newMin; newMin = 0; }
-    if (newMax >= flightData.length) { newMin -= (newMax - flightData.length + 1); newMax = flightData.length - 1; }
-    if (newMin < 0) newMin = 0;
-    gZoomRange = { minIdx: newMin, maxIdx: newMax };
-    refreshAllPanelCharts();
+  document.addEventListener('mouseup', function(e) {
+    if (!dragState) return;
+    var rect = dragState.rect;
+    if (dragState.mode === 'zoombox') {
+      zoomBox.style.display = 'none';
+      var curX  = e.clientX - rect.left;
+      var x1pct = Math.min(dragState.x0, curX) / rect.width;
+      var x2pct = Math.max(dragState.x0, curX) / rect.width;
+      if (x2pct - x1pct > 0.01 && typeof flightData !== 'undefined' && flightData.length) {
+        var base  = gZoomRange ? gZoomRange.minIdx : viewStart;
+        var top   = gZoomRange ? gZoomRange.maxIdx : viewEnd;
+        var total = top - base;
+        var newStart = Math.max(0, Math.round(base + x1pct * total));
+        var newEnd   = Math.min(flightData.length - 1, Math.round(base + x2pct * total));
+        if (newEnd - newStart >= 10) {
+          gZoomRange = { minIdx: newStart, maxIdx: newEnd };
+          refreshAllPanelCharts();
+        }
+      }
+    }
+    dragState = null;
+    grid.style.cursor = gZoomLocked ? 'crosshair' : 'grab';
+  });
+
+  // Double-clic → reset vue complète
+  grid.addEventListener('dblclick', function() {
+    resetGraphZoom();
   });
 }
 
@@ -10290,7 +10348,7 @@ window.addCurveToPanel      = addCurveToPanel;
 window.removeCurveFromPanel = removeCurveFromPanel;
 window.setGraphLayout       = setGraphLayout;
 window.toggleMapPanel       = toggleMapPanel;
-window.setGraphTool         = setGraphTool;
+window.toggleZoomLock       = toggleZoomLock;
 window.resetGraphZoom       = resetGraphZoom;
 window.selectAnalysis       = selectAnalysis;
 window.renderAnalysisPanels = renderAnalysisPanels;
