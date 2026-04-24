@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DEDAL Studio</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
   :root {
     --bg: #080c10;
@@ -40,7 +41,43 @@
     color: var(--dim); letter-spacing: 2px; text-transform: uppercase;
   }
 
-  .main { padding: 32px; max-width: 1100px; margin: 0 auto; }
+  .app-layout {
+    display: flex; height: calc(100vh - 53px); overflow: hidden;
+  }
+  .list-panel {
+    flex: 1; min-width: 0; overflow-y: auto; padding: 24px 32px;
+  }
+  .map-panel {
+    width: 420px; flex-shrink: 0;
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+  .map-controls {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    font-family: var(--mono); font-size: 10px;
+  }
+  .map-label { color: var(--dim); letter-spacing: 2px; text-transform: uppercase; margin-right: 4px; }
+  .map-toggle {
+    background: transparent; border: 1px solid var(--border2);
+    color: var(--dim); font-family: var(--mono); font-size: 10px;
+    letter-spacing: 1px; padding: 4px 10px; border-radius: 3px;
+    cursor: pointer; text-transform: uppercase; transition: all .12s;
+  }
+  .map-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .map-toggle.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
+  #map { flex: 1; }
+  .resize-handle {
+    width: 5px; flex-shrink: 0;
+    background: var(--border); cursor: col-resize;
+    transition: background .15s;
+  }
+  .resize-handle:hover, .resize-handle.dragging { background: var(--accent); }
+  .map-no-gps {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 11px; color: var(--dim);
+    letter-spacing: 1px; text-align: center; padding: 24px;
+  }
 
   .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
   .toolbar input[type="search"] {
@@ -80,20 +117,18 @@
     grid-template-columns: 170px 1fr 110px 220px 160px;
     align-items: center; padding: 12px 20px;
     border-bottom: 1px solid var(--border); transition: background .1s;
+    cursor: pointer;
   }
+  .session-row.selected { background: rgba(0,212,255,0.07); }
   .session-row:last-child { border-bottom: none; }
   .session-row:hover { background: rgba(0,212,255,0.03); }
 
   .lid { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: 1px; }
   .session-nickname {
-    font-size: 13px; color: var(--text); cursor: pointer;
-    padding: 3px 6px; border-radius: 3px;
-    border: 1px solid transparent; outline: none;
-    background: transparent; font-family: inherit;
-    transition: border-color .1s; width: 100%;
+    font-size: 13px; color: var(--text);
+    padding: 3px 0;
   }
-  .session-nickname:hover { border-color: var(--border2); }
-  .session-nickname:focus { border-color: var(--accent); background: var(--surface2); }
+  .session-nickname.empty { color: var(--dim); font-style: italic; }
   .date { font-family: var(--mono); font-size: 11px; color: var(--dim); }
 
   .tags { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -179,25 +214,45 @@
   <div class="sub">Flight analysis &amp; HUD generation</div>
 </div>
 
-<div class="main">
-  <div id="banner" class="banner"></div>
+<div class="app-layout">
 
-  <div class="toolbar">
-    <button class="btn" onclick="openImportModal()">+ Importer un log</button>
-    <button class="btn cancel" onclick="openNewModal()">+ Session vide</button>
-    <input type="search" id="search" placeholder="Filtrer…" oninput="renderSessions()">
-  </div>
-
-  <div class="sessions-wrap">
-    <div class="sessions-header">
-      <div>LID</div>
-      <div>Nom</div>
-      <div>Date</div>
-      <div>Log</div>
-      <div></div>
+  <!-- ── liste ── -->
+  <div class="list-panel">
+    <div id="banner" class="banner"></div>
+    <div class="toolbar">
+      <button class="btn" onclick="openImportModal()">+ Importer un log</button>
+      <button class="btn cancel" onclick="openNewModal()">+ Session vide</button>
+      <input type="search" id="search" placeholder="Filtrer…" oninput="renderSessions()">
     </div>
-    <div id="session-list"><div class="empty"><span class="spinner"></span></div></div>
+    <div class="sessions-wrap">
+      <div class="sessions-header">
+        <div>LID</div>
+        <div>Nom</div>
+        <div>Date</div>
+        <div>Log</div>
+        <div></div>
+      </div>
+      <div id="session-list"><div class="empty"><span class="spinner"></span></div></div>
+    </div>
   </div>
+
+  <!-- ── poignée redimensionnement ── -->
+  <div class="resize-handle" id="resize-handle"></div>
+
+  <!-- ── carte ── -->
+  <div class="map-panel" id="map-panel">
+    <div class="map-controls">
+      <span class="map-label">Carte</span>
+      <button class="map-toggle" id="btn-marker" onclick="setMapMode('marker')">Marqueurs</button>
+      <button class="map-toggle active" id="btn-trace"  onclick="setMapMode('trace')">Traces</button>
+      <button class="map-toggle" id="btn-fitall" onclick="fitAllSessions()">⊞</button>
+      <button class="map-toggle" id="btn-deselect"
+        style="margin-left:auto;display:none"
+        onclick="deselectSession()">✕ Tout afficher</button>
+    </div>
+    <div id="map"></div>
+  </div>
+
 </div>
 
 <!-- import log modal -->
@@ -233,8 +288,12 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
+'use strict';
 let sessions = [];
+let selectedLid = null;
+let mapMode = 'trace'; // 'marker' | 'trace'
 
 // ── API ────────────────────────────────────────────────────────────────────
 
@@ -249,12 +308,176 @@ async function api(method, path, body) {
   return r.json();
 }
 
+// ── map ────────────────────────────────────────────────────────────────────
+
+let map = null;
+const mapMarkers = {};   // lid → L.Marker
+const mapTracks = {};    // lid → L.Polyline (all sessions, dim)
+let mapTrack = null;     // selected session track (highlighted)
+
+function initMap() {
+  map = L.map('map', { zoomControl: true, attributionControl: false });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+  }).addTo(map);
+  map.setView([46.5, 2.5], 5); // France par défaut
+}
+
+function _markerIcon(selected) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:12px;height:12px;border-radius:50%;
+      background:${selected ? '#ffcc00' : '#00d4ff'};
+      border:2px solid ${selected ? '#fff' : '#1a2d45'};
+      box-shadow:0 0 6px ${selected ? '#ffcc00' : '#00d4ff'};
+    "></div>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  });
+}
+
+function rebuildMarkers() {
+  // Remove old markers
+  Object.values(mapMarkers).forEach(m => map.removeLayer(m));
+  Object.keys(mapMarkers).forEach(k => delete mapMarkers[k]);
+
+  const hasSessions = sessions.filter(s => s.gps_home);
+  if (!hasSessions.length) return;
+
+  hasSessions.forEach(s => {
+    const { lat, lon } = s.gps_home;
+    const marker = L.marker([lat, lon], { icon: _markerIcon(s.lid === selectedLid) });
+    const label = s.nickname || s.lid;
+    marker.bindTooltip(label, { permanent: false, direction: 'top', offset: [0, -8] });
+    marker.on('click', () => selectSession(s.lid));
+    marker.addTo(map);
+    mapMarkers[s.lid] = marker;
+  });
+
+  if (!selectedLid) {
+    const bounds = L.latLngBounds(hasSessions.map(s => [s.gps_home.lat, s.gps_home.lon]));
+    map.fitBounds(bounds, { padding: [32, 32], maxZoom: 14 });
+  }
+}
+
+async function selectSession(lid) {
+  // Toggle deselect
+  if (selectedLid === lid) { deselectSession(); return; }
+
+  selectedLid = lid;
+
+  // Highlight row
+  document.querySelectorAll('.session-row').forEach(r => r.classList.remove('selected'));
+  const row = document.getElementById('row-' + lid);
+  if (row) { row.classList.add('selected'); row.scrollIntoView({ block: 'nearest' }); }
+
+  // Update marker icons
+  Object.entries(mapMarkers).forEach(([k, m]) => m.setIcon(_markerIcon(k === lid)));
+
+  // Show deselect button
+  document.getElementById('btn-deselect').style.display = '';
+
+  // Remove old highlighted track
+  if (mapTrack) { map.removeLayer(mapTrack); mapTrack = null; }
+
+  const s = sessions.find(x => x.lid === lid);
+
+  if (mapMode === 'trace') {
+    // Dim all background tracks
+    Object.entries(mapTracks).forEach(([k, pl]) => {
+      pl.setStyle(k === lid
+        ? { color: '#ffcc00', weight: 2.5, opacity: 0.9 }
+        : { color: '#00d4ff', weight: 1.5, opacity: 0.25 });
+    });
+
+    // If we already have the track in mapTracks, use it for bounds
+    if (mapTracks[lid]) {
+      map.fitBounds(mapTracks[lid].getBounds(), { padding: [32, 32] });
+      return;
+    }
+
+    // Fetch and draw if not yet loaded
+    try {
+      const data = await fetch(`/api/sessions/${lid}/track`).then(r => r.json());
+      if (data.points && data.points.length > 1) {
+        // Replace dim placeholder with highlighted polyline
+        mapTrack = L.polyline(data.points, {
+          color: '#ffcc00', weight: 2.5, opacity: 0.9,
+        }).addTo(map);
+        map.fitBounds(mapTrack.getBounds(), { padding: [32, 32] });
+        return;
+      }
+    } catch (_) {}
+  }
+
+  // Marker mode (or trace with no data) — fly to gps_home
+  if (s && s.gps_home) {
+    map.flyTo([s.gps_home.lat, s.gps_home.lon], 14, { duration: 0.8 });
+  }
+}
+
+function deselectSession() {
+  selectedLid = null;
+  document.querySelectorAll('.session-row').forEach(r => r.classList.remove('selected'));
+  document.getElementById('btn-deselect').style.display = 'none';
+  Object.entries(mapMarkers).forEach(([, m]) => m.setIcon(_markerIcon(false)));
+  if (mapTrack) { map.removeLayer(mapTrack); mapTrack = null; }
+  // Reset all background tracks to dim
+  Object.values(mapTracks).forEach(pl => pl.setStyle({ color: '#00d4ff', weight: 1.5, opacity: 0.25 }));
+  const hasSessions = sessions.filter(s => s.gps_home);
+  if (hasSessions.length) {
+    const bounds = L.latLngBounds(hasSessions.map(s => [s.gps_home.lat, s.gps_home.lon]));
+    map.fitBounds(bounds, { padding: [32, 32], maxZoom: 14 });
+  }
+}
+
+function setMapMode(mode) {
+  mapMode = mode;
+  document.getElementById('btn-marker').classList.toggle('active', mode === 'marker');
+  document.getElementById('btn-trace').classList.toggle('active', mode === 'trace');
+  // Show/hide background tracks
+  Object.values(mapTracks).forEach(pl => {
+    if (mode === 'trace') pl.addTo(map); else map.removeLayer(pl);
+  });
+  if (mapTrack) { if (mode === 'trace') mapTrack.addTo(map); else map.removeLayer(mapTrack); }
+  // Re-select current session with new mode
+  if (selectedLid) { const lid = selectedLid; selectedLid = null; selectSession(lid); }
+}
+
+async function loadAllTracks() {
+  // Remove stale tracks
+  Object.entries(mapTracks).forEach(([lid, pl]) => {
+    map.removeLayer(pl);
+    delete mapTracks[lid];
+  });
+  if (mapMode !== 'trace') return;
+
+  await Promise.all(sessions.map(async s => {
+    if (!s.log_file) return; // no log → no track
+    try {
+      const data = await fetch(`/api/sessions/${s.lid}/track`).then(r => r.json());
+      if (data.points && data.points.length > 1) {
+        const isSelected = s.lid === selectedLid;
+        const pl = L.polyline(data.points, {
+          color: isSelected ? '#ffcc00' : '#00d4ff',
+          weight: isSelected ? 2.5 : 1.5,
+          opacity: isSelected ? 0.9 : 0.25,
+        }).addTo(map);
+        mapTracks[s.lid] = pl;
+      }
+    } catch (_) {}
+  }));
+}
+
 // ── render ─────────────────────────────────────────────────────────────────
 
 async function loadSessions() {
   try {
     sessions = await api('GET', '/api/sessions');
     renderSessions();
+    rebuildMarkers();
+    loadAllTracks();
   } catch (e) {
     showBanner('err', 'Impossible de charger les sessions : ' + e.message);
   }
@@ -275,18 +498,19 @@ function renderSessions() {
   }
 
   list.innerHTML = filtered.map(s => `
-    <div class="session-row" id="row-${s.lid}">
+    <div class="session-row${s.lid === selectedLid ? ' selected' : ''}" id="row-${s.lid}"
+         onclick="handleRowClick(event, '${s.lid}')"
+         ondblclick="openSession(event, '${s.lid}')"
+         oncontextmenu="showRenamePrompt(event, '${s.lid}')"
+         onmouseenter="hoverSession('${s.lid}')"
+         onmouseleave="unhoverSession('${s.lid}')">
       <div class="lid">${s.lid}</div>
       <div>
-        <input class="session-nickname" type="text" value="${esc(s.nickname)}"
-          placeholder="Sans nom"
-          onblur="renameSession('${s.lid}', this)"
-          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}">
+        <span class="session-nickname${s.nickname ? '' : ' empty'}">${esc(s.nickname) || 'Sans nom'}</span>
       </div>
-      <div class="date">${fmtDate(s.created_at)}</div>
+      <div class="date" title="Date du vol (mtime CSV)">VOL ${fmtDate(s.created_at)}</div>
       <div class="log-badge">${logBadge(s)}</div>
-      <div class="row-actions">
-        ${s.log_file ? `<a class="btn sm" href="/viewer.html?lid=${s.lid}">Ouvrir</a>` : ''}
+      <div class="row-actions" onclick="event.stopPropagation()">
         <label class="import-label" title="Attacher une vidéo">
           VID
           <input type="file" accept="video/*" onchange="attachVideo('${s.lid}', this)">
@@ -295,6 +519,49 @@ function renderSessions() {
       </div>
     </div>
   `).join('');
+}
+
+function handleRowClick(event, lid) {
+  if (event.target.closest('button, a, label')) return;
+  selectSession(lid);
+}
+
+function openSession(event, lid) {
+  if (event.target.closest('button, a, label')) return;
+  const s = sessions.find(x => x.lid === lid);
+  if (!s || !s.log_file) return;
+  sessionStorage.setItem('ds_lid', lid);
+  window.location.href = '/viewer.html?lid=' + lid;
+}
+
+let _hoverTimer = null;
+
+function hoverSession(lid) {
+  _hoverTimer = setTimeout(() => {
+    if (mapMode === 'trace' && mapTracks[lid]) {
+      if (lid !== selectedLid) {
+        mapTracks[lid].setStyle({ color: '#00d4ff', opacity: 0.65, weight: 2 });
+      }
+      map.fitBounds(mapTracks[lid].getBounds(), { padding: [40, 40], animate: true });
+    } else if (mapMarkers[lid]) {
+      const s = sessions.find(x => x.lid === lid);
+      if (s && s.gps_home) map.flyTo([s.gps_home.lat, s.gps_home.lon], 14, { duration: 0.5 });
+    }
+  }, 180);
+}
+
+function unhoverSession(lid) {
+  clearTimeout(_hoverTimer);
+  _hoverTimer = null;
+  if (mapMode === 'trace' && mapTracks[lid] && lid !== selectedLid) {
+    mapTracks[lid].setStyle({ color: '#00d4ff', opacity: 0.25, weight: 1.5 });
+  }
+}
+
+function fitAllSessions() {
+  if (selectedLid) deselectSession();
+  const pts = sessions.filter(s => s.gps_home).map(s => [s.gps_home.lat, s.gps_home.lon]);
+  if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [32, 32], maxZoom: 14 });
 }
 
 function logBadge(s) {
@@ -331,6 +598,8 @@ async function confirmImport() {
     const s = await r.json();
     sessions.unshift(s);
     renderSessions();
+    rebuildMarkers();
+    loadAllTracks();
     showBanner('ok', `Session ${s.lid} créée — ${s.log_meta?.row_count || '?'} points, ${s.log_meta?.duration_s || '?'}s`);
   } catch (e) {
     showBanner('err', 'Erreur import : ' + e.message);
@@ -359,17 +628,21 @@ async function confirmNew() {
 
 // ── rename ─────────────────────────────────────────────────────────────────
 
-async function renameSession(lid, input) {
-  const newName = input.value.trim();
+async function showRenamePrompt(event, lid) {
+  event.preventDefault();
+  event.stopPropagation();
   const s = sessions.find(x => x.lid === lid);
-  if (!s || newName === s.nickname) return;
+  if (!s) return;
+  const newName = prompt('Renommer la session :', s.nickname || '');
+  if (newName === null) return;
+  const trimmed = newName.trim();
+  if (trimmed === s.nickname) return;
   try {
-    const updated = await api('PATCH', `/api/sessions/${lid}`, { nickname: newName });
+    const updated = await api('PATCH', `/api/sessions/${lid}`, { nickname: trimmed });
     Object.assign(s, updated);
-    input.defaultValue = updated.nickname;
+    renderSessions();
   } catch (e) {
     showBanner('err', 'Erreur renommage : ' + e.message);
-    input.value = s.nickname;
   }
 }
 
@@ -380,7 +653,10 @@ async function deleteSession(lid) {
   try {
     await api('DELETE', `/api/sessions/${lid}`);
     sessions = sessions.filter(s => s.lid !== lid);
+    if (selectedLid === lid) { selectedLid = null; }
     renderSessions();
+    rebuildMarkers();
+    loadAllTracks();
   } catch (e) {
     showBanner('err', 'Erreur suppression : ' + e.message);
   }
@@ -434,6 +710,40 @@ function showBanner(type, msg) {
   _bannerTimer = setTimeout(() => { el.className = 'banner'; }, 5000);
 }
 
+// ── resize handle ─────────────────────────────────────────────────────────
+
+(function () {
+  const handle = document.getElementById('resize-handle');
+  const panel  = document.getElementById('map-panel');
+  const MIN = 200, MAX = 900;
+  let dragging = false, startX = 0, startW = 0;
+
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.offsetWidth;
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const w = Math.min(MAX, Math.max(MIN, startW - (e.clientX - startX)));
+    panel.style.width = w + 'px';
+    if (map) map.invalidateSize();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+})();
+
+initMap();
 loadSessions();
 </script>
 </body>

@@ -212,7 +212,7 @@ def test_delete_session_not_found(tmp_path: Path) -> None:
 
 def test_parse_log_meta(tmp_path: Path) -> None:
     f = _write_csv(tmp_path / "LOG_TEST.csv")
-    meta = _parse_log_meta(f)
+    meta, gps = _parse_log_meta(f)
     assert meta["config_name"] == "VTOL_CONFIG_v0.49"
     assert meta["fw_version"] == "Beta 1.3"
     assert meta["row_count"] == 3
@@ -222,6 +222,6 @@ def test_parse_log_meta(tmp_path: Path) -> None:
 def test_parse_log_meta_empty(tmp_path: Path) -> None:
     f = tmp_path / "empty.csv"
     f.write_text("timestamp_us,dt_us\n", encoding="utf-8")
-    meta = _parse_log_meta(f)
+    meta, gps = _parse_log_meta(f)
     assert meta["row_count"] == 0
     assert meta["duration_s"] == 0.0

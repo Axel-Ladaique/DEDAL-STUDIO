@@ -63,8 +63,8 @@ def _lid_to_folder(lid: str) -> str:
     return f"{_FOLDER_PREFIX}{parts[1]}_{parts[2]}"
 
 
-def _parse_log_meta(path: Path) -> dict:
-    """Stream-scan a DEDAL CSV log and return summary metadata."""
+def _parse_log_meta(path: Path) -> tuple[dict, "dict | None"]:
+    """Stream-scan a DEDAL CSV log and return (summary metadata, gps_home or None)."""
     meta: dict = {
         "filename": path.name,
         "config_name": "",
@@ -75,6 +75,10 @@ def _parse_log_meta(path: Path) -> dict:
     first_ts: int | None = None
     last_ts: int | None = None
     row_count = 0
+    gps_home: dict | None = None
+    col_valid: int | None = None
+    col_lat: int | None = None
+    col_lon: int | None = None
 
     with path.open(encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -88,9 +92,18 @@ def _parse_log_meta(path: Path) -> dict:
                 if m:
                     meta["fw_version"] = m.group(1).strip()
                 continue
-            if not line or line.startswith("timestamp_us"):
+            if not line:
                 continue
-            parts = line.split(",", 2)
+            if line.startswith("timestamp_us"):
+                cols = line.split(",")
+                try:
+                    col_valid = cols.index("gps_valid")
+                    col_lat   = cols.index("gps_lat")
+                    col_lon   = cols.index("gps_lon")
+                except ValueError:
+                    pass
+                continue
+            parts = line.split(",")
             try:
                 ts = int(parts[0])
                 if first_ts is None:
@@ -99,11 +112,20 @@ def _parse_log_meta(path: Path) -> dict:
                 row_count += 1
             except (ValueError, IndexError):
                 pass
+            if gps_home is None and col_valid is not None:
+                try:
+                    if parts[col_valid].strip() == "1":
+                        lat = float(parts[col_lat])
+                        lon = float(parts[col_lon])
+                        if lat != 0.0 and lon != 0.0:
+                            gps_home = {"lat": lat, "lon": lon}
+                except (ValueError, IndexError):
+                    pass
 
     meta["row_count"] = row_count
     if first_ts is not None and last_ts is not None:
         meta["duration_s"] = round((last_ts - first_ts) / 1_000_000, 1)
-    return meta
+    return meta, gps_home
 
 
 # ── dataclass ─────────────────────────────────────────────────────────────
@@ -118,8 +140,9 @@ class Session:
     log_file: str = ""            # relative path inside dir_path
     video_file: str | None = None # relative path inside dir_path
     tags: list[str] = field(default_factory=list)
-    location: dict | None = None  # {lat, lon, place_name}
-    log_meta: dict | None = None  # populated on CSV import
+    location: dict | None = None   # {lat, lon, place_name}
+    log_meta: dict | None = None   # populated on CSV import
+    gps_home: dict | None = None   # {lat, lon} — first valid GPS fix
 
     def to_dict(self) -> dict:
         return {
@@ -131,6 +154,7 @@ class Session:
             "tags": self.tags,
             "location": self.location,
             "log_meta": self.log_meta,
+            "gps_home": self.gps_home,
         }
 
 
@@ -158,6 +182,7 @@ def load_session(dir_path: Path) -> Session:
         tags=data.get("tags", []),
         location=data.get("location"),
         log_meta=data.get("log_meta"),
+        gps_home=data.get("gps_home"),
     )
 
 
@@ -230,16 +255,63 @@ def import_log(csv_path: Path, flights_root: Path, nickname: str = "") -> Sessio
     except OSError:
         created_at = datetime.now().replace(microsecond=0)
 
+    log_meta, gps_home = _parse_log_meta(dest)
     session = Session(
         lid=lid,
         nickname=nickname,
         created_at=created_at,
         dir_path=folder,
         log_file="log.csv",
-        log_meta=_parse_log_meta(dest),
+        log_meta=log_meta,
+        gps_home=gps_home,
     )
     save_session(session)
     return session
+
+
+def extract_gps_home(csv_path: Path) -> "dict | None":
+    """Return the first valid GPS fix from a CSV log, or None."""
+    _, gps = _parse_log_meta(csv_path)
+    return gps
+
+
+def extract_gps_track(csv_path: Path, max_pts: int = 500) -> "list[list[float]]":
+    """Return a downsampled GPS track from a CSV log (at most max_pts points)."""
+    col_valid: int | None = None
+    col_lat: int | None = None
+    col_lon: int | None = None
+    points: list[list[float]] = []
+
+    with csv_path.open(encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith("timestamp_us"):
+                cols = line.split(",")
+                try:
+                    col_valid = cols.index("gps_valid")
+                    col_lat   = cols.index("gps_lat")
+                    col_lon   = cols.index("gps_lon")
+                except ValueError:
+                    return []
+                continue
+            if col_valid is None:
+                continue
+            parts = line.split(",")
+            try:
+                if parts[col_valid].strip() == "1":
+                    lat = float(parts[col_lat])
+                    lon = float(parts[col_lon])
+                    if lat != 0.0 and lon != 0.0:
+                        points.append([lat, lon])
+            except (ValueError, IndexError):
+                pass
+
+    if not points:
+        return []
+    step = max(1, len(points) // max_pts)
+    return points[::step]
 
 
 def scan_sessions(flights_root: Path) -> list[Session]:

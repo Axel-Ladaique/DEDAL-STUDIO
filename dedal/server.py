@@ -5,6 +5,7 @@ import asyncio
 import json
 import shutil
 import tempfile
+import threading
 from pathlib import Path
 from queue import Empty, Queue
 
@@ -17,6 +18,8 @@ from .config import Config
 from .sessions import (
     create_empty_session,
     delete_session,
+    extract_gps_home,
+    extract_gps_track,
     get_session,
     import_log,
     save_session,
@@ -46,6 +49,30 @@ _sessions = APIRouter(prefix="/api/sessions", tags=["sessions"])
 @_sessions.get("")
 def sessions_list(request: Request) -> JSONResponse:
     items = scan_sessions(request.app.state.cfg.flights_root)
+    # Lazy-populate gps_home from flight_pack.json for sessions that don't have it yet.
+    for s in items:
+        if s.gps_home is None:
+            pack_file = s.dir_path / "flight_pack.json"
+            if pack_file.exists():
+                try:
+                    frames = json.loads(pack_file.read_text(encoding="utf-8")).get("frames", [])
+                    for fr in frames:
+                        if fr.get("gps_ok") and fr.get("lat") and fr.get("lon"):
+                            s.gps_home = {"lat": fr["lat"], "lon": fr["lon"]}
+                            save_session(s)
+                            break
+                except (OSError, ValueError):
+                    pass
+            elif s.log_file:
+                csv_path = s.dir_path / s.log_file
+                if csv_path.exists():
+                    try:
+                        gps = extract_gps_home(csv_path)
+                        if gps:
+                            s.gps_home = gps
+                            save_session(s)
+                    except (OSError, ValueError):
+                        pass
     return JSONResponse([s.to_dict() for s in items])
 
 
@@ -160,7 +187,55 @@ async def session_put_pack(lid: str, request: Request) -> JSONResponse:
     tmp = pack_file.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     tmp.replace(pack_file)
+    # Extract and cache the first valid GPS fix in session.json.
+    if s.gps_home is None:
+        for fr in data.get("frames", []):
+            if fr.get("gps_ok") and fr.get("lat") and fr.get("lon"):
+                s.gps_home = {"lat": fr["lat"], "lon": fr["lon"]}
+                save_session(s)
+                break
     return JSONResponse({"ok": True, "frames": len(data.get("frames", []))})
+
+
+@_sessions.get("/{lid}/track")
+def session_get_track(lid: str, request: Request) -> JSONResponse:
+    """Return a downsampled GPS track (max 500 pts) from flight_pack.json or CSV fallback."""
+    s = get_session(request.app.state.cfg.flights_root, lid)
+    if s is None:
+        return JSONResponse({"error": f"session '{lid}' not found"}, status_code=404)
+
+    points: list = []
+    pack_file = s.dir_path / "flight_pack.json"
+    if pack_file.exists():
+        try:
+            frames = json.loads(pack_file.read_text(encoding="utf-8")).get("frames", [])
+            gps = [
+                [fr["lat"], fr["lon"]]
+                for fr in frames
+                if fr.get("gps_ok") and fr.get("lat") and fr.get("lon")
+            ]
+            if gps:
+                step = max(1, len(gps) // 500)
+                points = gps[::step]
+        except (OSError, ValueError):
+            pass
+
+    if not points and s.log_file:
+        csv_path = s.dir_path / s.log_file
+        if csv_path.exists():
+            try:
+                points = extract_gps_track(csv_path)
+            except (OSError, ValueError):
+                pass
+
+    if not points:
+        return JSONResponse({"points": [], "home": None})
+
+    home = points[0]
+    if s.gps_home is None:
+        s.gps_home = {"lat": home[0], "lon": home[1]}
+        save_session(s)
+    return JSONResponse({"points": points, "home": {"lat": home[0], "lon": home[1]}})
 
 
 @_sessions.get("/{lid}/sync")
@@ -202,6 +277,9 @@ class _HudParams(BaseModel):
     height: int = 1080
     cells: int = 6
     min_gps_sats: int = 0
+    t_start_s: float = 0.0
+    t_end_s: float | None = None
+    output_path: str | None = None
 
 
 @_sessions.post("/{lid}/hud")
@@ -228,8 +306,9 @@ async def session_generate_hud(
     except ImportError as exc:
         return JSONResponse({"error": f"HUD module unavailable: {exc}"}, status_code=500)
 
-    output_dir = s.dir_path / "hud_output"
+    output_dir = Path(body.output_path) if body.output_path else s.dir_path / "hud_output"
     q: Queue = Queue()
+    cancel_event = threading.Event()
 
     def _progress(current: int, total: int) -> None:
         q.put(("progress", current, total))
@@ -240,9 +319,14 @@ async def session_generate_hud(
                 pack_file, output_dir,
                 fps=body.fps, width=body.width, height=body.height,
                 cells=body.cells, min_gps_sats=body.min_gps_sats,
+                t_start_s=body.t_start_s, t_end_s=body.t_end_s,
                 progress_cb=_progress,
+                cancel_event=cancel_event,
             )
-            q.put(("done", n))
+            if cancel_event.is_set():
+                q.put(("cancelled",))
+            else:
+                q.put(("done", n, str(output_dir)))
         except Exception as exc:
             q.put(("error", str(exc)))
 
@@ -250,11 +334,13 @@ async def session_generate_hud(
         loop = asyncio.get_event_loop()
         fut = loop.run_in_executor(None, _run)
 
-        # Emit started event once generator is kicked off
         yield _sse({"status": "started"})
 
         while True:
             await asyncio.sleep(0.05)
+            if await request.is_disconnected():
+                cancel_event.set()
+                return
             while True:
                 try:
                     msg = q.get_nowait()
@@ -266,7 +352,10 @@ async def session_generate_hud(
                     pct = round(cur / tot * 100) if tot else 0
                     yield _sse({"status": "progress", "frame": cur, "total": tot, "pct": pct})
                 elif kind == "done":
-                    yield _sse({"status": "done", "frames": msg[1], "output_dir": "hud_output/"})
+                    yield _sse({"status": "done", "frames": msg[1], "output_dir": msg[2]})
+                    return
+                elif kind == "cancelled":
+                    yield _sse({"status": "cancelled"})
                     return
                 elif kind == "error":
                     yield _sse({"status": "error", "message": msg[1]})
@@ -315,12 +404,14 @@ def create_app(cfg: Config) -> FastAPI:
             "flights_root": str(cfg.flights_root),
         })
 
+    _no_cache = {"Cache-Control": "no-cache, no-store, must-revalidate"}
+
     @app.get("/viewer.html")
     def viewer() -> Response:
         f = WEB_DIR / "viewer.html"
         if not f.exists():
             return JSONResponse({"error": "viewer.html not found"}, status_code=500)
-        return FileResponse(f)
+        return FileResponse(f, headers=_no_cache)
 
     @app.get("/")
     def root() -> Response:
@@ -330,7 +421,7 @@ def create_app(cfg: Config) -> FastAPI:
                 {"error": f"web/index.html not found at {index}"},
                 status_code=500,
             )
-        return FileResponse(index)
+        return FileResponse(index, headers=_no_cache)
 
     app.include_router(_sessions)
 

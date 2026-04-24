@@ -53,12 +53,17 @@ def generate_hud(
     height: int = 1080,
     cells: int = 6,
     min_gps_sats: int = 0,
+    t_start_s: float = 0.0,
+    t_end_s: float | None = None,
     progress_cb: Callable[[int, int], None] | None = None,
+    cancel_event=None,
 ) -> int:
     """Render a transparent PNG sequence from flight_pack.json.
 
     Clears *output_dir* before writing.  Calls *progress_cb(current, total)*
     every *fps* frames.  Returns the total frame count rendered.
+
+    t_start_s / t_end_s: seconds from the beginning of the log (t0).
     """
     frames = load_pack(pack_path)
     if not frames:
@@ -74,17 +79,26 @@ def generate_hud(
 
     hud = ProfessionalHUD(width, height, cells, gps_data, min_gps_sats)
     t0 = frames[0].timestamp_us
-    total = int((frames[-1].timestamp_us - t0) / 1e6 * fps)
-    if total < 1:
-        total = 1
+    duration_s = (frames[-1].timestamp_us - t0) / 1e6
 
-    for fi in range(total):
+    start_s = max(0.0, t_start_s)
+    end_s   = min(duration_s, t_end_s if t_end_s is not None else duration_s)
+    if end_s <= start_s:
+        raise ValueError(f"Invalid time range: t_start_s={start_s} >= t_end_s={end_s}")
+
+    fi_start = int(start_s * fps)
+    fi_end   = int(end_s   * fps)
+    total    = max(1, fi_end - fi_start)
+
+    for n, fi in enumerate(range(fi_start, fi_end)):
+        if cancel_event is not None and cancel_event.is_set():
+            return n
         target = t0 + fi / fps * 1e6
         idx = min(range(len(frames)), key=lambda i: abs(frames[i].timestamp_us - target))
         frame = hud.render(frames[idx], idx, t0)
-        cv2.imwrite(str(output_dir / f"frame_{fi:06d}.png"), frame)
-        if progress_cb and (fi + 1) % fps == 0:
-            progress_cb(fi + 1, total)
+        cv2.imwrite(str(output_dir / f"frame_{n:06d}.png"), frame)
+        if progress_cb and (n + 1) % fps == 0:
+            progress_cb(n + 1, total)
 
     if progress_cb:
         progress_cb(total, total)

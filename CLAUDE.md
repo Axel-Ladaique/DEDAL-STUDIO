@@ -148,15 +148,13 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 | PATCH | `/api/sessions/{lid}` | Modifier nickname / tags |
 | DELETE | `/api/sessions/{lid}` | Supprimer session + dossier |
 | POST | `/api/sessions/{lid}/video` | Attacher une vidéo |
-| POST | `/api/sessions/{lid}/hud` | Générer séquence PNG HUD (SSE progress) |
+| POST | `/api/sessions/{lid}/hud` | Générer séquence PNG HUD (SSE progress) — params: fps, width, height, cells, min_gps_sats, t_start_s, t_end_s, output_path |
 | GET | `/api/sessions/{lid}/log` | Servir le CSV brut de la session |
 | GET | `/api/sessions/{lid}/sync` | Lire sync.json |
 | PUT | `/api/sessions/{lid}/sync` | Écrire offset vidéo dans sync.json |
 
-À venir :
-- `GET /api/sessions/{lid}/pack` — lire flight_pack.json (étape 4)
-- `PUT /api/sessions/{lid}/pack` — recevoir flight_pack depuis le HTML (étape 4)
-- `POST /api/sessions/{lid}/hud` — générer le HUD avec progression SSE (étape 5)
+| GET | `/api/sessions/{lid}/pack` | Lire flight_pack.json |
+| PUT | `/api/sessions/{lid}/pack` | Recevoir flight_pack depuis le HTML |
 
 ---
 
@@ -170,8 +168,24 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 | 3 | Viewer HTML intégré + player vidéo + sync manuel 2 curseurs | ✅ |
 | 4 | Flight pack JSON (export HTML → endpoint serveur) | ✅ |
 | 5 | HUD Python refactoré (lit flight_pack, widgets, progression SSE) | ✅ |
-| 6 | Carte Leaflet sur home page | ← next |
-| 7 | Sync vidéo automatique | ⬜ |
+| 5b | Bug fix : auto-load viewer (TDZ `dsGenerateHUD` dans IIFE strict) | ✅ |
+| 6 | Carte Leaflet sur home page | ✅ |
+| 7 | HUD — options avancées (fps UI, t_start/t_end, output_path) | ✅ |
+| 8 | Sync vidéo automatique | ⬜ |
+
+---
+
+## HUD — options avancées (étape 7, à implémenter)
+
+Demande utilisateur :
+- **Chemin de sortie personnalisé** — pouvoir spécifier un dossier de sortie autre que `session_dir/hud_output/`
+- **FPS configurable** — déjà dans le body JSON (`fps: int = 25`), mais exposer dans l'UI
+- **Plage temporelle (in/out)** — spécifier un temps de début et de fin (en secondes depuis t0 du log) pour ne générer le HUD que sur une portion du vol
+
+Implémentation suggérée :
+- Body `POST /api/sessions/{lid}/hud` : ajouter `t_start_s: float = 0`, `t_end_s: float | None = None`, `output_path: str | None = None`
+- Dans `generate_hud()` : filtrer les frames par timestamp, écrire dans `output_path` si fourni
+- UI : un formulaire simple dans le viewer avant de lancer la génération
 
 ---
 
@@ -183,6 +197,11 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 - Ne pas ajouter de dépendances sans les ajouter à `requirements.txt` ET les installer dans `.venv`
 - `INPUT_4_CLAUDE/` = dossier où l'utilisateur dépose des exemples de fichiers réels à analyser
 - Mettre à jour ce fichier CLAUDE.md à chaque fin d'étape (roadmap + endpoints)
+
+## Pièges connus (à ne pas reproduire)
+
+- **TDZ dans IIFE strict** : dans la couche d'intégration de `viewer.html`, toutes les fonctions (`dsGenerateHUD`, etc.) sont déclarées avec `function` (hoistées) mais si on les référence dans `onclick = fnName` avant leur définition dans le code source, Safari lève `ReferenceError: Can't find variable`. Toujours utiliser `onclick = function() { fn(); }` comme wrapper, ou s'assurer que les fonctions sont déclarées avant d'être référencées.
+- **Plusieurs instances du serveur** : si `python app.py` est lancé plusieurs fois, les instances s'empilent sur des ports 7860, 7861… Le navigateur peut se connecter à une vieille instance qui sert du code périmé. Toujours vérifier avec `lsof -ti:7860` et tuer les instances parasites avant de relancer.
 
 ## Playwright / checks visuels
 
