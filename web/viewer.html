@@ -10998,6 +10998,53 @@ function closeCurvePopup() {
 }
 window.closeCurvePopup = closeCurvePopup;
 
+// ── SAVED LAYOUT GROUPS (needs gPanels access) ──
+function saveLayoutGroup() {
+  var nonMapPanels = gPanels.filter(function(p) { return !p.isMap; });
+  if (!nonMapPanels.length) { alert('Aucun panel à sauvegarder.'); return; }
+  var name = prompt('Nom du groupe :', '');
+  if (!name || !name.trim()) return;
+  var active = document.querySelector('#graphs-toolbar .g-tbtn.g-active[id^="btn-layout"]');
+  var layout = active ? active.id.replace('btn-layout-', '') : '2x1';
+  var panels = nonMapPanels.map(function(p) {
+    return {
+      curves: p.curves.map(function(c) {
+        return { key: c.key, color: c.color, style: c.style || 'solid' };
+      })
+    };
+  });
+  var newGroup = { name: name.trim(), layout: layout, panels: panels };
+  loadLayoutTemplates(function(groups) {
+    groups.push(newGroup);
+    storeLayoutTemplates(groups);
+  });
+}
+window.saveLayoutGroup = saveLayoutGroup;
+
+function applyLayoutGroup(grp) {
+  var nonMapPanels = gPanels.filter(function(p) { return !p.isMap; });
+  if (nonMapPanels.length > 0) {
+    var ok = confirm('Remplacer les ' + nonMapPanels.length + ' panel(s) actuel(s) par le groupe « ' + grp.name + ' » ?');
+    if (!ok) return;
+  }
+  var ids = nonMapPanels.map(function(p) { return p.id; });
+  ids.forEach(function(id) { removeGraphPanel(id); });
+  if (grp.layout) setGraphLayout(grp.layout);
+  (grp.panels || []).forEach(function(pd) {
+    var npid = addGraphPanel();
+    (pd.curves || []).forEach(function(c) { addCurveToPanel(npid, c.key, c.color, false); });
+    var panel = gPanels.find(function(p) { return p.id === npid; });
+    if (panel) {
+      panel.curves.forEach(function(c, i) {
+        c.style = (pd.curves[i] && pd.curves[i].style) || 'solid';
+      });
+    }
+    refreshPanelChart(npid);
+  });
+  if (typeof setupGraphCursorSync === 'function') setupGraphCursorSync();
+}
+window.applyLayoutGroup = applyLayoutGroup;
+
 // ── SAVED PANEL TEMPLATES (needs gPanels access) ──
 function savePanelTemplate(pid) {
   var panel = gPanels.find(function(p) { return p.id === pid; });
