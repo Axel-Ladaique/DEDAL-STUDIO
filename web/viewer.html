@@ -295,6 +295,46 @@ body::before {
   background:rgba(0,255,157,0.08); color:var(--accent);
   border:1px solid rgba(0,255,157,0.2); cursor:pointer;
 }
+.g-tsaved {
+  padding:3px 10px; border-radius:4px;
+  font-family:var(--font-mono); font-size:11px;
+  background:rgba(0,212,255,0.08); color:var(--accent3);
+  border:1px solid rgba(0,212,255,0.2); cursor:pointer; position:relative;
+}
+
+/* Curve right-click popup */
+#g-curve-popup {
+  position:fixed; z-index:9999;
+  background:var(--surface2); border:1px solid var(--border2); border-radius:6px;
+  padding:8px 10px; display:none; flex-direction:column; gap:7px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.6); min-width:160px;
+}
+#g-curve-popup .g-cpop-title { font-family:var(--font-hud); font-size:8px; letter-spacing:2px; color:var(--dim); }
+#g-curve-popup .g-cpop-row { display:flex; align-items:center; gap:7px; }
+#g-curve-popup label { font-family:var(--font-mono); font-size:10px; color:var(--dim2); flex:1; }
+#g-curve-popup input[type=color] { width:32px; height:20px; border:none; border-radius:3px; cursor:pointer; background:none; padding:0; }
+.g-cpop-btn {
+  padding:2px 8px; border-radius:3px; font-family:var(--font-mono); font-size:9px;
+  background:var(--surface); border:1px solid var(--border); color:var(--dim2); cursor:pointer;
+}
+.g-cpop-btn.active { background:rgba(0,212,255,0.12); border-color:rgba(0,212,255,0.4); color:var(--accent3); }
+
+/* Saved panels dropdown */
+#g-saved-menu {
+  position:fixed; z-index:9990; display:none; flex-direction:column;
+  background:var(--surface2); border:1px solid var(--border2); border-radius:6px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.6); min-width:200px; max-height:300px; overflow-y:auto;
+}
+.g-smenu-hdr { font-family:var(--font-hud); font-size:8px; letter-spacing:2px; color:var(--dim); padding:7px 10px 4px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.g-smenu-item { display:flex; align-items:center; padding:5px 10px; gap:6px; cursor:pointer; transition:background .12s; }
+.g-smenu-item:hover { background:rgba(255,255,255,0.04); }
+.g-smenu-name { flex:1; font-family:var(--font-mono); font-size:10px; color:var(--text); }
+.g-smenu-del { font-size:9px; color:var(--dim); cursor:pointer; padding:1px 4px; border-radius:2px; }
+.g-smenu-del:hover { color:var(--red); background:rgba(255,69,58,0.1); }
+.g-smenu-empty { font-family:var(--font-mono); font-size:9px; color:var(--dim); padding:8px 10px; }
+.g-smenu-save-row { padding:6px 10px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.g-smenu-save-row button { width:100%; font-family:var(--font-mono); font-size:9px; background:rgba(0,255,157,0.07); border:1px solid rgba(0,255,157,0.2); color:var(--accent); border-radius:3px; padding:4px 0; cursor:pointer; }
+.g-smenu-save-row button:hover { background:rgba(0,255,157,0.14); }
 
 /* Panels grid */
 #panels-grid {
@@ -1469,7 +1509,7 @@ canvas.chart { width: 100%; height: 100%; }
         <!-- AHI + 3D views -->
         <div class="atti-views" id="atti-views-container">
           <div class="atti-ahi-wrap" id="atti-ahi-wrap">
-            <canvas id="ahi-canvas" width="300" height="300" style="max-width:min(140px,45%);width:auto;height:auto;"></canvas>
+            <canvas id="ahi-canvas" width="300" height="300" style="width:130px;height:130px;flex-shrink:0;"></canvas>
             <span class="panel-badge" id="ahi-vals" style="font-size:9px;margin-top:2px;">R:0° P:0°</span>
           </div>
           <div class="atti-3d-wrap" id="atti-3d-wrap">
@@ -1808,7 +1848,11 @@ canvas.chart { width: 100%; height: 100%; }
         <button class="g-tbtn" onclick="resetGraphZoom()" title="Vue complète (ou double-clic)">↺ RESET</button>
         <div class="g-tsep"></div>
         <button class="g-tbtn" onclick="toggleHelpPanel()" title="Aide navigation">? AIDE</button>
-        <button class="g-tadd" onclick="addGraphPanel()">＋ PANEL</button>
+        <div style="margin-left:auto;display:flex;gap:4px;">
+          <button class="g-tsaved" id="btn-saved-groups" onclick="toggleLayoutsMenu(this)">⊞ GROUPS</button>
+          <button class="g-tsaved" id="btn-saved-panels" onclick="toggleSavedMenu(this)">⊞ SAVED</button>
+          <button class="g-tadd" style="margin-left:0;" onclick="addGraphPanel()">＋ PANEL</button>
+        </div>
       </div>
 
       <!-- Panels grid -->
@@ -3611,15 +3655,16 @@ function setAttiMode(mode) {
   if(mode === '3d')   btn3d   && btn3d.classList.add('active');
   if(mode === 'both') btnBoth && btnBoth.classList.add('active');
 
-  // Force 3D canvas resize after show
-  if(mode !== 'ahi') {
-    const c3d = document.getElementById('drone3d-canvas');
-    if(c3d) { c3d.dispatchEvent(new Event('resize')); if(typeof resizeDrone3D==='function') resizeDrone3D(); }
-  }
-  if(mode !== '3d') {
-    const ahi = document.getElementById('ahi-canvas');
-    if(ahi && typeof drawAHI === 'function') drawAHI();
-  }
+  // Force resize/redraw after DOM settles
+  setTimeout(function() {
+    if(mode !== 'ahi') {
+      const c3d = document.getElementById('drone3d-canvas');
+      if(c3d) { c3d.dispatchEvent(new Event('resize')); if(typeof resizeDrone3D==='function') resizeDrone3D(); }
+    }
+    if(mode !== '3d') {
+      if(typeof drawAHI === 'function') drawAHI();
+    }
+  }, 50);
 }
 window.setAttiMode = setAttiMode;
 
@@ -10200,7 +10245,20 @@ function sigDragStart(e, key, color) {
       }
     });
     gMouseDrag = null;
-    if (target) addCurveToPanel(target, key, color);
+    if (target) {
+      addCurveToPanel(target, key, color);
+    } else {
+      // Drop dans le vide du panels-grid → créer un nouveau panel
+      var grid = document.getElementById('panels-grid');
+      if (grid) {
+        var gr = grid.getBoundingClientRect();
+        if (ev.clientX >= gr.left && ev.clientX <= gr.right && ev.clientY >= gr.top && ev.clientY <= gr.bottom) {
+          var npid = addGraphPanel();
+          addCurveToPanel(npid, key, color);
+          setupGraphCursorSync();
+        }
+      }
+    }
   }
 
   document.addEventListener('mousemove', onMove);
@@ -10248,6 +10306,7 @@ function buildPanelDOM(pid) {
   panel.innerHTML = '<div class="g-panel-header">' +
     '<div class="g-curve-tags" id="' + pid + '-tags"><div class="g-drop-hint">↕ glisser un signal ici</div></div>' +
     '<div class="g-panel-btns">' +
+    '<button class="g-pbtn" title="Sauvegarder comme template" onclick="savePanelTemplate(\'' + pid + '\')">💾</button>' +
     '<button class="g-pbtn" title="Dupliquer" onclick="duplicateGraphPanel(\'' + pid + '\')">⊕</button>' +
     '<button class="g-pbtn close" title="Fermer" onclick="removeGraphPanel(\'' + pid + '\')">✕</button>' +
     '</div></div>' +
@@ -10319,15 +10378,19 @@ function addCurveToPanel(pid, key, color, redraw) {
   if (redraw === undefined) redraw = true;
   var panel = gPanels.find(function(p) { return p.id === pid; });
   if (!panel || panel.curves.find(function(c) { return c.key === key; })) return;
-  panel.curves.push({ key: key, color: color });
+  panel.curves.push({ key: key, color: color, style: 'solid' });
   var tagsEl = document.getElementById(pid + '-tags');
   if (tagsEl) {
     var hint = tagsEl.querySelector('.g-drop-hint');
     var tag = document.createElement('div');
     tag.className = 'g-ctag';
     tag.dataset.key = key;
-    tag.innerHTML = '<div class="sig-dot" style="background:' + color + '"></div>' + key +
+    tag.innerHTML = '<div class="sig-dot" id="cdot-' + pid + '-' + key + '" style="background:' + color + '"></div>' + key +
       '<span class="g-ctag-x" onclick="removeCurveFromPanel(\'' + pid + '\',\'' + key + '\')">×</span>';
+    tag.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      showCurvePopup(pid, key, e.clientX, e.clientY);
+    });
     tagsEl.insertBefore(tag, hint);
   }
   if (redraw) refreshPanelChart(pid);
@@ -10371,6 +10434,7 @@ function refreshPanelChart(pid) {
       borderWidth: 1.5,
       pointRadius: 0,
       tension: 0,
+      borderDash: ({solid:[], dashed:[6,3], dotted:[2,4], dashdot:[8,3,2,3]})[c.style || 'solid'] || [],
     };
   });
   chart.update('none');
@@ -10422,10 +10486,23 @@ function showGraphCursor(pct, tSec) {
   gPanels.forEach(function(p) {
     var cursor = document.getElementById(p.id + '-cursor');
     var tip    = document.getElementById(p.id + '-tip');
-    if (cursor) { cursor.style.display = 'block'; cursor.style.left = pct + '%'; }
+    if (cursor) {
+      cursor.style.display = 'block';
+      var ch = gCharts[p.id];
+      if (ch && ch.chartArea) {
+        cursor.style.left = (ch.chartArea.left + (pct / 100) * (ch.chartArea.right - ch.chartArea.left)) + 'px';
+      } else {
+        cursor.style.left = pct + '%';
+      }
+    }
     if (tip) {
       tip.style.display = 'block';
-      tip.style.left = 'calc(' + pct + '% + 4px)';
+      var ch2 = gCharts[p.id];
+      if (ch2 && ch2.chartArea) {
+        tip.style.left = (ch2.chartArea.left + (pct / 100) * (ch2.chartArea.right - ch2.chartArea.left) + 4) + 'px';
+      } else {
+        tip.style.left = 'calc(' + pct + '% + 4px)';
+      }
       tip.textContent = 't = ' + tSec.toFixed(2) + ' s';
     }
   });
@@ -10854,6 +10931,7 @@ window.buildArmedBar        = buildArmedBar;
 window.gSetArmedRange       = gSetArmedRange;
 window.toggleHelpPanel      = toggleHelpPanel;
 window.setupGraphCursorSync = setupGraphCursorSync;
+window.refreshPanelChart    = refreshPanelChart;
 
 function toggleTelemConfig() {
   var overlay = document.getElementById('telem-config-overlay');
@@ -10861,6 +10939,88 @@ function toggleTelemConfig() {
   overlay.classList.toggle('visible');
 }
 window.toggleTelemConfig = toggleTelemConfig;
+
+// ── CURVE STYLE POPUP (needs gPanels access) ──
+var _cpopState = null;
+
+function showCurvePopup(pid, key, cx, cy) {
+  var pop = document.getElementById('g-curve-popup');
+  if (!pop) return;
+  var panel = gPanels.find(function(p) { return p.id === pid; });
+  if (!panel) return;
+  var curve = panel.curves.find(function(c) { return c.key === key; });
+  if (!curve) return;
+  _cpopState = { pid: pid, key: key };
+  document.getElementById('g-cpop-color').value = curve.color;
+  var cur = curve.style || 'solid';
+  pop.querySelectorAll('[data-style]').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.style === cur);
+  });
+  pop.style.display = 'flex';
+  var pw = pop.offsetWidth || 220, ph = pop.offsetHeight || 110;
+  pop.style.left = Math.min(cx, window.innerWidth - pw - 8) + 'px';
+  pop.style.top  = Math.min(cy, window.innerHeight - ph - 8) + 'px';
+}
+window.showCurvePopup = showCurvePopup;
+
+function onCurvePopupColor(val) {
+  if (!_cpopState) return;
+  var panel = gPanels.find(function(p) { return p.id === _cpopState.pid; });
+  if (!panel) return;
+  var curve = panel.curves.find(function(c) { return c.key === _cpopState.key; });
+  if (!curve) return;
+  curve.color = val;
+  var dot = document.getElementById('cdot-' + _cpopState.pid + '-' + _cpopState.key);
+  if (dot) dot.style.background = val;
+  refreshPanelChart(_cpopState.pid);
+}
+window.onCurvePopupColor = onCurvePopupColor;
+
+function onCurvePopupStyle(style) {
+  if (!_cpopState) return;
+  var panel = gPanels.find(function(p) { return p.id === _cpopState.pid; });
+  if (!panel) return;
+  var curve = panel.curves.find(function(c) { return c.key === _cpopState.key; });
+  if (!curve) return;
+  curve.style = style;
+  var pop = document.getElementById('g-curve-popup');
+  if (pop) pop.querySelectorAll('[data-style]').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.style === style);
+  });
+  refreshPanelChart(_cpopState.pid);
+}
+window.onCurvePopupStyle = onCurvePopupStyle;
+
+function closeCurvePopup() {
+  var pop = document.getElementById('g-curve-popup');
+  if (pop) pop.style.display = 'none';
+  _cpopState = null;
+}
+window.closeCurvePopup = closeCurvePopup;
+
+// ── SAVED PANEL TEMPLATES (needs gPanels access) ──
+function savePanelTemplate(pid) {
+  var panel = gPanels.find(function(p) { return p.id === pid; });
+  if (!panel || !panel.curves.length) { alert('Aucun signal dans ce panel.'); return; }
+  var name = prompt('Nom du template :', panel.curves.map(function(c) { return c.key; }).join(', '));
+  if (!name || !name.trim()) return;
+  var newTpl = { name: name.trim(), curves: panel.curves.map(function(c) { return { key: c.key, color: c.color, style: c.style || 'solid' }; }) };
+  loadPanelTemplates(function(templates) {
+    templates.push(newTpl);
+    storePanelTemplates(templates);
+  });
+}
+window.savePanelTemplate = savePanelTemplate;
+
+function applyPanelTemplate(tpl) {
+  var npid = addGraphPanel();
+  tpl.curves.forEach(function(c) { addCurveToPanel(npid, c.key, c.color, false); });
+  var panel = gPanels.find(function(p) { return p.id === npid; });
+  if (panel) panel.curves.forEach(function(c, i) { c.style = (tpl.curves[i] && tpl.curves[i].style) || 'solid'; });
+  refreshPanelChart(npid);
+  if (typeof setupGraphCursorSync === 'function') setupGraphCursorSync();
+}
+window.applyPanelTemplate = applyPanelTemplate;
 
 })();
 </script>
@@ -11520,6 +11680,126 @@ window.toggleTelemConfig = toggleTelemConfig;
   }
 
 })();
+</script>
+
+<!-- Curve style popup (singleton) -->
+<div id="g-curve-popup">
+  <div class="g-cpop-title">COURBE</div>
+  <div class="g-cpop-row">
+    <label>Couleur</label>
+    <input type="color" id="g-cpop-color" oninput="onCurvePopupColor(this.value)">
+  </div>
+  <div class="g-cpop-row" style="flex-wrap:wrap;gap:4px;">
+    <button class="g-cpop-btn" data-style="solid"   onclick="onCurvePopupStyle('solid')">——— Continu</button>
+    <button class="g-cpop-btn" data-style="dashed"  onclick="onCurvePopupStyle('dashed')">- - - Tirets</button>
+    <button class="g-cpop-btn" data-style="dotted"  onclick="onCurvePopupStyle('dotted')">....... Points</button>
+    <button class="g-cpop-btn" data-style="dashdot" onclick="onCurvePopupStyle('dashdot')">-·-·- Mixte</button>
+  </div>
+</div>
+
+<!-- Saved layout groups menu -->
+<div id="g-layouts-menu" style="display:none;position:fixed;z-index:200;min-width:220px;max-width:300px;max-height:340px;overflow-y:auto;background:var(--surface);border:1px solid var(--border2);border-radius:6px;box-shadow:0 4px 24px #000a;flex-direction:column;">
+  <div class="g-smenu-hdr">GROUPES SAUVEGARDÉS</div>
+  <div class="g-smenu-save-row">
+    <button onclick="saveLayoutGroup()">💾 Sauvegarder le groupe actuel</button>
+  </div>
+  <div id="g-layouts-list"></div>
+</div>
+
+<!-- Saved panels menu -->
+<div id="g-saved-menu">
+  <div class="g-smenu-hdr">PANELS SAUVEGARDÉS</div>
+  <div id="g-saved-list"></div>
+</div>
+
+<script>
+// ── Fermeture popup/menu au clic extérieur ──
+document.addEventListener('mousedown', function(e) {
+  var pop = document.getElementById('g-curve-popup');
+  if (pop && pop.style.display === 'flex' && !pop.contains(e.target)) {
+    closeCurvePopup();
+  }
+  var menu = document.getElementById('g-saved-menu');
+  var btn = document.getElementById('btn-saved-panels');
+  if (menu && menu.style.display === 'flex' && !menu.contains(e.target) && e.target !== btn) {
+    menu.style.display = 'none';
+  }
+});
+
+// ── SAVED PANEL TEMPLATES (serveur — persistant entre sessions) ──
+var _tplCache = null; // cache mémoire
+
+function _tplRender(btn) {
+  var menu = document.getElementById('g-saved-menu');
+  var list = document.getElementById('g-saved-list');
+  if (!menu || !list) return;
+  var templates = _tplCache || [];
+  list.innerHTML = '';
+  if (!templates.length) {
+    list.innerHTML = '<div class="g-smenu-empty">Aucun template sauvegardé.<br>Cliquez 💾 sur un panel.</div>';
+  } else {
+    templates.forEach(function(tpl, idx) {
+      var row = document.createElement('div');
+      row.className = 'g-smenu-item';
+      row.innerHTML = '<span class="g-smenu-name">' + tpl.name + '</span>' +
+        '<span class="g-smenu-del" title="Supprimer" onclick="deletePanelTemplate(' + idx + ');event.stopPropagation()">✕</span>';
+      row.addEventListener('click', function() {
+        applyPanelTemplate(tpl);
+        menu.style.display = 'none';
+      });
+      list.appendChild(row);
+    });
+  }
+  if (btn) {
+    var br = btn.getBoundingClientRect();
+    menu.style.display = 'flex';
+    var mw = menu.offsetWidth || 220;
+    menu.style.left = Math.min(br.right - mw, window.innerWidth - mw - 8) + 'px';
+    menu.style.top  = (br.bottom + 4) + 'px';
+  }
+}
+
+function loadPanelTemplates(cb) {
+  if (_tplCache !== null) { if (cb) cb(_tplCache); return _tplCache; }
+  fetch('/api/panel-templates')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { _tplCache = Array.isArray(data) ? data : []; if (cb) cb(_tplCache); })
+    .catch(function() { _tplCache = []; if (cb) cb(_tplCache); });
+  return _tplCache || [];
+}
+
+function storePanelTemplates(arr, cb) {
+  _tplCache = arr;
+  fetch('/api/panel-templates', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(arr),
+  }).then(function() { if (cb) cb(); }).catch(function() {});
+}
+
+function toggleSavedMenu(btn) {
+  var menu = document.getElementById('g-saved-menu');
+  if (!menu) return;
+  if (menu.style.display === 'flex') { menu.style.display = 'none'; return; }
+  loadPanelTemplates(function() { _tplRender(btn); });
+  if (_tplCache !== null) _tplRender(btn); // affiche immédiatement si cache chaud
+}
+
+function deletePanelTemplate(idx) {
+  var templates = (_tplCache || []).slice();
+  templates.splice(idx, 1);
+  storePanelTemplates(templates, function() {
+    var menu = document.getElementById('g-saved-menu');
+    if (menu) menu.style.display = 'none';
+    var btn = document.getElementById('btn-saved-panels');
+    if (btn) toggleSavedMenu(btn);
+  });
+  // Mise à jour optimiste immédiate
+  var menu = document.getElementById('g-saved-menu');
+  if (menu) menu.style.display = 'none';
+  var btn = document.getElementById('btn-saved-panels');
+  if (btn) toggleSavedMenu(btn);
+}
 </script>
 </body>
 </html>
