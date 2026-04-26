@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import os
 from .config import Config
 from .sessions import (
     create_empty_session,
@@ -424,6 +425,69 @@ def create_app(cfg: Config) -> FastAPI:
         return FileResponse(index, headers=_no_cache)
 
     app.include_router(_sessions)
+
+    # ── Panel templates persistence ──────────────────────────────────────────
+    def _templates_path() -> Path:
+        xdg = os.environ.get("XDG_CONFIG_HOME")
+        base = Path(xdg) / "dedal-studio" if xdg else Path.home() / ".config" / "dedal-studio"
+        base.mkdir(parents=True, exist_ok=True)
+        return base / "panel_templates.json"
+
+    @app.get("/api/panel-templates")
+    def get_panel_templates() -> JSONResponse:
+        p = _templates_path()
+        if not p.exists():
+            return JSONResponse([])
+        try:
+            return JSONResponse(json.loads(p.read_text()))
+        except Exception:
+            return JSONResponse([])
+
+    @app.put("/api/panel-templates")
+    async def put_panel_templates(request: Request) -> JSONResponse:
+        try:
+            data = await request.json()
+            if not isinstance(data, list):
+                return JSONResponse({"error": "expected array"}, status_code=400)
+            p = _templates_path()
+            tmp = p.with_suffix(".tmp")
+            tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+            os.replace(tmp, p)
+            return JSONResponse({"ok": True})
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+    # ── Layout templates persistence ─────────────────────────────────────────
+
+    def _layout_templates_path() -> Path:
+        xdg = os.environ.get("XDG_CONFIG_HOME")
+        base = Path(xdg) / "dedal-studio" if xdg else Path.home() / ".config" / "dedal-studio"
+        base.mkdir(parents=True, exist_ok=True)
+        return base / "layout_templates.json"
+
+    @app.get("/api/layout-templates")
+    def get_layout_templates() -> JSONResponse:
+        p = _layout_templates_path()
+        if not p.exists():
+            return JSONResponse([])
+        try:
+            return JSONResponse(json.loads(p.read_text()))
+        except Exception:
+            return JSONResponse([])
+
+    @app.put("/api/layout-templates")
+    async def put_layout_templates(request: Request) -> JSONResponse:
+        try:
+            data = await request.json()
+            if not isinstance(data, list):
+                return JSONResponse({"error": "expected array"}, status_code=400)
+            p = _layout_templates_path()
+            tmp = p.with_suffix(".tmp")
+            tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+            os.replace(tmp, p)
+            return JSONResponse({"ok": True})
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
 
     if WEB_DIR.exists():
         app.mount(

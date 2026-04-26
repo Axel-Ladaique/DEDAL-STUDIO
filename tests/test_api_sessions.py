@@ -182,3 +182,49 @@ def test_pack_overwrites(client: TestClient) -> None:
              "frames": _MINIMAL_PACK["frames"] * 3}
     client.put(f"/api/sessions/{lid}/pack", json=pack2)
     assert len(client.get(f"/api/sessions/{lid}/pack").json()["frames"]) == 3
+
+
+# ── Layout templates ────────────────────────────────────────────────────────
+
+def test_layout_templates_empty(client: TestClient) -> None:
+    r = client.get("/api/layout-templates")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_layout_templates_put_and_get(client: TestClient) -> None:
+    payload = [
+        {
+            "name": "Analyse Pitch",
+            "layout": "2x2",
+            "panels": [
+                {"curves": [{"key": "pitch_IMU", "color": "#67e8f9", "style": "solid"}]},
+                {"curves": [{"key": "pitch_PID", "color": "#fb923c", "style": "dashed"}]},
+            ],
+        }
+    ]
+    r = client.put("/api/layout-templates", json=payload)
+    assert r.status_code == 200
+    assert r.json() == {"ok": True}
+
+    r2 = client.get("/api/layout-templates")
+    assert r2.status_code == 200
+    data = r2.json()
+    assert len(data) == 1
+    assert data[0]["name"] == "Analyse Pitch"
+    assert data[0]["layout"] == "2x2"
+    assert len(data[0]["panels"]) == 2
+
+
+def test_layout_templates_put_bad_body(client: TestClient) -> None:
+    r = client.put("/api/layout-templates", json={"not": "a list"})
+    assert r.status_code == 400
+
+
+def test_layout_templates_put_overwrites(client: TestClient) -> None:
+    client.put("/api/layout-templates", json=[{"name": "A", "layout": "1x1", "panels": []}])
+    client.put("/api/layout-templates", json=[{"name": "B", "layout": "2x2", "panels": []}])
+    r = client.get("/api/layout-templates")
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["name"] == "B"

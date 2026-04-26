@@ -1,6 +1,7 @@
 """Shared fixtures for DEDAL Studio tests."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -23,6 +24,9 @@ def cfg(flights_root: Path) -> Config:
 
 
 @pytest.fixture()
-def client(cfg: Config) -> TestClient:
+def client(cfg: Config, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config_dir))
     app = create_app(cfg)
     return TestClient(app, raise_server_exceptions=True)
