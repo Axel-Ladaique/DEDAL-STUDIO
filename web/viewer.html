@@ -11724,7 +11724,86 @@ document.addEventListener('mousedown', function(e) {
   if (menu && menu.style.display === 'flex' && !menu.contains(e.target) && e.target !== btn) {
     menu.style.display = 'none';
   }
+  var layoutMenu = document.getElementById('g-layouts-menu');
+  var layoutBtn  = document.getElementById('btn-saved-groups');
+  if (layoutMenu && layoutMenu.style.display === 'flex' && !layoutMenu.contains(e.target) && e.target !== layoutBtn) {
+    layoutMenu.style.display = 'none';
+  }
 });
+
+// ── SAVED LAYOUT GROUPS (serveur — persistant entre sessions) ──
+var _layoutCache = null;
+
+function _layoutRender(btn) {
+  var menu = document.getElementById('g-layouts-menu');
+  var list = document.getElementById('g-layouts-list');
+  if (!menu || !list) return;
+  var groups = _layoutCache || [];
+  list.innerHTML = '';
+  if (!groups.length) {
+    list.innerHTML = '<div class="g-smenu-empty">Aucun groupe sauvegardé.<br>Cliquez "💾 Sauvegarder le groupe actuel".</div>';
+  } else {
+    groups.forEach(function(grp, idx) {
+      var row = document.createElement('div');
+      row.className = 'g-smenu-item';
+      var badge = grp.layout ? '<span style="font-family:var(--font-mono);font-size:8px;color:var(--dim);margin-right:4px;">[' + grp.layout + ']</span>' : '';
+      row.innerHTML = badge + '<span class="g-smenu-name">' + grp.name + '</span>' +
+        '<span class="g-smenu-del" title="Supprimer" onclick="deleteLayoutGroup(' + idx + ');event.stopPropagation()">✕</span>';
+      row.addEventListener('click', function() {
+        window.applyLayoutGroup(grp);
+        menu.style.display = 'none';
+      });
+      list.appendChild(row);
+    });
+  }
+  if (btn) {
+    var br = btn.getBoundingClientRect();
+    menu.style.display = 'flex';
+    var mw = menu.offsetWidth || 240;
+    menu.style.left = Math.min(br.right - mw, window.innerWidth - mw - 8) + 'px';
+    menu.style.top  = (br.bottom + 4) + 'px';
+  }
+}
+
+function loadLayoutTemplates(cb) {
+  if (_layoutCache !== null) { if (cb) cb(_layoutCache); return; }
+  fetch('/api/layout-templates')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { _layoutCache = Array.isArray(data) ? data : []; if (cb) cb(_layoutCache); })
+    .catch(function() { _layoutCache = []; if (cb) cb(_layoutCache); });
+}
+
+function storeLayoutTemplates(arr, cb) {
+  _layoutCache = arr;
+  fetch('/api/layout-templates', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(arr),
+  }).then(function() { if (cb) cb(); }).catch(function() {});
+}
+
+function toggleLayoutsMenu(btn) {
+  var menu = document.getElementById('g-layouts-menu');
+  if (!menu) return;
+  if (menu.style.display === 'flex') { menu.style.display = 'none'; return; }
+  loadLayoutTemplates(function() { _layoutRender(btn); });
+  if (_layoutCache !== null) _layoutRender(btn);
+}
+
+function deleteLayoutGroup(idx) {
+  var groups = (_layoutCache || []).slice();
+  groups.splice(idx, 1);
+  storeLayoutTemplates(groups, function() {
+    var menu = document.getElementById('g-layouts-menu');
+    if (menu) menu.style.display = 'none';
+    var btn = document.getElementById('btn-saved-groups');
+    if (btn) toggleLayoutsMenu(btn);
+  });
+  var menu = document.getElementById('g-layouts-menu');
+  if (menu) menu.style.display = 'none';
+  var btn = document.getElementById('btn-saved-groups');
+  if (btn) toggleLayoutsMenu(btn);
+}
 
 // ── SAVED PANEL TEMPLATES (serveur — persistant entre sessions) ──
 var _tplCache = null; // cache mémoire
