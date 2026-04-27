@@ -10330,7 +10330,8 @@ function setupPanelDrag(panel) {
   var handle = panel.querySelector('.g-pdrag');
   if (!handle) return;
 
-  handle.addEventListener('mousedown', function() {
+  handle.addEventListener('mousedown', function(e) {
+    e.stopPropagation();
     panel.draggable = true;
   });
   handle.addEventListener('mouseup', function() {
@@ -10790,7 +10791,7 @@ function setupGraphCursorSync() {
         seekTo(idx);
       }
     }
-    if (!gZoomLocked) grid.style.cursor = e.shiftKey ? 'crosshair' : 'grab';
+    grid.style.cursor = 'crosshair';
   }, sig);
   grid.addEventListener('mouseleave', hideGraphCursor, sig);
 
