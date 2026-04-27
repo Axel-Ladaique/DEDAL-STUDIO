@@ -10324,69 +10324,60 @@ function buildPanelDOM(pid) {
   return panel;
 }
 
-var _gPanelDragSrc = null;
-
 function setupPanelDrag(panel) {
   var handle = panel.querySelector('.g-pdrag');
   if (!handle) return;
 
   handle.addEventListener('mousedown', function(e) {
     e.stopPropagation();
-    panel.draggable = true;
-  });
-  handle.addEventListener('mouseup', function() {
-    panel.draggable = false;
-  });
-
-  panel.addEventListener('dragstart', function(e) {
-    _gPanelDragSrc = panel;
+    e.preventDefault();
     panel.classList.add('g-panel-dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', panel.id);
-  });
 
-  panel.addEventListener('dragend', function() {
-    panel.draggable = false;
-    panel.classList.remove('g-panel-dragging', 'g-panel-drag-over');
-    document.querySelectorAll('.g-panel').forEach(function(p) {
-      p.classList.remove('g-panel-drag-over');
-    });
-    _gPanelDragSrc = null;
-  });
-
-  panel.addEventListener('dragover', function(e) {
-    if (!_gPanelDragSrc || _gPanelDragSrc === panel) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    panel.classList.add('g-panel-drag-over');
-  });
-
-  panel.addEventListener('dragleave', function(e) {
-    if (panel.contains(e.relatedTarget)) return;
-    panel.classList.remove('g-panel-drag-over');
-  });
-
-  panel.addEventListener('drop', function(e) {
-    if (!_gPanelDragSrc || _gPanelDragSrc === panel) return;
-    e.preventDefault();
-    panel.classList.remove('g-panel-drag-over');
-
-    // DOM swap via placeholder
-    var grid = panel.parentNode;
-    var placeholder = document.createElement('div');
-    grid.insertBefore(placeholder, _gPanelDragSrc);
-    grid.insertBefore(_gPanelDragSrc, panel);
-    grid.insertBefore(panel, placeholder);
-    grid.removeChild(placeholder);
-
-    // Sync gPanels array
-    var srcIdx = gPanels.findIndex(function(p) { return p.id === _gPanelDragSrc.id; });
-    var dstIdx = gPanels.findIndex(function(p) { return p.id === panel.id; });
-    if (srcIdx !== -1 && dstIdx !== -1) {
-      var tmp = gPanels[srcIdx];
-      gPanels[srcIdx] = gPanels[dstIdx];
-      gPanels[dstIdx] = tmp;
+    function panelFromPoint(x, y) {
+      var panels = document.querySelectorAll('#panels-grid .g-panel');
+      for (var i = 0; i < panels.length; i++) {
+        if (panels[i] === panel) continue;
+        var r = panels[i].getBoundingClientRect();
+        if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return panels[i];
+      }
+      return null;
     }
+
+    function onMove(ev) {
+      document.querySelectorAll('#panels-grid .g-panel').forEach(function(p) {
+        p.classList.remove('g-panel-drag-over');
+      });
+      var target = panelFromPoint(ev.clientX, ev.clientY);
+      if (target) target.classList.add('g-panel-drag-over');
+    }
+
+    function onUp(ev) {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      panel.classList.remove('g-panel-dragging');
+      document.querySelectorAll('#panels-grid .g-panel').forEach(function(p) {
+        p.classList.remove('g-panel-drag-over');
+      });
+      var target = panelFromPoint(ev.clientX, ev.clientY);
+      if (target) {
+        var grid = panel.parentNode;
+        var placeholder = document.createElement('div');
+        grid.insertBefore(placeholder, panel);
+        grid.insertBefore(panel, target);
+        grid.insertBefore(target, placeholder);
+        grid.removeChild(placeholder);
+        var srcIdx = gPanels.findIndex(function(p) { return p.id === panel.id; });
+        var dstIdx = gPanels.findIndex(function(p) { return p.id === target.id; });
+        if (srcIdx !== -1 && dstIdx !== -1) {
+          var tmp = gPanels[srcIdx];
+          gPanels[srcIdx] = gPanels[dstIdx];
+          gPanels[dstIdx] = tmp;
+        }
+      }
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   });
 }
 
