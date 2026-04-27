@@ -372,6 +372,10 @@ body::before {
 }
 .g-pbtn:hover { background:var(--surface2); color:var(--text); }
 .g-pbtn.close:hover { color:var(--red); }
+.g-pdrag { cursor:grab; }
+.g-pdrag:active { cursor:grabbing; }
+.g-panel.g-panel-dragging { opacity:0.35; }
+.g-panel.g-panel-drag-over { border-color:var(--accent) !important; box-shadow:0 0 0 1px var(--accent); }
 
 /* Panel canvas area */
 .g-canvas-wrap { flex:1; position:relative; overflow:hidden; }
@@ -10306,6 +10310,7 @@ function buildPanelDOM(pid) {
   panel.innerHTML = '<div class="g-panel-header">' +
     '<div class="g-curve-tags" id="' + pid + '-tags"><div class="g-drop-hint">↕ glisser un signal ici</div></div>' +
     '<div class="g-panel-btns">' +
+    '<button class="g-pbtn g-pdrag" title="Déplacer le panel">⠿</button>' +
     '<button class="g-pbtn" title="Sauvegarder comme template" onclick="savePanelTemplate(\'' + pid + '\')">💾</button>' +
     '<button class="g-pbtn" title="Dupliquer" onclick="duplicateGraphPanel(\'' + pid + '\')">⊕</button>' +
     '<button class="g-pbtn close" title="Fermer" onclick="removeGraphPanel(\'' + pid + '\')">✕</button>' +
@@ -10315,6 +10320,7 @@ function buildPanelDOM(pid) {
     '<div class="g-shared-cursor" id="' + pid + '-cursor"></div>' +
     '<div class="g-cursor-tip" id="' + pid + '-tip" style="display:none;"></div>' +
     '</div>';
+  setupPanelDrag(panel);
   return panel;
 }
 
