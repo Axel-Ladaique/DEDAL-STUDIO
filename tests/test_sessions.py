@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime
 from pathlib import Path
 
 import pytest
-
-from datetime import datetime
 
 from dedal.sessions import (
     Session,
