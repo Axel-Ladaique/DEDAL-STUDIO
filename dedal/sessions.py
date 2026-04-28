@@ -441,6 +441,8 @@ def reload_meta(session: Session) -> bool:
     Clears meta fields if no valid log.meta is present.
     """
     meta_path = session.dir_path / "log.meta"
+    if not meta_path.exists() and session.log_file:
+        meta_path = session.dir_path / (Path(session.log_file).stem + ".meta")
     parsed = parse_meta_file(meta_path)
     if not parsed:
         session.meta_ref = None
