@@ -112,6 +112,9 @@
     font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
     text-transform: uppercase; color: var(--dim);
   }
+  .sessions-header [data-sort] { cursor: pointer; user-select: none; }
+  .sessions-header [data-sort]:hover { color: var(--dim2); }
+  .sessions-header [data-sort].active { color: var(--accent); }
   .session-row {
     display: grid;
     grid-template-columns: 170px 1fr 110px 110px 220px 160px;
@@ -228,10 +231,10 @@
     <div class="sessions-wrap">
       <div class="sessions-header">
         <div>LID</div>
-        <div>Nom</div>
-        <div>Vol</div>
-        <div>Import</div>
-        <div>Log</div>
+        <div data-sort="name" onclick="setSort('name')">Nom</div>
+        <div data-sort="flight" onclick="setSort('flight')">Vol</div>
+        <div data-sort="import" onclick="setSort('import')">Import</div>
+        <div data-sort="duration" onclick="setSort('duration')">Log</div>
         <div></div>
       </div>
       <div id="session-list"><div class="empty"><span class="spinner"></span></div></div>
@@ -477,7 +480,7 @@ async function loadAllTracks() {
 async function loadSessions() {
   try {
     sessions = await api('GET', '/api/sessions');
-    renderSessions();
+    setSort(_sortKey);
     rebuildMarkers();
     loadAllTracks();
   } catch (e) {
@@ -485,14 +488,44 @@ async function loadSessions() {
   }
 }
 
+let _sortKey = 'import';
+let _sortDir = -1; // -1 = desc, 1 = asc
+
+function setSort(key) {
+  if (_sortKey === key) { _sortDir *= -1; }
+  else { _sortKey = key; _sortDir = -1; }
+  document.querySelectorAll('.sessions-header [data-sort]').forEach(el => {
+    const isActive = el.dataset.sort === _sortKey;
+    el.classList.toggle('active', isActive);
+    el.textContent = el.dataset.sort === 'name' ? 'Nom'
+      : el.dataset.sort === 'flight' ? 'Vol'
+      : el.dataset.sort === 'import' ? 'Import'
+      : 'Log';
+    if (isActive) el.textContent += _sortDir === -1 ? ' ↓' : ' ↑';
+  });
+  renderSessions();
+}
+
+function _sortValue(s) {
+  if (_sortKey === 'name')     return (s.nickname || '').toLowerCase();
+  if (_sortKey === 'flight')   return s.flight_date_utc || s.created_at || '';
+  if (_sortKey === 'import')   return s.imported_at || s.created_at || '';
+  if (_sortKey === 'duration') return s.log_meta?.duration_s || 0;
+  return '';
+}
+
 function renderSessions() {
   const q = document.getElementById('search').value.trim().toLowerCase();
   const list = document.getElementById('session-list');
-  const filtered = q
+  const filtered = (q
     ? sessions.filter(s => s.lid.toLowerCase().includes(q) ||
                            s.nickname.toLowerCase().includes(q) ||
                            (s.tags || []).some(t => t.toLowerCase().includes(q)))
-    : sessions;
+    : [...sessions]
+  ).sort((a, b) => {
+    const va = _sortValue(a), vb = _sortValue(b);
+    return va < vb ? _sortDir : va > vb ? -_sortDir : 0;
+  });
 
   if (filtered.length === 0) {
     list.innerHTML = '<div class="empty">Aucune session — importez un log CSV pour commencer.</div>';
