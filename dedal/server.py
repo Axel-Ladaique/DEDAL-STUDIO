@@ -23,6 +23,7 @@ from .sessions import (
     extract_gps_track,
     get_session,
     import_log,
+    reload_meta,
     save_session,
     scan_sessions,
 )
@@ -42,6 +43,7 @@ class _SessionCreate(BaseModel):
 class _SessionPatch(BaseModel):
     nickname: str | None = None
     tags: list[str] | None = None
+    notes: str | None = None
 
 
 _sessions = APIRouter(prefix="/api/sessions", tags=["sessions"])
@@ -133,6 +135,8 @@ def session_update(lid: str, body: _SessionPatch, request: Request) -> JSONRespo
         s.nickname = body.nickname
     if body.tags is not None:
         s.tags = body.tags
+    if body.notes is not None:
+        s.notes = body.notes
     save_session(s)
     return JSONResponse(s.to_dict())
 
@@ -270,6 +274,22 @@ def session_put_sync(lid: str, body: _SyncBody, request: Request) -> JSONRespons
     tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
     tmp.replace(sync_file)
     return JSONResponse(data)
+
+
+@_sessions.post("/{lid}/reload-meta")
+def session_reload_meta(lid: str, request: Request) -> JSONResponse:
+    """Re-read log.meta from the session folder and update cached fields.
+
+    Use after manually depositing a .meta file into the session directory.
+    """
+    s = get_session(request.app.state.cfg.flights_root, lid)
+    if s is None:
+        return JSONResponse({"error": f"session '{lid}' not found"}, status_code=404)
+    found = reload_meta(s)
+    result = s.to_dict()
+    if not found:
+        result["warning"] = "no log.meta found in session folder"
+    return JSONResponse(result)
 
 
 class _HudParams(BaseModel):
