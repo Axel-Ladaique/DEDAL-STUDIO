@@ -15,6 +15,7 @@ from dedal.sessions import (
     get_session,
     import_log,
     load_session,
+    parse_meta_file,
     save_session,
     scan_sessions,
 )
@@ -229,8 +230,6 @@ def test_parse_log_meta_empty(tmp_path: Path) -> None:
 
 # ── parse_meta_file ───────────────────────────────────────────────────────
 
-
-from dedal.sessions import parse_meta_file
 
 _META_CONTENT = """\
 # DEDAL flight log metadata

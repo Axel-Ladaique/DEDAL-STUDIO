@@ -51,7 +51,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-def parse_meta_file(path: Path) -> "dict | None":
+def parse_meta_file(path: Path) -> dict | None:
     """Parse a DEDAL .meta file. Returns dict or None if absent/malformed.
 
     Expected keys: gps_utc_ref (str), micros_ref (int), log_file (str, optional).
