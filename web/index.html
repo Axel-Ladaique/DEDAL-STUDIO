@@ -260,11 +260,11 @@
 <div class="overlay" id="modal-import" onclick="closeModal(event)">
   <div class="modal">
     <h2>Importer un log CSV</h2>
-    <label for="import-file">Fichier CSV</label>
+    <label for="import-file">Fichier CSV (+ .meta optionnel — sélection multiple)</label>
     <input type="text" id="import-file-display" placeholder="Aucun fichier sélectionné" readonly
            onclick="document.getElementById('import-file-input').click()" style="cursor:pointer">
-    <input type="file" id="import-file-input" accept=".csv" style="display:none"
-           onchange="document.getElementById('import-file-display').value=this.files[0]?.name||''">
+    <input type="file" id="import-file-input" accept=".csv,.meta" multiple style="display:none"
+           onchange="document.getElementById('import-file-display').value=Array.from(this.files).map(f=>f.name).join(', ')">
     <label for="import-nickname">Nom (optionnel)</label>
     <input type="text" id="import-nickname" placeholder="Ex : Mission Alpha" autocomplete="off"
            onkeydown="if(event.key==='Enter') confirmImport()">
@@ -587,13 +587,16 @@ function openImportModal() {
 
 async function confirmImport() {
   const fileInput = document.getElementById('import-file-input');
-  const file = fileInput.files[0];
-  if (!file) { showBanner('err', 'Sélectionnez un fichier CSV.'); return; }
+  const files = Array.from(fileInput.files);
+  const csvFile = files.find(f => f.name.toLowerCase().endsWith('.csv'));
+  const metaFile = files.find(f => f.name.toLowerCase().endsWith('.meta'));
+  if (!csvFile) { showBanner('err', 'Sélectionnez un fichier CSV.'); return; }
   const nickname = document.getElementById('import-nickname').value.trim();
   document.getElementById('modal-import').classList.remove('open');
 
   const fd = new FormData();
-  fd.append('file', file);
+  fd.append('file', csvFile);
+  if (metaFile) fd.append('meta_file', metaFile);
   try {
     const r = await fetch(`/api/sessions/import?nickname=${encodeURIComponent(nickname)}`,
                           { method: 'POST', body: fd });

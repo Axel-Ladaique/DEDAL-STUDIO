@@ -95,6 +95,7 @@ async def session_import(
     request: Request,
     file: UploadFile,
     nickname: str = Query(default=""),
+    meta_file: UploadFile | None = None,
 ) -> JSONResponse:
     """Import a CSV log — automatically creates a new session."""
     cfg = request.app.state.cfg
@@ -112,6 +113,11 @@ async def session_import(
             if s.log_meta:
                 s.log_meta["filename"] = file.filename
             save_session(s)
+        # Save and apply .meta if provided alongside the CSV.
+        if meta_file is not None:
+            meta_bytes = await meta_file.read()
+            (s.dir_path / "log.meta").write_bytes(meta_bytes)
+            reload_meta(s)
     finally:
         tmp_path.unlink(missing_ok=True)
     return JSONResponse(s.to_dict(), status_code=201)
