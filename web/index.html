@@ -106,7 +106,7 @@
   }
   .sessions-header {
     display: grid;
-    grid-template-columns: 170px 1fr 110px 220px 160px;
+    grid-template-columns: 170px 1fr 110px 110px 220px 160px;
     padding: 10px 20px;
     background: var(--surface2); border-bottom: 1px solid var(--border);
     font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
@@ -114,7 +114,7 @@
   }
   .session-row {
     display: grid;
-    grid-template-columns: 170px 1fr 110px 220px 160px;
+    grid-template-columns: 170px 1fr 110px 110px 220px 160px;
     align-items: center; padding: 12px 20px;
     border-bottom: 1px solid var(--border); transition: background .1s;
     cursor: pointer;
@@ -228,7 +228,8 @@
       <div class="sessions-header">
         <div>LID</div>
         <div>Nom</div>
-        <div>Date</div>
+        <div>Vol</div>
+        <div>Import</div>
         <div>Log</div>
         <div></div>
       </div>
@@ -508,9 +509,11 @@ function renderSessions() {
       <div>
         <span class="session-nickname${s.nickname ? '' : ' empty'}">${esc(s.nickname) || 'Sans nom'}</span>
       </div>
-      <div class="date" title="Date du vol (mtime CSV)">VOL ${fmtDate(s.created_at)}</div>
+      <div class="date">${fmtFlightDate(s)}</div>
+      <div class="date">${fmtImportDate(s)}</div>
       <div class="log-badge">${logBadge(s)}</div>
       <div class="row-actions" onclick="event.stopPropagation()">
+        ${s.log_file ? `<button class="btn sm" title="Recharger .meta depuis le dossier session" onclick="reloadMeta('${s.lid}')">⟳ META</button>` : ''}
         <label class="import-label" title="Attacher une vidéo">
           VID
           <input type="file" accept="video/*" onchange="attachVideo('${s.lid}', this)">
@@ -692,6 +695,47 @@ function closeModal(e) {
 
 function esc(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtFlightDate(s) {
+  // Use flight_date_utc + tz_offset_s if available, else created_at
+  if (s.flight_date_utc && s.tz_offset_s != null) {
+    const utcMs = new Date(s.flight_date_utc + 'Z').getTime();
+    const localMs = utcMs + s.tz_offset_s * 1000;
+    const d = new Date(localMs);
+    const pad = n => String(n).padStart(2, '0');
+    const dateStr = `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+    const timeStr = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    const tzLabel = s.tz_name ? ` <span style="color:var(--dim);font-size:9px;">[${s.tz_name.split('/').pop()}]</span>` : '';
+    return dateStr + ' ' + timeStr + tzLabel;
+  }
+  if (s.flight_date_utc) {
+    return s.flight_date_utc.replace('T', ' ').slice(0, 16) + ' <span style="color:var(--dim);font-size:9px;">UTC</span>';
+  }
+  return fmtDate(s.created_at) + ' <span style="color:var(--dim);font-size:9px;">≈mtime</span>';
+}
+
+function fmtImportDate(s) {
+  return fmtDate(s.imported_at || s.created_at);
+}
+
+async function reloadMeta(lid) {
+  try {
+    const r = await fetch(`/api/sessions/${lid}/reload-meta`, { method: 'POST' });
+    const data = await r.json();
+    if (!r.ok) { showBanner('err', 'Erreur reload-meta : ' + (data.error || r.status)); return; }
+    if (data.warning) {
+      showBanner('err', `${lid} : aucun log.meta trouvé dans le dossier session.`);
+    } else {
+      showBanner('ok', `${lid} : métadonnées rechargées — ${data.flight_date_utc || 'pas de date GPS'}`);
+    }
+    // Refresh session in local array
+    const idx = sessions.findIndex(s => s.lid === lid);
+    if (idx >= 0) sessions[idx] = data;
+    renderSessions();
+  } catch(e) {
+    showBanner('err', 'Erreur réseau : ' + e.message);
+  }
 }
 
 function fmtDate(iso) {
