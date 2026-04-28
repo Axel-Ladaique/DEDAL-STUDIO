@@ -192,12 +192,13 @@
   .btn.cancel:hover { background: rgba(255,255,255,0.05); }
 
   .banner {
-    padding: 8px 16px; border-radius: 4px;
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    padding: 8px 20px; border-radius: 4px; z-index: 999;
     font-family: var(--mono); font-size: 11px;
-    margin-bottom: 16px; display: none;
+    white-space: nowrap; display: none; pointer-events: none;
   }
-  .banner.err { display: block; background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.3); color: #ff6b35; }
-  .banner.ok  { display: block; background: rgba(57,255,20,0.06); border: 1px solid rgba(57,255,20,0.3); color: var(--accent3); }
+  .banner.err { display: block; background: rgba(255,77,77,0.12); border: 1px solid rgba(255,77,77,0.4); color: #ff6b35; }
+  .banner.ok  { display: block; background: rgba(57,255,20,0.08); border: 1px solid rgba(57,255,20,0.35); color: var(--accent3); }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner {
@@ -216,9 +217,9 @@
 
 <div class="app-layout">
 
+  <div id="banner" class="banner"></div>
   <!-- ── liste ── -->
   <div class="list-panel">
-    <div id="banner" class="banner"></div>
     <div class="toolbar">
       <button class="btn" onclick="openImportModal()">+ Importer un log</button>
       <button class="btn cancel" onclick="openNewModal()">+ Session vide</button>
@@ -513,7 +514,9 @@ function renderSessions() {
       <div class="date">${fmtImportDate(s)}</div>
       <div class="log-badge">${logBadge(s)}</div>
       <div class="row-actions" onclick="event.stopPropagation()">
-        ${s.log_file ? `<button class="btn sm" title="Recharger .meta depuis le dossier session" onclick="reloadMeta('${s.lid}')">⟳ META</button>` : ''}
+        ${s.log_file ? (s.meta_ref
+          ? `<button class="btn sm" style="color:var(--accent3);border-color:var(--accent3)" title="Métadonnées GPS chargées — cliquer pour recharger" onclick="reloadMeta('${s.lid}')">✓ META</button>`
+          : `<button class="btn sm" style="opacity:.55" title="Aucune référence .meta — cliquer pour recharger" onclick="reloadMeta('${s.lid}')">⟳ META</button>`) : ''}
         <label class="import-label" title="Attacher une vidéo">
           VID
           <input type="file" accept="video/*" onchange="attachVideo('${s.lid}', this)">
