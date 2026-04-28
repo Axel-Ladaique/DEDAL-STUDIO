@@ -9,7 +9,7 @@ import threading
 from pathlib import Path
 from queue import Empty, Queue
 
-from fastapi import APIRouter, FastAPI, Query, Request, UploadFile
+from fastapi import APIRouter, FastAPI, File, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -95,7 +95,7 @@ async def session_import(
     request: Request,
     file: UploadFile,
     nickname: str = Query(default=""),
-    meta_file: UploadFile | None = None,
+    meta_file: UploadFile | None = File(default=None),
 ) -> JSONResponse:
     """Import a CSV log — automatically creates a new session."""
     cfg = request.app.state.cfg
