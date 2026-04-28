@@ -6,9 +6,13 @@ from pathlib import Path
 
 import pytest
 
+from datetime import datetime
+
 from dedal.sessions import (
     Session,
+    _parse_gps_utc_ref,
     _parse_log_meta,
+    _resolve_timezone,
     create_empty_session,
     delete_session,
     generate_lid,
@@ -291,3 +295,39 @@ def test_parse_meta_file_log_file_optional(tmp_path: Path) -> None:
     result = parse_meta_file(f)
     assert result is not None
     assert result.get("log_file", "") == ""
+
+
+# ── _parse_gps_utc_ref ────────────────────────────────────────────────────
+
+
+def test_parse_gps_utc_ref_with_centiseconds() -> None:
+    dt = _parse_gps_utc_ref("2026-04-23T14:32:05.67")
+    assert dt == datetime(2026, 4, 23, 14, 32, 5)
+
+
+def test_parse_gps_utc_ref_without_centiseconds() -> None:
+    dt = _parse_gps_utc_ref("2026-04-23T14:32:05")
+    assert dt == datetime(2026, 4, 23, 14, 32, 5)
+
+
+def test_parse_gps_utc_ref_invalid() -> None:
+    assert _parse_gps_utc_ref("not-a-date") is None
+    assert _parse_gps_utc_ref("") is None
+
+
+# ── _resolve_timezone ─────────────────────────────────────────────────────
+
+
+def test_resolve_timezone_paris() -> None:
+    # Paris coordinates, summer (CEST = UTC+2)
+    dt = datetime(2026, 4, 23, 14, 32, 5)
+    tz_name, offset_s = _resolve_timezone(48.8566, 2.3522, dt)
+    assert tz_name == "Europe/Paris"
+    assert offset_s == 7200  # CEST = UTC+2
+
+
+def test_resolve_timezone_fallback_on_bad_coords() -> None:
+    dt = datetime(2026, 4, 23, 14, 32, 5)
+    # Ocean coordinates with no timezone → fallback UTC
+    tz_name, offset_s = _resolve_timezone(0.0, 0.0, dt)
+    assert offset_s == 0

@@ -88,6 +88,38 @@ def parse_meta_file(path: Path) -> dict | None:
     return result
 
 
+def _parse_gps_utc_ref(gps_utc_ref: str) -> datetime | None:
+    """Parse GPS_UTC_REF string to datetime (truncates centiseconds).
+
+    Accepts YYYY-MM-DDTHH:MM:SS and YYYY-MM-DDTHH:MM:SS.CC formats.
+    """
+    try:
+        dt_str = gps_utc_ref.split(".")[0]
+        return datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%S")
+    except (ValueError, AttributeError):
+        return None
+
+
+def _resolve_timezone(lat: float, lon: float, dt_utc: datetime) -> tuple[str, int]:
+    """Return (tz_name, offset_seconds) for given GPS coords at dt_utc (DST-aware).
+
+    Falls back to ("UTC", 0) on any error (no GPS, ocean coords, missing lib).
+    """
+    try:
+        from timezonefinder import TimezoneFinder
+        from zoneinfo import ZoneInfo
+        tf = TimezoneFinder()
+        tz_name = tf.timezone_at(lat=lat, lng=lon)
+        if tz_name is None:
+            return ("UTC", 0)
+        aware_utc = dt_utc.replace(tzinfo=ZoneInfo("UTC"))
+        local = aware_utc.astimezone(ZoneInfo(tz_name))
+        offset_s = int(local.utcoffset().total_seconds())
+        return (tz_name, offset_s)
+    except Exception:
+        return ("UTC", 0)
+
+
 _DT_FMT = "%Y-%m-%dT%H:%M:%S"
 _FOLDER_PREFIX = "flight_"
 
