@@ -1322,6 +1322,7 @@ canvas.chart { width: 100%; height: 100%; }
   <div class="vtab active" data-tab="telem">◈ TÉLÉMÉTRIE</div>
   <div class="vtab" data-tab="graphs">◫ GRAPHES</div>
   <div class="vtab" data-tab="analyse">◎ ANALYSE</div>
+  <div class="vtab" data-tab="info">◉ INFOS</div>
   <div class="vtab disabled">⚙ HUD</div>
   <div class="vtab disabled">⇄ COMPARAISON</div>
 </nav>
@@ -2341,6 +2342,13 @@ canvas.chart { width: 100%; height: 100%; }
   </div>
 
 </div><!-- /pane-analyse -->
+
+<!-- ══ TAB INFOS ══ -->
+<div class="tab-pane" id="pane-info">
+  <div id="info-content" style="padding:24px 32px;max-width:820px;margin:0 auto;">
+    <div id="info-loading" style="font-family:var(--font-mono);font-size:11px;color:var(--dim);letter-spacing:1px;">CHARGEMENT…</div>
+  </div>
+</div>
 
 </div><!-- /main -->
 
@@ -10111,6 +10119,9 @@ if (typeof _origInit === 'function') {
       if (t.dataset.tab === 'analyse') {
         renderAnalysisPanels();
       }
+      if (t.dataset.tab === 'info') {
+        loadInfoTab();
+      }
     });
   });
 })();
@@ -11988,6 +11999,109 @@ function deletePanelTemplate(idx) {
   if (menu) menu.style.display = 'none';
   var btn = document.getElementById('btn-saved-panels');
   if (btn) toggleSavedMenu(btn);
+}
+
+// ── ONGLET INFOS ──────────────────────────────────────────────────────────
+var _infoLoaded = false;
+
+function loadInfoTab() {
+  if (_infoLoaded) return;
+  _infoLoaded = true;
+  var lid = new URLSearchParams(location.search).get('lid');
+  if (!lid) {
+    document.getElementById('info-content').innerHTML =
+      '<p style="font-family:var(--font-mono);font-size:11px;color:var(--dim);">Session non disponible hors mode intégré.</p>';
+    return;
+  }
+  fetch('/api/sessions/' + lid)
+    .then(function(r) { return r.json(); })
+    .then(function(s) { renderInfoTab(s); })
+    .catch(function() {
+      document.getElementById('info-content').innerHTML =
+        '<p style="font-family:var(--font-mono);font-size:11px;color:var(--danger);">Erreur lors du chargement de la session.</p>';
+    });
+}
+
+function renderInfoTab(s) {
+  var flightDateDisplay = '—';
+  var localTimeDisplay = '—';
+  if (s.flight_date_utc) {
+    flightDateDisplay = s.flight_date_utc + ' UTC';
+    if (s.tz_offset_s !== null && s.tz_offset_s !== undefined) {
+      var utcMs = new Date(s.flight_date_utc + 'Z').getTime();
+      var localMs = utcMs + s.tz_offset_s * 1000;
+      var ld = new Date(localMs);
+      function pad(n) { return String(n).padStart(2, '0'); }
+      var localStr = ld.getUTCFullYear() + '-' + pad(ld.getUTCMonth()+1) + '-' + pad(ld.getUTCDate())
+        + ' ' + pad(ld.getUTCHours()) + ':' + pad(ld.getUTCMinutes()) + ':' + pad(ld.getUTCSeconds());
+      localTimeDisplay = localStr + (s.tz_name ? ' [' + s.tz_name + ']' : '');
+    }
+  } else if (s.created_at) {
+    flightDateDisplay = s.created_at + ' <span style="color:var(--dim);font-size:10px;">(estimé depuis mtime CSV)</span>';
+  }
+
+  var lm = s.log_meta || {};
+  var dur = lm.duration_s > 0 ? lm.duration_s + 's' : '—';
+  var pts = lm.row_count > 0 ? lm.row_count + ' points' : '—';
+  var gpsStr = s.gps_home ? s.gps_home.lat.toFixed(5) + ', ' + s.gps_home.lon.toFixed(5) : '—';
+
+  var metaRefHtml;
+  if (s.meta_ref) {
+    metaRefHtml = '<div class="irow"><span class="ilbl">GPS_UTC_REF</span><span class="ival">' + s.meta_ref.gps_utc_ref + '</span></div>'
+      + '<div class="irow"><span class="ilbl">MICROS_REF</span><span class="ival">' + s.meta_ref.micros_ref + '</span></div>';
+  } else {
+    metaRefHtml = '<span style="color:var(--dim);font-style:italic;font-family:var(--font-mono);font-size:11px;">Horodatage absolu non disponible</span>';
+  }
+
+  document.getElementById('info-content').innerHTML = '<style>'
+    + '.isec{margin-bottom:24px}'
+    + '.isec-title{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:12px}'
+    + '.irow{display:flex;gap:16px;margin-bottom:8px;align-items:baseline}'
+    + '.ilbl{font-family:var(--font-mono);font-size:10px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;width:160px;flex-shrink:0}'
+    + '.ival{font-family:var(--font-mono);font-size:12px;color:var(--text)}'
+    + '.inotes{width:100%;min-height:120px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:-apple-system,sans-serif;font-size:13px;padding:10px 12px;border-radius:4px;resize:vertical;outline:none}'
+    + '.inotes:focus{border-color:var(--accent)}'
+    + '</style>'
+    + '<div class="isec"><div class="isec-title">◈ Vol</div>'
+    + '<div class="irow"><span class="ilbl">Date UTC</span><span class="ival">' + flightDateDisplay + '</span></div>'
+    + '<div class="irow"><span class="ilbl">Heure locale</span><span class="ival">' + localTimeDisplay + '</span></div>'
+    + '<div class="irow"><span class="ilbl">Durée</span><span class="ival">' + dur + '</span></div>'
+    + '<div class="irow"><span class="ilbl">Points log</span><span class="ival">' + pts + '</span></div>'
+    + '</div>'
+    + '<div class="isec"><div class="isec-title">⚙ Système</div>'
+    + '<div class="irow"><span class="ilbl">Firmware</span><span class="ival">' + (lm.fw_version || '—') + '</span></div>'
+    + '<div class="irow"><span class="ilbl">Config</span><span class="ival">' + (lm.config_name || '—') + '</span></div>'
+    + '<div class="irow"><span class="ilbl">GPS home</span><span class="ival">' + gpsStr + '</span></div>'
+    + '</div>'
+    + '<div class="isec"><div class="isec-title">⏱ Référence temporelle</div>' + metaRefHtml + '</div>'
+    + '<div class="isec"><div class="isec-title">📝 Commentaires</div>'
+    + '<textarea class="inotes" id="info-notes-ta"></textarea>'
+    + '<div style="margin-top:10px;display:flex;align-items:center;gap:12px;">'
+    + '<button class="btn sm" onclick="saveInfoNotes(\'' + (s.lid || '') + '\')">Sauvegarder</button>'
+    + '<span id="info-notes-fb" style="font-family:var(--font-mono);font-size:10px;"></span>'
+    + '</div></div>';
+
+  // Set textarea value safely after innerHTML (avoids HTML injection)
+  document.getElementById('info-notes-ta').value = s.notes || '';
+}
+
+function saveInfoNotes(lid) {
+  var notes = document.getElementById('info-notes-ta').value;
+  var fb = document.getElementById('info-notes-fb');
+  fb.textContent = '';
+  fetch('/api/sessions/' + lid, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({notes: notes})
+  }).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    fb.style.color = 'var(--accent3)';
+    fb.textContent = '✓ Sauvegardé';
+    setTimeout(function() { fb.textContent = ''; }, 2000);
+  }).catch(function(e) {
+    fb.style.color = 'var(--danger)';
+    fb.textContent = '✗ Erreur : ' + e.message;
+  });
 }
 </script>
 </body>
