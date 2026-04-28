@@ -302,7 +302,7 @@ def create_empty_session(flights_root: Path, nickname: str = "",
     folder = flights_root / _lid_to_folder(lid)
     folder.mkdir(parents=True, exist_ok=True)
     s = Session(lid=lid, nickname=nickname, created_at=now,
-                dir_path=folder, tags=tags or [])
+                dir_path=folder, tags=tags or [], imported_at=now)
     save_session(s)
     return s
 
@@ -327,8 +327,8 @@ def generate_lid(log_csv_path: Path, flights_root: Path) -> str:
 def import_log(csv_path: Path, flights_root: Path, nickname: str = "") -> Session:
     """Create a new session from a CSV log file.
 
-    Copies (never moves) ``csv_path`` into a new session folder as ``log.csv``.
-    Extracts metadata from the CSV and writes ``session.json``.
+    Copies (never moves) csv_path into a new session folder.
+    Also copies {csv_stem}.meta from the same directory if present.
     """
     lid = generate_lid(csv_path, flights_root)
     folder_name = _lid_to_folder(lid)
@@ -344,7 +344,33 @@ def import_log(csv_path: Path, flights_root: Path, nickname: str = "") -> Sessio
     except OSError:
         created_at = datetime.now().replace(microsecond=0)
 
+    imported_at = datetime.now().replace(microsecond=0)
     log_meta, gps_home = _parse_log_meta(dest)
+
+    meta_ref: dict | None = None
+    flight_date_utc: str | None = None
+    tz_name: str | None = None
+    tz_offset_s: int | None = None
+
+    source_meta = csv_path.parent / (csv_path.stem + ".meta")
+    if source_meta.exists():
+        parsed = parse_meta_file(source_meta)
+        if parsed:
+            shutil.copy2(source_meta, folder / "log.meta")
+            meta_ref = parsed
+            dt = _parse_gps_utc_ref(parsed["gps_utc_ref"])
+            if dt:
+                flight_date_utc = dt.strftime(_DT_FMT)
+                if gps_home:
+                    tz_name, tz_offset_s = _resolve_timezone(
+                        gps_home["lat"], gps_home["lon"], dt
+                    )
+            if parsed.get("log_file") and parsed["log_file"] != csv_path.name:
+                logger.warning(
+                    "meta LOG_FILE=%r doesn't match CSV name %r — loading anyway",
+                    parsed["log_file"], csv_path.name,
+                )
+
     session = Session(
         lid=lid,
         nickname=nickname,
@@ -353,6 +379,11 @@ def import_log(csv_path: Path, flights_root: Path, nickname: str = "") -> Sessio
         log_file="log.csv",
         log_meta=log_meta,
         gps_home=gps_home,
+        imported_at=imported_at,
+        flight_date_utc=flight_date_utc,
+        tz_name=tz_name,
+        tz_offset_s=tz_offset_s,
+        meta_ref=meta_ref,
     )
     save_session(session)
     return session

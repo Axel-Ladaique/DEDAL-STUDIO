@@ -385,3 +385,56 @@ def test_load_session_new_fields_default_to_none(tmp_path: Path) -> None:
     assert loaded.tz_offset_s is None
     assert loaded.meta_ref is None
     assert loaded.notes == ""
+
+
+def test_import_log_sets_imported_at(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    source = _write_csv(tmp_path / "log.csv")
+    before = datetime.now().replace(microsecond=0)
+    s = import_log(source, flights)
+    after = datetime.now().replace(microsecond=0)
+    assert s.imported_at is not None
+    assert before <= s.imported_at <= after
+
+
+def test_import_log_with_meta(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    _write_csv(tmp_path / "LOG_023.csv")
+    _write_meta(tmp_path / "LOG_023.meta")
+    s = import_log(tmp_path / "LOG_023.csv", flights)
+    assert s.meta_ref is not None
+    assert s.meta_ref["gps_utc_ref"] == "2026-04-23T14:32:05.67"
+    assert s.meta_ref["micros_ref"] == 1234567890
+    assert s.flight_date_utc == "2026-04-23T14:32:05"
+    assert (s.dir_path / "log.meta").exists()
+
+
+def test_import_log_without_meta(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    source = _write_csv(tmp_path / "LOG_024.csv")
+    s = import_log(source, flights)
+    assert s.meta_ref is None
+    assert s.flight_date_utc is None
+    assert not (s.dir_path / "log.meta").exists()
+
+
+def test_import_log_meta_log_file_mismatch_warns(tmp_path: Path, caplog) -> None:
+    """LOG_FILE mismatch logs a warning but does not fail."""
+    import logging
+    flights = tmp_path / "flights"
+    _write_csv(tmp_path / "LOG_025.csv")
+    meta_content = "GPS_UTC_REF=2026-04-23T14:32:05.67\nMICROS_REF=999\nLOG_FILE=WRONG.csv\n"
+    _write_meta(tmp_path / "LOG_025.meta", meta_content)
+    with caplog.at_level(logging.WARNING, logger="dedal.sessions"):
+        s = import_log(tmp_path / "LOG_025.csv", flights)
+    assert s.meta_ref is not None
+    assert any("WRONG.csv" in r.message for r in caplog.records)
+
+
+def test_create_empty_session_sets_imported_at(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    before = datetime.now().replace(microsecond=0)
+    s = create_empty_session(flights, nickname="empty")
+    after = datetime.now().replace(microsecond=0)
+    assert s.imported_at is not None
+    assert before <= s.imported_at <= after
