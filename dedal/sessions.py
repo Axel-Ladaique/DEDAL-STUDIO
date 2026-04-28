@@ -207,24 +207,36 @@ class Session:
     nickname: str
     created_at: datetime
     dir_path: Path
-    log_file: str = ""            # relative path inside dir_path
-    video_file: str | None = None # relative path inside dir_path
+    log_file: str = ""
+    video_file: str | None = None
     tags: list[str] = field(default_factory=list)
-    location: dict | None = None   # {lat, lon, place_name}
-    log_meta: dict | None = None   # populated on CSV import
-    gps_home: dict | None = None   # {lat, lon} — first valid GPS fix
+    location: dict | None = None
+    log_meta: dict | None = None
+    gps_home: dict | None = None
+    imported_at: datetime | None = None
+    flight_date_utc: str | None = None
+    tz_name: str | None = None
+    tz_offset_s: int | None = None
+    meta_ref: dict | None = None
+    notes: str = ""
 
     def to_dict(self) -> dict:
         return {
             "lid": self.lid,
             "nickname": self.nickname,
             "created_at": self.created_at.strftime(_DT_FMT),
+            "imported_at": self.imported_at.strftime(_DT_FMT) if self.imported_at else None,
             "log_file": self.log_file,
             "video_file": self.video_file,
             "tags": self.tags,
             "location": self.location,
             "log_meta": self.log_meta,
             "gps_home": self.gps_home,
+            "flight_date_utc": self.flight_date_utc,
+            "tz_name": self.tz_name,
+            "tz_offset_s": self.tz_offset_s,
+            "meta_ref": self.meta_ref,
+            "notes": self.notes,
         }
 
 
@@ -242,6 +254,7 @@ def save_session(session: Session) -> None:
 def load_session(dir_path: Path) -> Session:
     """Load a Session from its folder. Raises on missing / malformed JSON."""
     data = json.loads((dir_path / "session.json").read_text(encoding="utf-8"))
+    imported_at_str = data.get("imported_at")
     return Session(
         lid=data["lid"],
         nickname=data.get("nickname", ""),
@@ -253,6 +266,12 @@ def load_session(dir_path: Path) -> Session:
         location=data.get("location"),
         log_meta=data.get("log_meta"),
         gps_home=data.get("gps_home"),
+        imported_at=datetime.strptime(imported_at_str, _DT_FMT) if imported_at_str else None,
+        flight_date_utc=data.get("flight_date_utc"),
+        tz_name=data.get("tz_name"),
+        tz_offset_s=data.get("tz_offset_s"),
+        meta_ref=data.get("meta_ref"),
+        notes=data.get("notes", ""),
     )
 
 

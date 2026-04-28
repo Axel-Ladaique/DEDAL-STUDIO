@@ -330,3 +330,58 @@ def test_resolve_timezone_fallback_on_bad_coords() -> None:
     # Ocean coordinates with no timezone → fallback UTC
     tz_name, offset_s = _resolve_timezone(0.0, 0.0, dt)
     assert offset_s == 0
+
+
+# ── new fields roundtrip ──────────────────────────────────────────────────
+
+
+def test_save_load_roundtrip_new_fields(tmp_path: Path) -> None:
+    folder = tmp_path / "flight_20260423_001"
+    folder.mkdir()
+    s = Session(
+        lid="DEDAL-20260423-001",
+        nickname="Test meta",
+        created_at=datetime(2026, 4, 23, 12, 0, 0),
+        dir_path=folder,
+        log_file="log.csv",
+        imported_at=datetime(2026, 4, 28, 10, 0, 0),
+        flight_date_utc="2026-04-23T14:32:05",
+        tz_name="Europe/Paris",
+        tz_offset_s=7200,
+        meta_ref={"gps_utc_ref": "2026-04-23T14:32:05.67", "micros_ref": 1234567890, "log_file": "LOG_023.csv"},
+        notes="Premier vol de test.",
+    )
+    save_session(s)
+    loaded = load_session(folder)
+    assert loaded.imported_at == datetime(2026, 4, 28, 10, 0, 0)
+    assert loaded.flight_date_utc == "2026-04-23T14:32:05"
+    assert loaded.tz_name == "Europe/Paris"
+    assert loaded.tz_offset_s == 7200
+    assert loaded.meta_ref["micros_ref"] == 1234567890
+    assert loaded.notes == "Premier vol de test."
+
+
+def test_load_session_new_fields_default_to_none(tmp_path: Path) -> None:
+    """Old sessions without new fields load without error."""
+    import json
+    folder = tmp_path / "flight_20260419_001"
+    folder.mkdir()
+    data = {
+        "lid": "DEDAL-20260419-001",
+        "nickname": "old",
+        "created_at": "2026-04-19T14:00:00",
+        "log_file": "log.csv",
+        "video_file": None,
+        "tags": [],
+        "location": None,
+        "log_meta": None,
+        "gps_home": None,
+    }
+    (folder / "session.json").write_text(json.dumps(data), encoding="utf-8")
+    loaded = load_session(folder)
+    assert loaded.imported_at is None
+    assert loaded.flight_date_utc is None
+    assert loaded.tz_name is None
+    assert loaded.tz_offset_s is None
+    assert loaded.meta_ref is None
+    assert loaded.notes == ""
