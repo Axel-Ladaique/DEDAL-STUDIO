@@ -19,6 +19,7 @@ from dedal.sessions import (
     import_log,
     load_session,
     parse_meta_file,
+    reload_meta,
     save_session,
     scan_sessions,
 )
@@ -438,3 +439,31 @@ def test_create_empty_session_sets_imported_at(tmp_path: Path) -> None:
     after = datetime.now().replace(microsecond=0)
     assert s.imported_at is not None
     assert before <= s.imported_at <= after
+
+
+# ── reload_meta ───────────────────────────────────────────────────────────
+
+
+def test_reload_meta_found(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    source = _write_csv(tmp_path / "LOG_023.csv")
+    s = import_log(source, flights)
+    # Deposit log.meta manually into session folder
+    _write_meta(s.dir_path / "log.meta")
+    result = reload_meta(s)
+    assert result is True
+    assert s.meta_ref is not None
+    assert s.flight_date_utc == "2026-04-23T14:32:05"
+    # Verify persisted to session.json
+    loaded = load_session(s.dir_path)
+    assert loaded.flight_date_utc == "2026-04-23T14:32:05"
+
+
+def test_reload_meta_not_found(tmp_path: Path) -> None:
+    flights = tmp_path / "flights"
+    source = _write_csv(tmp_path / "log.csv")
+    s = import_log(source, flights)
+    result = reload_meta(s)
+    assert result is False
+    assert s.meta_ref is None
+    assert s.flight_date_utc is None

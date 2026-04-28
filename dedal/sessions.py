@@ -434,6 +434,34 @@ def extract_gps_track(csv_path: Path, max_pts: int = 500) -> "list[list[float]]"
     return points[::step]
 
 
+def reload_meta(session: Session) -> bool:
+    """Read log.meta from session folder, update session fields, save atomically.
+
+    Returns True if log.meta was found and parsed successfully, False otherwise.
+    Clears meta fields if no valid log.meta is present.
+    """
+    meta_path = session.dir_path / "log.meta"
+    parsed = parse_meta_file(meta_path)
+    if not parsed:
+        session.meta_ref = None
+        session.flight_date_utc = None
+        session.tz_name = None
+        session.tz_offset_s = None
+        save_session(session)
+        return False
+
+    session.meta_ref = parsed
+    dt = _parse_gps_utc_ref(parsed["gps_utc_ref"])
+    if dt:
+        session.flight_date_utc = dt.strftime(_DT_FMT)
+        if session.gps_home:
+            session.tz_name, session.tz_offset_s = _resolve_timezone(
+                session.gps_home["lat"], session.gps_home["lon"], dt
+            )
+    save_session(session)
+    return True
+
+
 def scan_sessions(flights_root: Path) -> list[Session]:
     """Return all valid sessions sorted by created_at descending."""
     if not flights_root.exists():
