@@ -225,3 +225,70 @@ def test_parse_log_meta_empty(tmp_path: Path) -> None:
     meta, gps = _parse_log_meta(f)
     assert meta["row_count"] == 0
     assert meta["duration_s"] == 0.0
+
+
+# ── parse_meta_file ───────────────────────────────────────────────────────
+
+
+from dedal.sessions import parse_meta_file
+
+_META_CONTENT = """\
+# DEDAL flight log metadata
+GPS_UTC_REF=2026-04-23T14:32:05.67
+MICROS_REF=1234567890
+LOG_FILE=LOG_023.csv
+"""
+
+
+def _write_meta(path: Path, content: str = _META_CONTENT) -> Path:
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def test_parse_meta_file_valid(tmp_path: Path) -> None:
+    f = _write_meta(tmp_path / "LOG_023.meta")
+    result = parse_meta_file(f)
+    assert result is not None
+    assert result["gps_utc_ref"] == "2026-04-23T14:32:05.67"
+    assert result["micros_ref"] == 1234567890
+    assert result["log_file"] == "LOG_023.csv"
+
+
+def test_parse_meta_file_absent(tmp_path: Path) -> None:
+    assert parse_meta_file(tmp_path / "missing.meta") is None
+
+
+def test_parse_meta_file_unknown_keys_ignored(tmp_path: Path) -> None:
+    content = "GPS_UTC_REF=2026-04-23T14:32:05.67\nMICROS_REF=999\nFUTURE_KEY=ignored\n"
+    f = _write_meta(tmp_path / "x.meta", content)
+    result = parse_meta_file(f)
+    assert result is not None
+    assert "FUTURE_KEY" not in result
+
+
+def test_parse_meta_file_missing_required_field(tmp_path: Path) -> None:
+    content = "GPS_UTC_REF=2026-04-23T14:32:05.67\n"  # missing MICROS_REF
+    f = _write_meta(tmp_path / "x.meta", content)
+    assert parse_meta_file(f) is None
+
+
+def test_parse_meta_file_bad_micros_ref(tmp_path: Path) -> None:
+    content = "GPS_UTC_REF=2026-04-23T14:32:05.67\nMICROS_REF=NOT_A_NUMBER\n"
+    f = _write_meta(tmp_path / "x.meta", content)
+    assert parse_meta_file(f) is None
+
+
+def test_parse_meta_file_comments_ignored(tmp_path: Path) -> None:
+    content = "# comment\nGPS_UTC_REF=2026-04-23T14:32:05.67\n# another\nMICROS_REF=42\n"
+    f = _write_meta(tmp_path / "x.meta", content)
+    result = parse_meta_file(f)
+    assert result is not None
+    assert result["micros_ref"] == 42
+
+
+def test_parse_meta_file_log_file_optional(tmp_path: Path) -> None:
+    content = "GPS_UTC_REF=2026-04-23T14:32:05.67\nMICROS_REF=42\n"
+    f = _write_meta(tmp_path / "x.meta", content)
+    result = parse_meta_file(f)
+    assert result is not None
+    assert result.get("log_file", "") == ""

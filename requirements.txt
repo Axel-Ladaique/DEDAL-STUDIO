@@ -13,6 +13,7 @@ python-multipart>=0.0.9
 # HUD generation
 opencv-python-headless>=4.9
 numpy>=1.26
+timezonefinder>=6.5
 
 # testing
 pytest>=8.0

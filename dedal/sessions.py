@@ -50,6 +50,44 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
+def parse_meta_file(path: Path) -> "dict | None":
+    """Parse a DEDAL .meta file. Returns dict or None if absent/malformed.
+
+    Expected keys: gps_utc_ref (str), micros_ref (int), log_file (str, optional).
+    Unknown keys are silently ignored.
+    """
+    if not path.exists():
+        return None
+    result: dict = {}
+    try:
+        with path.open(encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                key = key.strip()
+                val = val.strip()
+                if key == "GPS_UTC_REF":
+                    result["gps_utc_ref"] = val
+                elif key == "MICROS_REF":
+                    try:
+                        result["micros_ref"] = int(val)
+                    except ValueError:
+                        return None
+                elif key == "LOG_FILE":
+                    result["log_file"] = val
+    except OSError:
+        return None
+    if "gps_utc_ref" not in result or "micros_ref" not in result:
+        return None
+    result.setdefault("log_file", "")
+    return result
+
+
 _DT_FMT = "%Y-%m-%dT%H:%M:%S"
 _FOLDER_PREFIX = "flight_"
 
