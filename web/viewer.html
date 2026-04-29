@@ -12114,7 +12114,7 @@ function _buildInfoTagsHtml(s) {
         +';border-radius:3px;padding:3px 10px;font-family:var(--font-mono);font-size:11px;color:'+col+';cursor:context-menu" '
         +'oncontextmenu="showInfoTagMenu(event,\''+t+'\')" title="Clic droit pour options">'
         +'<span style="width:10px;height:10px;border-radius:50%;background:'+col+';cursor:pointer;flex-shrink:0" '
-        +'title="Changer la couleur" onclick="pickInfoTagColor(\''+t+'\')"></span>'
+        +'title="Changer la couleur" onclick="pickInfoTagColor(event,\''+t+'\')"></span>'
         +t
         +'<span style="cursor:pointer;margin-left:2px;opacity:.7;font-size:14px;line-height:1" onclick="removeInfoTag(\''+t+'\')">×</span>'
         +'</span>';
@@ -12130,10 +12130,10 @@ function _buildInfoTagsHtml(s) {
     html += '<div style="display:flex;flex-wrap:wrap;gap:4px">';
     html += available.map(function(t) {
       var col = _infoTagColors[t] || '#7b8fa1';
-      return '<span style="display:inline-flex;align-items:center;background:var(--surface2);border:1px solid var(--border2);'
-        +'border-radius:3px;padding:2px 8px;font-family:var(--font-mono);font-size:11px;color:var(--dim);cursor:pointer" '
-        +'onmouseover="this.style.borderColor=\''+col+'\';this.style.color=\''+col+'\'" '
-        +'onmouseout="this.style.borderColor=\'\';this.style.color=\'\'" '
+      return '<span style="display:inline-flex;align-items:center;background:'+col+'0f;border:1px solid '+col+'55;'
+        +'border-radius:3px;padding:2px 8px;font-family:var(--font-mono);font-size:11px;color:'+col+'88;cursor:pointer;transition:all .12s" '
+        +'onmouseover="this.style.background=\''+col+'33\';this.style.borderColor=\''+col+'\';this.style.color=\''+col+'\'" '
+        +'onmouseout="this.style.background=\''+col+'0f\';this.style.borderColor=\''+col+'55\';this.style.color=\''+col+'88\'" '
         +'onclick="addInfoTagDirect(\''+t+'\')" '
         +'oncontextmenu="showInfoTagMenu(event,\''+t+'\')" title="Clic pour ajouter · clic droit pour options">+ '+t+'</span>';
     }).join('');
@@ -12174,27 +12174,27 @@ function addInfoTagDirect(tag) {
 
 function removeInfoTag(tag) {
   if (!_infoSession) return;
-  if (!confirm('Retirer l\'étiquette "' + tag + '" de ce log ?')) return;
   _infoSession.tags = (_infoSession.tags || []).filter(function(t){return t !== tag;});
   fetch('/api/sessions/' + (_infoSession.lid||''), {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({tags:_infoSession.tags})});
   _refreshInfoTags();
 }
 
-function pickInfoTagColor(tag) {
+function pickInfoTagColor(evt, tag) {
   var inp = document.getElementById('_globalColorPicker');
   if (!inp) {
     inp = document.createElement('input');
     inp.type = 'color';
     inp.id = '_globalColorPicker';
-    // opacity:0.01 (pas 0) + taille non nulle : requis par WebKit pour déclencher le picker natif
-    inp.style.cssText = 'position:fixed;top:0;left:0;width:40px;height:40px;opacity:0.01;border:0;padding:0;cursor:pointer';
+    inp.style.cssText = 'position:fixed;width:40px;height:40px;opacity:0.01;border:0;padding:0;cursor:pointer';
     document.body.appendChild(inp);
   }
+  // Positionner près du clic (WebKit ouvre le picker natif depuis cet emplacement)
+  var x = evt ? Math.min(evt.clientX, window.innerWidth  - 50) : 0;
+  var y = evt ? Math.min(evt.clientY, window.innerHeight - 50) : 0;
+  inp.style.left = x + 'px';
+  inp.style.top  = y + 'px';
   inp.value = _infoTagColors[tag] || '#7b8fa1';
-  inp.onchange = null;
-  inp.onchange = function() {
-    setInfoTagColor(tag, inp.value);
-  };
+  inp.onchange = function() { setInfoTagColor(tag, inp.value); };
   inp.click();
 }
 
@@ -12217,11 +12217,11 @@ function showInfoTagMenu(event, tag) {
     return '<div style="padding:7px 14px;cursor:pointer;color:'+color+';border-radius:3px" '
       +'onmouseover="this.style.background=\'var(--surface2)\'" '
       +'onmouseout="this.style.background=\'\'" '
-      +'onclick="hideInfoCtxMenu();('+fn+')()">'+label+'</div>';
+      +'onclick="hideInfoCtxMenu();('+fn+')(event)">'+label+'</div>';
   };
   menu.innerHTML =
     item('🎨 Changer la couleur', 'var(--text)',
-      'function(){pickInfoTagColor(\''+tag+'\')}')
+      'function(ev){pickInfoTagColor(ev,\''+tag+'\')}')
     +'<div style="height:1px;background:var(--border);margin:3px 0"></div>'
     +item('🗑 Supprimer de la base de tags', 'var(--danger)',
       'function(){deleteInfoTagGlobal(\''+tag+'\')}');
