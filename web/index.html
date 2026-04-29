@@ -106,7 +106,7 @@
   }
   .sessions-header {
     display: grid;
-    grid-template-columns: 170px 1fr 110px 110px 220px 160px;
+    grid-template-columns: 170px 1fr 110px 110px 155px 110px 110px;
     padding: 10px 20px;
     background: var(--surface2); border-bottom: 1px solid var(--border);
     font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
@@ -117,7 +117,7 @@
   .sessions-header [data-sort].active { color: var(--accent); }
   .session-row {
     display: grid;
-    grid-template-columns: 170px 1fr 110px 110px 220px 160px;
+    grid-template-columns: 170px 1fr 110px 110px 155px 110px 110px;
     align-items: center; padding: 12px 20px;
     border-bottom: 1px solid var(--border); transition: background .1s;
     cursor: pointer;
@@ -134,27 +134,65 @@
   .session-nickname.empty { color: var(--dim); font-style: italic; }
   .date { font-family: var(--mono); font-size: 11px; color: var(--dim); }
 
-  .tags { display: flex; flex-wrap: wrap; gap: 4px; }
-  .tag {
-    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
-    color: var(--dim); background: var(--surface2);
-    border: 1px solid var(--border2); border-radius: 3px;
-    padding: 1px 6px;
-  }
   .tag-chip {
     display: inline-flex; align-items: center;
     font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
     border: 1px solid; border-radius: 3px; padding: 2px 8px;
-    cursor: pointer; margin-right: 4px;
+    cursor: pointer;
   }
-  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; margin-top: 8px; }
-  .cal-day { text-align:center; padding:4px 2px; font-family:var(--mono); font-size:11px;
-             border-radius:3px; cursor:default; min-height:28px; position:relative; }
-  .cal-day.has-log { cursor:pointer; }
-  .cal-day.has-log:hover { background:var(--surface2); }
-  .cal-day.selected { background:var(--accent)33 !important; color:var(--accent); }
-  .cal-day.today { font-weight:bold; }
-  .cal-dot { width:4px; height:4px; border-radius:50%; background:var(--accent); margin:1px auto 0; }
+  .tag-mini {
+    font-family: var(--mono); font-size: 9px; border: 1px solid;
+    border-radius: 2px; padding: 1px 5px; cursor: pointer;
+    white-space: nowrap; display: inline-block; transition: opacity .1s;
+  }
+  .tag-mini:hover { opacity: .75; }
+  .tag-dd-wrap { position: relative; }
+  .tag-dd {
+    position: absolute; background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 10px 12px; z-index: 200; min-width: 180px;
+    display: flex; flex-direction: column; gap: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.55); top: calc(100% + 6px); right: 0;
+  }
+  .tag-dd-title { font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--dim); }
+  .tag-dd-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag-dd-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: var(--mono); font-size: 10px; border: 1px solid;
+    border-radius: 3px; padding: 3px 8px; cursor: pointer; transition: opacity .1s;
+  }
+  .tag-dd-chip:hover { opacity: .8; }
+  /* Calendar card */
+  .cal-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; margin-top: 16px; overflow: hidden;
+  }
+  .cal-nav {
+    display: flex; align-items: center; padding: 7px 12px; gap: 8px;
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+  }
+  .cal-nav-title {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; flex: 1; text-align: center;
+    cursor: pointer; color: var(--dim); transition: color .12s;
+  }
+  .cal-nav-title:hover { color: var(--accent); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; padding: 8px 12px; }
+  .cal-day { text-align: center; padding: 3px 2px; font-family: var(--mono); font-size: 10px;
+             border-radius: 3px; cursor: default; min-height: 26px; }
+  .cal-day.has-log { cursor: pointer; }
+  .cal-day.has-log:hover { background: var(--surface2); }
+  .cal-day.selected { background: var(--accent)33 !important; color: var(--accent); }
+  .cal-day.today { font-weight: bold; color: var(--text); }
+  .cal-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); margin: 2px auto 0; }
+  .cal-pick { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; padding: 12px; }
+  .cal-pick-m {
+    text-align: center; padding: 7px 4px; border-radius: 3px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    cursor: pointer; border: 1px solid transparent; transition: all .1s;
+  }
+  .cal-pick-m:hover { background: var(--surface2); border-color: var(--border2); }
+  .cal-pick-m.cal-cur { border-color: var(--accent); color: var(--accent); }
 
   .log-badge { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; }
   .log-badge .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
@@ -238,11 +276,11 @@
   <!-- ── liste ── -->
   <div class="list-panel">
     <div class="toolbar">
-      <div id="tag-filter-bar" style="display:contents"></div>
       <button class="btn" onclick="openImportModal()">+ Importer un log</button>
       <button class="btn cancel" onclick="openNewModal()">+ Session vide</button>
       <input type="search" id="search" placeholder="Filtrer…" oninput="renderSessions()">
     </div>
+    <div id="active-filters" style="display:none;flex-wrap:wrap;gap:4px;padding:0 0 12px 0"></div>
     <div class="sessions-wrap">
       <div class="sessions-header">
         <div>LID</div>
@@ -250,11 +288,12 @@
         <div data-sort="flight" onclick="setSort('flight')">Vol</div>
         <div data-sort="import" onclick="setSort('import')">Import</div>
         <div data-sort="duration" onclick="setSort('duration')">Log</div>
+        <div class="tag-dd-wrap" id="tags-col-hdr" style="position:relative"></div>
         <div></div>
       </div>
       <div id="session-list"><div class="empty"><span class="spinner"></span></div></div>
-      <div id="calendar-section" style="padding:16px 20px 20px;border-top:1px solid var(--border)"></div>
     </div>
+    <div class="cal-card" id="cal-card"></div>
   </div>
 
   <!-- ── poignée redimensionnement ── -->
@@ -320,6 +359,8 @@ let _filterTags = new Set();
 let _filterDate = null; // 'YYYY-MM-DD' or null
 let _calYear = new Date().getFullYear();
 let _calMonth = new Date().getMonth();
+let _calPickerOpen = false;
+let _tagDropdownOpen = false;
 
 // ── API ────────────────────────────────────────────────────────────────────
 
@@ -505,6 +546,7 @@ async function loadSessions() {
       api('GET', '/api/tag-colors'),
     ]);
     setSort(_sortKey);
+    renderTagColHeader();
     renderCalendar();
     rebuildMarkers();
     loadAllTracks();
@@ -522,11 +564,9 @@ function setSort(key) {
   document.querySelectorAll('.sessions-header [data-sort]').forEach(el => {
     const isActive = el.dataset.sort === _sortKey;
     el.classList.toggle('active', isActive);
-    el.textContent = el.dataset.sort === 'name' ? 'Nom'
-      : el.dataset.sort === 'flight' ? 'Vol'
-      : el.dataset.sort === 'import' ? 'Import'
-      : 'Log';
-    if (isActive) el.textContent += _sortDir === -1 ? ' ↓' : ' ↑';
+    const labels = {name:'Nom', flight:'Vol', import:'Import', duration:'Log'};
+    el.textContent = (labels[el.dataset.sort] || el.dataset.sort)
+      + (isActive ? (_sortDir === -1 ? ' ↓' : ' ↑') : '');
   });
   renderSessions();
 }
@@ -545,14 +585,17 @@ function tagColor(name) {
 
 function toggleTagFilter(tag) {
   if (_filterTags.has(tag)) _filterTags.delete(tag); else _filterTags.add(tag);
-  renderTagFilters();
+  renderTagColHeader();
+  renderActiveFilters();
   renderSessions();
 }
 
-function renderTagFilters() {
-  const el = document.getElementById('tag-filter-bar');
+function renderActiveFilters() {
+  const el = document.getElementById('active-filters');
   if (!el) return;
-  if (_filterTags.size === 0 && !_filterDate) { el.innerHTML = ''; return; }
+  const hasFilters = _filterTags.size > 0 || _filterDate;
+  el.style.display = hasFilters ? 'flex' : 'none';
+  if (!hasFilters) { el.innerHTML = ''; return; }
   const chips = [..._filterTags].map(t =>
     `<span class="tag-chip" style="background:${tagColor(t)}22;border-color:${tagColor(t)};color:${tagColor(t)}"
       onclick="toggleTagFilter('${esc(t)}')">${esc(t)} ×</span>`
@@ -561,16 +604,55 @@ function renderTagFilters() {
     ? `<span class="tag-chip" style="background:var(--accent)22;border-color:var(--accent);color:var(--accent)"
         onclick="setDateFilter(null)">${_filterDate} ×</span>`
     : '';
-  el.innerHTML = chips + dateChip +
-    `<span style="font-family:var(--mono);font-size:10px;color:var(--dim);cursor:pointer;margin-left:4px"
-      onclick="_filterTags.clear();setDateFilter(null)">tout effacer</span>`;
+  el.innerHTML = chips + dateChip
+    + `<span style="font-family:var(--mono);font-size:10px;color:var(--dim);cursor:pointer;padding:2px 8px"
+        onclick="_filterTags.clear();setDateFilter(null)">effacer tout</span>`;
 }
 
 function setDateFilter(dateStr) {
   _filterDate = dateStr;
-  renderTagFilters();
+  renderActiveFilters();
   renderCalendar();
   renderSessions();
+}
+
+function renderTagColHeader() {
+  const hdr = document.getElementById('tags-col-hdr');
+  if (!hdr) return;
+  const allTags = Object.keys(_tagColors);
+  const activeCount = _filterTags.size;
+  const label = 'TAGS' + (activeCount ? ` (${activeCount})` : '') + ' ▾';
+  const color = activeCount ? 'var(--accent)' : 'var(--dim)';
+  let html = `<span onclick="toggleTagDropdown(event)" style="cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:${color}">${label}</span>`;
+  if (_tagDropdownOpen && allTags.length) {
+    const chips = allTags.map(t => {
+      const col = _tagColors[t] || '#7b8fa1';
+      const active = _filterTags.has(t);
+      return `<span class="tag-dd-chip" style="color:${col};border-color:${col};background:${active ? col+'33' : 'transparent'}"
+        onclick="event.stopPropagation();toggleTagFilter('${esc(t)}')">${esc(t)}${active ? ' ✓' : ''}</span>`;
+    }).join('');
+    html += `<div class="tag-dd">
+      <div class="tag-dd-title">Filtrer par étiquette</div>
+      <div class="tag-dd-chips">${chips}</div>
+      ${_filterTags.size ? `<span style="font-family:var(--mono);font-size:9px;color:var(--dim);cursor:pointer;padding-top:2px" onclick="event.stopPropagation();_filterTags.clear();renderTagColHeader();renderActiveFilters();renderSessions()">Tout effacer</span>` : ''}
+    </div>`;
+  } else if (_tagDropdownOpen && !allTags.length) {
+    html += `<div class="tag-dd"><div class="tag-dd-title" style="font-style:italic">Aucune étiquette créée</div></div>`;
+  }
+  hdr.innerHTML = html;
+}
+
+function toggleTagDropdown(event) {
+  event.stopPropagation();
+  _tagDropdownOpen = !_tagDropdownOpen;
+  renderTagColHeader();
+  if (_tagDropdownOpen) {
+    document.addEventListener('click', function _close() {
+      _tagDropdownOpen = false;
+      renderTagColHeader();
+      document.removeEventListener('click', _close);
+    });
+  }
 }
 
 function renderSessions() {
@@ -595,7 +677,12 @@ function renderSessions() {
     return;
   }
 
-  list.innerHTML = filtered.map(s => `
+  list.innerHTML = filtered.map(s => {
+    const tagsMini = (s.tags||[]).map(t =>
+      `<span class="tag-mini" style="color:${tagColor(t)};border-color:${tagColor(t)}66"
+        onclick="event.stopPropagation();toggleTagFilter('${esc(t)}')" title="${esc(t)}">${esc(t)}</span>`
+    ).join(' ');
+    return `
     <div class="session-row${s.lid === selectedLid ? ' selected' : ''}" id="row-${s.lid}"
          onclick="handleRowClick(event, '${s.lid}')"
          ondblclick="openSession(event, '${s.lid}')"
@@ -603,25 +690,19 @@ function renderSessions() {
          onmouseenter="hoverSession('${s.lid}')"
          onmouseleave="unhoverSession('${s.lid}')">
       <div class="lid">${s.lid}</div>
-      <div>
-        <span class="session-nickname${s.nickname ? '' : ' empty'}">${esc(s.nickname) || 'Sans nom'}</span>
-        ${(s.tags||[]).length ? `<div class="tags" style="margin-top:3px">${(s.tags||[]).map(t=>`<span class="tag" style="color:${tagColor(t)};border-color:${tagColor(t)}44;cursor:pointer" onclick="event.stopPropagation();toggleTagFilter('${esc(t)}')">${esc(t)}</span>`).join('')}</div>` : ''}
-      </div>
+      <div><span class="session-nickname${s.nickname ? '' : ' empty'}">${esc(s.nickname) || 'Sans nom'}</span></div>
       <div class="date">${fmtFlightDate(s)}</div>
       <div class="date">${fmtImportDate(s)}</div>
       <div class="log-badge">${logBadge(s)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;align-items:center">${tagsMini}</div>
       <div class="row-actions" onclick="event.stopPropagation()">
         ${s.log_file ? (s.meta_ref
           ? `<button class="btn sm" style="color:var(--accent3);border-color:var(--accent3)" title="Métadonnées GPS chargées — cliquer pour recharger" onclick="reloadMeta('${s.lid}')">✓ META</button>`
           : `<button class="btn sm" style="opacity:.55" title="Aucune référence .meta — cliquer pour recharger" onclick="reloadMeta('${s.lid}')">⟳ META</button>`) : ''}
-        <label class="import-label" title="Attacher une vidéo">
-          VID
-          <input type="file" accept="video/*" onchange="attachVideo('${s.lid}', this)">
-        </label>
         <button class="btn sm danger" onclick="deleteSession('${s.lid}')">✕</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function handleRowClick(event, lid) {
@@ -801,45 +882,63 @@ function esc(s) {
 }
 
 function renderCalendar() {
-  const el = document.getElementById('calendar-section');
+  const el = document.getElementById('cal-card');
   if (!el) return;
+  const MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+  const MONTHS_FULL = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const DAYS = ['L','M','M','J','V','S','D'];
-  const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const today = new Date();
+  const pad = n => String(n).padStart(2,'0');
 
-  // Build set of dates that have sessions
+  // Dates with sessions
   const datesWithLog = {};
   sessions.forEach(s => {
     const d = ((s.flight_date_utc || s.created_at) || '').slice(0, 10);
     if (d) datesWithLog[d] = (datesWithLog[d] || 0) + 1;
   });
 
-  const firstDay = new Date(_calYear, _calMonth, 1);
-  const lastDay = new Date(_calYear, _calMonth + 1, 0);
-  // Monday-first: 0=Mon..6=Sun
-  let startDow = (firstDay.getDay() + 6) % 7;
-
-  let html = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
-    <button class="btn sm" onclick="event.stopPropagation();_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--;}renderCalendar()">‹</button>
-    <span style="font-family:var(--mono);font-size:11px;letter-spacing:2px;flex:1;text-align:center">${monthNames[_calMonth]} ${_calYear}</span>
-    <button class="btn sm" onclick="event.stopPropagation();_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++;}renderCalendar()">›</button>
+  // Navigation header
+  let html = `<div class="cal-nav">
+    <button class="btn sm" onclick="event.stopPropagation();_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--;}_calPickerOpen=false;renderCalendar()">‹</button>
+    <span class="cal-nav-title" onclick="_calPickerOpen=!_calPickerOpen;renderCalendar()">${MONTHS_FULL[_calMonth]} ${_calYear}</span>
+    <button class="btn sm" onclick="event.stopPropagation();_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++;}_calPickerOpen=false;renderCalendar()">›</button>
   </div>`;
-  html += `<div class="cal-grid">${DAYS.map(d=>`<div style="text-align:center;font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--dim);padding:2px">${d}</div>`).join('')}`;
 
-  // Empty cells before first day
-  for (let i = 0; i < startDow; i++) html += `<div class="cal-day"></div>`;
+  if (_calPickerOpen) {
+    // Year nav + month picker grid
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--surface2)">
+      <button class="btn sm" onclick="event.stopPropagation();_calYear--;renderCalendar()">‹</button>
+      <span style="font-family:var(--mono);font-size:11px;letter-spacing:2px;flex:1;text-align:center;color:var(--text)">${_calYear}</span>
+      <button class="btn sm" onclick="event.stopPropagation();_calYear++;renderCalendar()">›</button>
+    </div>
+    <div class="cal-pick">`;
+    for (let m = 0; m < 12; m++) {
+      const isCur = m === _calMonth;
+      html += `<div class="cal-pick-m${isCur ? ' cal-cur' : ''}"
+        onclick="event.stopPropagation();_calMonth=${m};_calPickerOpen=false;renderCalendar()">${MONTHS_SHORT[m]}</div>`;
+    }
+    html += '</div>';
+  } else {
+    // Day grid
+    const firstDay = new Date(_calYear, _calMonth, 1);
+    const lastDay = new Date(_calYear, _calMonth + 1, 0);
+    const startDow = (firstDay.getDay() + 6) % 7;
 
-  for (let day = 1; day <= lastDay.getDate(); day++) {
-    const pad = n => String(n).padStart(2,'0');
-    const dateStr = `${_calYear}-${pad(_calMonth+1)}-${pad(day)}`;
-    const count = datesWithLog[dateStr] || 0;
-    const isToday = today.getFullYear()===_calYear && today.getMonth()===_calMonth && today.getDate()===day;
-    const isSelected = _filterDate === dateStr;
-    const cls = ['cal-day', count?'has-log':'', isToday?'today':'', isSelected?'selected':''].filter(Boolean).join(' ');
-    const click = count ? `onclick="setDateFilter('${dateStr}')"` : '';
-    html += `<div class="${cls}" ${click}>${day}${count ? `<div class="cal-dot"></div>` : ''}</div>`;
+    html += `<div class="cal-grid">`;
+    html += DAYS.map(d => `<div style="text-align:center;font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--dim);padding:2px">${d}</div>`).join('');
+    for (let i = 0; i < startDow; i++) html += `<div class="cal-day"></div>`;
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const dateStr = `${_calYear}-${pad(_calMonth+1)}-${pad(day)}`;
+      const count = datesWithLog[dateStr] || 0;
+      const isToday = today.getFullYear()===_calYear && today.getMonth()===_calMonth && today.getDate()===day;
+      const isSelected = _filterDate === dateStr;
+      const cls = ['cal-day', count?'has-log':'', isToday?'today':'', isSelected?'selected':''].filter(Boolean).join(' ');
+      const click = count ? `onclick="setDateFilter(${isSelected?'null':`'${dateStr}'`})"` : '';
+      html += `<div class="${cls}" ${click}>${day}${count ? `<div class="cal-dot"></div>` : ''}</div>`;
+    }
+    html += '</div>';
   }
-  html += '</div>';
+
   el.innerHTML = html;
 }
 

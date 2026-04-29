@@ -12080,13 +12080,12 @@ function renderInfoTab(s) {
     + '<div class="irow"><span class="ilbl">GPS home</span><span class="ival">' + gpsStr + '</span></div>'
     + '</div>'
     + '<div class="isec"><div class="isec-title">🏷 Étiquettes</div>'
-    + '<div id="info-tags-list" style="margin-bottom:10px">' + _buildInfoTagsHtml(s) + '</div>'
-    + '<div style="display:flex;gap:8px;align-items:center">'
-    + '<input id="info-tag-input" list="info-tag-datalist" placeholder="Nouvelle étiquette…" '
+    + '<div id="info-tags-content">' + _buildInfoTagsHtml(s) + '</div>'
+    + '<div style="display:flex;gap:8px;align-items:center;margin-top:8px">'
+    + '<input id="info-tag-input" placeholder="Nouvelle étiquette…" '
     + 'style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:-apple-system,sans-serif;font-size:12px;padding:4px 10px;border-radius:4px;outline:none;flex:1" '
     + 'onkeydown="if(event.key===\'Enter\')addInfoTag(\'' + (s.lid||'') + '\')">'
-    + '<datalist id="info-tag-datalist">' + Object.keys(_infoTagColors).map(function(t){return '<option value="'+t+'">';}).join('') + '</datalist>'
-    + '<button class="btn sm" onclick="addInfoTag(\'' + (s.lid||'') + '\')">+ Ajouter</button>'
+    + '<button class="btn sm" onclick="addInfoTag(\'' + (s.lid||'') + '\')">+ Créer</button>'
     + '</div></div>'
     + '<div class="isec"><div class="isec-title">⏱ Référence temporelle</div>' + metaRefHtml + '</div>'
     + '<div class="isec"><div class="isec-title">📝 Commentaires</div>'
@@ -12102,25 +12101,49 @@ function renderInfoTab(s) {
 
 function _buildInfoTagsHtml(s) {
   var tags = (s && s.tags) || [];
-  if (!tags.length) return '<span style="font-family:var(--font-mono);font-size:11px;color:var(--dim)">Aucune étiquette</span>';
-  return tags.map(function(t) {
-    var col = _infoTagColors[t] || '#7b8fa1';
-    return '<span style="display:inline-flex;align-items:center;gap:5px;background:'+col+'22;border:1px solid '+col
-      +';border-radius:3px;padding:2px 8px;margin:2px;font-family:var(--font-mono);font-size:11px;color:'+col+'">'
-      +'<input type="color" value="'+col+'" title="Couleur" '
-      +'style="width:12px;height:12px;border:none;padding:0;cursor:pointer;background:none;flex-shrink:0" '
-      +'onchange="setInfoTagColor(\''+t+'\',this.value)">'
-      +t
-      +'<span style="cursor:pointer;margin-left:2px;opacity:.6" onclick="removeInfoTag(\''+t+'\')">×</span>'
-      +'</span>';
-  }).join('');
+  var allGlobal = Object.keys(_infoTagColors);
+  var available = allGlobal.filter(function(t) { return tags.indexOf(t) === -1; });
+  var html = '';
+
+  // Active tags on this session
+  if (tags.length) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">';
+    html += tags.map(function(t) {
+      var col = _infoTagColors[t] || '#7b8fa1';
+      return '<span style="display:inline-flex;align-items:center;gap:6px;background:'+col+'22;border:1px solid '+col
+        +';border-radius:3px;padding:3px 10px;font-family:var(--font-mono);font-size:11px;color:'+col+'">'
+        +'<span style="width:10px;height:10px;border-radius:50%;background:'+col+';cursor:pointer;flex-shrink:0" '
+        +'title="Changer la couleur" onclick="pickInfoTagColor(\''+t+'\')"></span>'
+        +t
+        +'<span style="cursor:pointer;margin-left:2px;opacity:.7;font-size:14px;line-height:1" onclick="removeInfoTag(\''+t+'\')">×</span>'
+        +'</span>';
+    }).join('');
+    html += '</div>';
+  } else {
+    html += '<div style="font-family:var(--font-mono);font-size:11px;color:var(--dim);font-style:italic;margin-bottom:10px">Aucune étiquette</div>';
+  }
+
+  // Available global tags not yet on this session
+  if (available.length) {
+    html += '<div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:6px">Ajouter</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+    html += available.map(function(t) {
+      var col = _infoTagColors[t] || '#7b8fa1';
+      return '<span style="display:inline-flex;align-items:center;background:var(--surface2);border:1px solid var(--border2);'
+        +'border-radius:3px;padding:2px 8px;font-family:var(--font-mono);font-size:11px;color:var(--dim);cursor:pointer" '
+        +'onmouseover="this.style.borderColor=\''+col+'\';this.style.color=\''+col+'\'" '
+        +'onmouseout="this.style.borderColor=\'\';this.style.color=\'\'" '
+        +'onclick="addInfoTagDirect(\''+t+'\')" title="Ajouter '+t+'">+ '+t+'</span>';
+    }).join('');
+    html += '</div>';
+  }
+
+  return html;
 }
 
 function _refreshInfoTags() {
-  var el = document.getElementById('info-tags-list');
+  var el = document.getElementById('info-tags-content');
   if (el && _infoSession) el.innerHTML = _buildInfoTagsHtml(_infoSession);
-  var dl = document.getElementById('info-tag-datalist');
-  if (dl) dl.innerHTML = Object.keys(_infoTagColors).map(function(t){return '<option value="'+t+'">';}).join('');
 }
 
 function addInfoTag(lid) {
@@ -12128,7 +12151,7 @@ function addInfoTag(lid) {
   if (!input || !_infoSession) return;
   var tag = input.value.trim();
   if (!tag) return;
-  if (!(_infoSession.tags || []).includes(tag)) {
+  if ((_infoSession.tags || []).indexOf(tag) === -1) {
     _infoSession.tags = (_infoSession.tags || []).concat([tag]);
     if (!_infoTagColors[tag]) _infoTagColors[tag] = '#7b8fa1';
     fetch('/api/sessions/' + lid, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({tags:_infoSession.tags})});
@@ -12138,11 +12161,37 @@ function addInfoTag(lid) {
   _refreshInfoTags();
 }
 
+function addInfoTagDirect(tag) {
+  if (!_infoSession) return;
+  if ((_infoSession.tags || []).indexOf(tag) === -1) {
+    _infoSession.tags = (_infoSession.tags || []).concat([tag]);
+    fetch('/api/sessions/' + _infoSession.lid, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({tags:_infoSession.tags})});
+  }
+  _refreshInfoTags();
+}
+
 function removeInfoTag(tag) {
   if (!_infoSession) return;
+  if (!confirm('Retirer l\'étiquette "' + tag + '" de ce log ?')) return;
   _infoSession.tags = (_infoSession.tags || []).filter(function(t){return t !== tag;});
   fetch('/api/sessions/' + (_infoSession.lid||''), {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({tags:_infoSession.tags})});
   _refreshInfoTags();
+}
+
+function pickInfoTagColor(tag) {
+  var inp = document.createElement('input');
+  inp.type = 'color';
+  inp.value = _infoTagColors[tag] || '#7b8fa1';
+  inp.style.cssText = 'position:fixed;opacity:0;top:0;left:0;pointer-events:none';
+  document.body.appendChild(inp);
+  inp.addEventListener('change', function() {
+    setInfoTagColor(tag, inp.value);
+  });
+  inp.addEventListener('blur', function() {
+    setTimeout(function(){ if (inp.parentNode) inp.parentNode.removeChild(inp); }, 300);
+  });
+  inp.click();
+  inp.focus();
 }
 
 function setInfoTagColor(tag, color) {
