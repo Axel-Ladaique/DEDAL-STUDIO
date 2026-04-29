@@ -183,7 +183,7 @@
   .kpi-val { font-family: var(--mono); font-size: 18px; color: var(--text); line-height: 1.2; }
   .kpi-sub { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 1px; }
   /* Calendrier */
-  .cal-panel { display: flex; gap: 0; align-items: flex-start; flex-shrink: 0; }
+  .cal-panel { display: flex; gap: 0; align-items: stretch; flex-shrink: 0; }
   .cal-sidebar {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 8px 0 0 8px; width: 100px; flex-shrink: 0; overflow: hidden;
@@ -581,6 +581,7 @@ async function loadSessions() {
     renderCalSidebar();
     renderCalendar();
     renderStats();
+    renderSessions();
     rebuildMarkers();
     loadAllTracks();
   } catch (e) {
@@ -976,7 +977,8 @@ function renderStats() {
   if (!el) return;
 
   const withLog   = sessions.filter(s => s.log_file);
-  const durs      = withLog.map(s => s.log_meta?.duration_s || 0).filter(d => d > 0);
+  // Use armed_s (actual flight time) when available, fallback to duration_s (total log time)
+  const durs      = withLog.map(s => s.log_meta?.armed_s || s.log_meta?.duration_s || 0).filter(d => d > 0);
   const totalDur  = durs.reduce((a, d) => a + d, 0);
   const avgDur    = durs.length ? totalDur / durs.length : 0;
   const minDur    = durs.length ? Math.min(...durs) : 0;

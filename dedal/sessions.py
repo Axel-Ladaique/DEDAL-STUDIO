@@ -141,14 +141,18 @@ def _parse_log_meta(path: Path) -> tuple[dict, "dict | None"]:
         "fw_version": "",
         "row_count": 0,
         "duration_s": 0.0,
+        "armed_s": 0.0,
     }
     first_ts: int | None = None
     last_ts: int | None = None
+    first_armed_ts: int | None = None
+    last_armed_ts: int | None = None
     row_count = 0
     gps_home: dict | None = None
     col_valid: int | None = None
     col_lat: int | None = None
     col_lon: int | None = None
+    col_armed: int | None = None
 
     with path.open(encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -172,6 +176,10 @@ def _parse_log_meta(path: Path) -> tuple[dict, "dict | None"]:
                     col_lon   = cols.index("gps_lon")
                 except ValueError:
                     pass
+                try:
+                    col_armed = cols.index("armed")
+                except ValueError:
+                    pass
                 continue
             parts = line.split(",")
             try:
@@ -182,6 +190,14 @@ def _parse_log_meta(path: Path) -> tuple[dict, "dict | None"]:
                 row_count += 1
             except (ValueError, IndexError):
                 pass
+            if col_armed is not None:
+                try:
+                    if parts[col_armed].strip() == "1":
+                        if first_armed_ts is None:
+                            first_armed_ts = ts
+                        last_armed_ts = ts
+                except (ValueError, IndexError):
+                    pass
             if gps_home is None and col_valid is not None:
                 try:
                     if parts[col_valid].strip() == "1":
@@ -195,6 +211,8 @@ def _parse_log_meta(path: Path) -> tuple[dict, "dict | None"]:
     meta["row_count"] = row_count
     if first_ts is not None and last_ts is not None:
         meta["duration_s"] = round((last_ts - first_ts) / 1_000_000, 1)
+    if first_armed_ts is not None and last_armed_ts is not None:
+        meta["armed_s"] = round((last_armed_ts - first_armed_ts) / 1_000_000, 1)
     return meta, gps_home
 
 
