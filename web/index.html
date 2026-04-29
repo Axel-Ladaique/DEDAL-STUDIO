@@ -175,12 +175,13 @@
     text-transform: uppercase; color: var(--dim);
   }
   .kpi-grid { display: grid; grid-template-columns: repeat(3,1fr); }
-  .kpi { padding: 12px 14px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .kpi { padding: 11px 14px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   .kpi:nth-child(3n) { border-right: none; }
   .kpi:nth-last-child(-n+3) { border-bottom: none; }
-  .kpi-val { font-family: var(--mono); font-size: 20px; color: var(--accent); line-height: 1.2; }
-  .kpi-lbl { font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--dim); margin-top: 3px; }
+  .kpi-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: #8aaabb; margin-bottom: 4px; }
+  .kpi-val { font-family: var(--mono); font-size: 18px; color: var(--text); line-height: 1.2; }
+  .kpi-sub { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 1px; }
   /* Calendrier */
   .cal-panel { display: flex; gap: 0; align-items: flex-start; flex-shrink: 0; }
   .cal-sidebar {
@@ -784,9 +785,13 @@ function openSession(event, lid) {
 }
 
 let _hoverTimer = null;
+let _hoveredLid = null;
 
 function hoverSession(lid) {
+  _hoveredLid = lid;
+  clearTimeout(_hoverTimer); // annule le re-fit éventuel d'un unhover précédent
   _hoverTimer = setTimeout(() => {
+    if (_hoveredLid !== lid) return;
     if (mapMode === 'trace' && mapTracks[lid]) {
       if (lid !== selectedLid) {
         mapTracks[lid].setStyle({ color: '#00d4ff', opacity: 0.65, weight: 2 });
@@ -796,30 +801,30 @@ function hoverSession(lid) {
       const s = sessions.find(x => x.lid === lid);
       if (s && s.gps_home) map.flyTo([s.gps_home.lat, s.gps_home.lon], 14, { duration: 0.5 });
     }
-  }, 180);
+  }, 250);
 }
 
 function unhoverSession(lid) {
+  _hoveredLid = null;
   clearTimeout(_hoverTimer);
   _hoverTimer = null;
   if (mapMode === 'trace' && mapTracks[lid] && lid !== selectedLid) {
     mapTracks[lid].setStyle({ color: '#00d4ff', opacity: 0.25, weight: 1.5 });
   }
-  // Re-fit si rien de sélectionné
+  // Re-fit vers tous les vols seulement si rien n'est sélectionné ni survolé
   if (!selectedLid) {
     _hoverTimer = setTimeout(() => {
-      if (selectedLid) return;
+      if (selectedLid || _hoveredLid) return;
       if (mapMode === 'trace') {
         const bounds = Object.values(mapTracks)
           .map(pl => pl.getBounds()).filter(b => b.isValid());
-        if (bounds.length) {
+        if (bounds.length)
           map.fitBounds(bounds.reduce((a, b) => a.extend(b)), { padding: [32, 32], maxZoom: 14 });
-        }
       } else {
         const pts = sessions.filter(s => s.gps_home).map(s => [s.gps_home.lat, s.gps_home.lon]);
         if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [32, 32], maxZoom: 14 });
       }
-    }, 400);
+    }, 700);
   }
 }
 
@@ -970,34 +975,41 @@ function renderStats() {
   const el = document.getElementById('stats-card');
   if (!el) return;
 
-  const withLog  = sessions.filter(s => s.log_file);
-  const totalDur = withLog.reduce((a, s) => a + (s.log_meta?.duration_s || 0), 0);
-  const totalPts = withLog.reduce((a, s) => a + (s.log_meta?.row_count  || 0), 0);
+  const withLog   = sessions.filter(s => s.log_file);
+  const durs      = withLog.map(s => s.log_meta?.duration_s || 0).filter(d => d > 0);
+  const totalDur  = durs.reduce((a, d) => a + d, 0);
+  const avgDur    = durs.length ? totalDur / durs.length : 0;
+  const minDur    = durs.length ? Math.min(...durs) : 0;
+  const maxDur    = durs.length ? Math.max(...durs) : 0;
+  const totalPts  = withLog.reduce((a, s) => a + (s.log_meta?.row_count || 0), 0);
   const withMeta  = sessions.filter(s => s.meta_ref).length;
   const withVideo = sessions.filter(s => s.video_file).length;
   const allTags   = new Set(sessions.flatMap(s => s.tags || []));
-  const durs      = withLog.map(s => s.log_meta?.duration_s || 0).filter(d => d > 0);
-  const maxDur    = durs.length ? Math.max(...durs) : 0;
 
   const fmtDur = s => {
     s = Math.round(s);
     if (s < 60) return s + 's';
-    if (s < 3600) return Math.floor(s/60) + 'min';
+    if (s < 3600) return Math.floor(s/60) + 'min ' + String(s%60).padStart(2,'0') + 's';
     const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
-    return h + 'h' + (m ? String(m).padStart(2,'0') : '');
+    return h + 'h' + String(m).padStart(2,'0');
   };
   const fmtPts = n => n >= 1e6 ? (n/1e6).toFixed(1)+' M' : n >= 1e3 ? Math.round(n/1e3)+' k' : String(n);
+  const pct = (n, t) => t ? Math.round(n/t*100)+'%' : '—';
 
-  const kpi = (val, lbl) =>
-    `<div class="kpi"><div class="kpi-val">${val}</div><div class="kpi-lbl">${lbl}</div></div>`;
+  const kpi = (lbl, val, sub) =>
+    `<div class="kpi"><div class="kpi-lbl">${lbl}</div><div class="kpi-val">${val}</div>`
+    + (sub ? `<div class="kpi-sub">${sub}</div>` : '') + `</div>`;
 
   el.innerHTML = `<div class="stats-hdr">Récapitulatif</div><div class="kpi-grid">`
-    + kpi(withLog.length, 'Vols')
-    + kpi(totalDur > 0 ? fmtDur(totalDur) : '—', 'Durée totale')
-    + kpi(totalPts > 0 ? fmtPts(totalPts) : '—', 'Points log')
-    + kpi(withMeta + '<span style="font-size:12px;color:var(--dim)">/' + withLog.length + '</span>', 'GPS sync')
-    + kpi(maxDur > 0 ? fmtDur(maxDur) : '—', 'Vol le + long')
-    + kpi(withVideo + (allTags.size ? `<span style="font-size:12px;color:var(--dim)"> · ${allTags.size}🏷</span>` : ''), 'Vidéo · tags')
+    + kpi('Vols',          sessions.length,                            withLog.length + ' avec log')
+    + kpi('Durée totale',  totalDur > 0 ? fmtDur(totalDur) : '—',    durs.length + ' vols')
+    + kpi('Moy. / vol',    avgDur   > 0 ? fmtDur(avgDur)   : '—',    durs.length ? fmtDur(minDur) + ' – ' + fmtDur(maxDur) : '')
+    + kpi('Vol + long',    maxDur   > 0 ? fmtDur(maxDur)   : '—',    '')
+    + kpi('Vol + court',   minDur   > 0 ? fmtDur(minDur)   : '—',    '')
+    + kpi('Points log',    totalPts > 0 ? fmtPts(totalPts) : '—',    withLog.length ? '~' + fmtPts(Math.round(totalPts/withLog.length)) + '/vol' : '')
+    + kpi('GPS sync',      withMeta + ' / ' + withLog.length,         pct(withMeta, withLog.length))
+    + kpi('Avec vidéo',    withVideo,                                  pct(withVideo, sessions.length))
+    + kpi('Étiquettes',    allTags.size,                               allTags.size ? [...allTags].slice(0,3).join(', ') + (allTags.size > 3 ? '…' : '') : 'aucune')
     + '</div>';
 }
 
