@@ -141,6 +141,20 @@
     border: 1px solid var(--border2); border-radius: 3px;
     padding: 1px 6px;
   }
+  .tag-chip {
+    display: inline-flex; align-items: center;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    border: 1px solid; border-radius: 3px; padding: 2px 8px;
+    cursor: pointer; margin-right: 4px;
+  }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; margin-top: 8px; }
+  .cal-day { text-align:center; padding:4px 2px; font-family:var(--mono); font-size:11px;
+             border-radius:3px; cursor:default; min-height:28px; position:relative; }
+  .cal-day.has-log { cursor:pointer; }
+  .cal-day.has-log:hover { background:var(--surface2); }
+  .cal-day.selected { background:var(--accent)33 !important; color:var(--accent); }
+  .cal-day.today { font-weight:bold; }
+  .cal-dot { width:4px; height:4px; border-radius:50%; background:var(--accent); margin:1px auto 0; }
 
   .log-badge { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; }
   .log-badge .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
@@ -224,6 +238,7 @@
   <!-- ── liste ── -->
   <div class="list-panel">
     <div class="toolbar">
+      <div id="tag-filter-bar" style="display:contents"></div>
       <button class="btn" onclick="openImportModal()">+ Importer un log</button>
       <button class="btn cancel" onclick="openNewModal()">+ Session vide</button>
       <input type="search" id="search" placeholder="Filtrer…" oninput="renderSessions()">
@@ -238,6 +253,7 @@
         <div></div>
       </div>
       <div id="session-list"><div class="empty"><span class="spinner"></span></div></div>
+      <div id="calendar-section" style="padding:16px 20px 20px;border-top:1px solid var(--border)"></div>
     </div>
   </div>
 
@@ -299,6 +315,11 @@
 let sessions = [];
 let selectedLid = null;
 let mapMode = 'trace'; // 'marker' | 'trace'
+let _tagColors = {};   // {tagname: hexcolor} — loaded from /api/tag-colors
+let _filterTags = new Set();
+let _filterDate = null; // 'YYYY-MM-DD' or null
+let _calYear = new Date().getFullYear();
+let _calMonth = new Date().getMonth();
 
 // ── API ────────────────────────────────────────────────────────────────────
 
@@ -479,8 +500,12 @@ async function loadAllTracks() {
 
 async function loadSessions() {
   try {
-    sessions = await api('GET', '/api/sessions');
+    [sessions, _tagColors] = await Promise.all([
+      api('GET', '/api/sessions'),
+      api('GET', '/api/tag-colors'),
+    ]);
     setSort(_sortKey);
+    renderCalendar();
     rebuildMarkers();
     loadAllTracks();
   } catch (e) {
@@ -514,10 +539,44 @@ function _sortValue(s) {
   return '';
 }
 
+function tagColor(name) {
+  return _tagColors[name] || '#7b8fa1';
+}
+
+function toggleTagFilter(tag) {
+  if (_filterTags.has(tag)) _filterTags.delete(tag); else _filterTags.add(tag);
+  renderTagFilters();
+  renderSessions();
+}
+
+function renderTagFilters() {
+  const el = document.getElementById('tag-filter-bar');
+  if (!el) return;
+  if (_filterTags.size === 0 && !_filterDate) { el.innerHTML = ''; return; }
+  const chips = [..._filterTags].map(t =>
+    `<span class="tag-chip" style="background:${tagColor(t)}22;border-color:${tagColor(t)};color:${tagColor(t)}"
+      onclick="toggleTagFilter('${esc(t)}')">${esc(t)} ×</span>`
+  ).join('');
+  const dateChip = _filterDate
+    ? `<span class="tag-chip" style="background:var(--accent)22;border-color:var(--accent);color:var(--accent)"
+        onclick="setDateFilter(null)">${_filterDate} ×</span>`
+    : '';
+  el.innerHTML = chips + dateChip +
+    `<span style="font-family:var(--mono);font-size:10px;color:var(--dim);cursor:pointer;margin-left:4px"
+      onclick="_filterTags.clear();setDateFilter(null)">tout effacer</span>`;
+}
+
+function setDateFilter(dateStr) {
+  _filterDate = dateStr;
+  renderTagFilters();
+  renderCalendar();
+  renderSessions();
+}
+
 function renderSessions() {
   const q = document.getElementById('search').value.trim().toLowerCase();
   const list = document.getElementById('session-list');
-  const filtered = (q
+  let filtered = (q
     ? sessions.filter(s => s.lid.toLowerCase().includes(q) ||
                            s.nickname.toLowerCase().includes(q) ||
                            (s.tags || []).some(t => t.toLowerCase().includes(q)))
@@ -526,6 +585,10 @@ function renderSessions() {
     const va = _sortValue(a), vb = _sortValue(b);
     return va < vb ? _sortDir : va > vb ? -_sortDir : 0;
   });
+  if (_filterTags.size > 0)
+    filtered = filtered.filter(s => [..._filterTags].every(t => (s.tags || []).includes(t)));
+  if (_filterDate)
+    filtered = filtered.filter(s => ((s.flight_date_utc || s.created_at) || '').slice(0, 10) === _filterDate);
 
   if (filtered.length === 0) {
     list.innerHTML = '<div class="empty">Aucune session — importez un log CSV pour commencer.</div>';
@@ -542,6 +605,7 @@ function renderSessions() {
       <div class="lid">${s.lid}</div>
       <div>
         <span class="session-nickname${s.nickname ? '' : ' empty'}">${esc(s.nickname) || 'Sans nom'}</span>
+        ${(s.tags||[]).length ? `<div class="tags" style="margin-top:3px">${(s.tags||[]).map(t=>`<span class="tag" style="color:${tagColor(t)};border-color:${tagColor(t)}44;cursor:pointer" onclick="event.stopPropagation();toggleTagFilter('${esc(t)}')">${esc(t)}</span>`).join('')}</div>` : ''}
       </div>
       <div class="date">${fmtFlightDate(s)}</div>
       <div class="date">${fmtImportDate(s)}</div>
@@ -734,6 +798,49 @@ function closeModal(e) {
 
 function esc(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderCalendar() {
+  const el = document.getElementById('calendar-section');
+  if (!el) return;
+  const DAYS = ['L','M','M','J','V','S','D'];
+  const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const today = new Date();
+
+  // Build set of dates that have sessions
+  const datesWithLog = {};
+  sessions.forEach(s => {
+    const d = ((s.flight_date_utc || s.created_at) || '').slice(0, 10);
+    if (d) datesWithLog[d] = (datesWithLog[d] || 0) + 1;
+  });
+
+  const firstDay = new Date(_calYear, _calMonth, 1);
+  const lastDay = new Date(_calYear, _calMonth + 1, 0);
+  // Monday-first: 0=Mon..6=Sun
+  let startDow = (firstDay.getDay() + 6) % 7;
+
+  let html = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+    <button class="btn sm" onclick="event.stopPropagation();_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--;}renderCalendar()">‹</button>
+    <span style="font-family:var(--mono);font-size:11px;letter-spacing:2px;flex:1;text-align:center">${monthNames[_calMonth]} ${_calYear}</span>
+    <button class="btn sm" onclick="event.stopPropagation();_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++;}renderCalendar()">›</button>
+  </div>`;
+  html += `<div class="cal-grid">${DAYS.map(d=>`<div style="text-align:center;font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--dim);padding:2px">${d}</div>`).join('')}`;
+
+  // Empty cells before first day
+  for (let i = 0; i < startDow; i++) html += `<div class="cal-day"></div>`;
+
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    const pad = n => String(n).padStart(2,'0');
+    const dateStr = `${_calYear}-${pad(_calMonth+1)}-${pad(day)}`;
+    const count = datesWithLog[dateStr] || 0;
+    const isToday = today.getFullYear()===_calYear && today.getMonth()===_calMonth && today.getDate()===day;
+    const isSelected = _filterDate === dateStr;
+    const cls = ['cal-day', count?'has-log':'', isToday?'today':'', isSelected?'selected':''].filter(Boolean).join(' ');
+    const click = count ? `onclick="setDateFilter('${dateStr}')"` : '';
+    html += `<div class="${cls}" ${click}>${day}${count ? `<div class="cal-dot"></div>` : ''}</div>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 function fmtFlightDate(s) {
