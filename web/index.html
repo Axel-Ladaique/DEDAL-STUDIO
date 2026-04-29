@@ -162,10 +162,30 @@
     border-radius: 3px; padding: 3px 8px; cursor: pointer; transition: opacity .1s;
   }
   .tag-dd-chip:hover { opacity: .8; }
-  /* Calendar card */
+  /* Calendar + stats row */
+  .bottom-row { display: flex; gap: 16px; margin-top: 16px; align-items: flex-start; }
+  .stats-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; flex: 1; min-width: 0; overflow: hidden;
+  }
+  .stats-hdr {
+    padding: 8px 14px; background: var(--surface2); border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .stats-body { padding: 6px 14px 10px; }
+  .stat-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 5px 0; border-bottom: 1px solid var(--border);
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    color: var(--dim); text-transform: uppercase; }
+  .stat-val { font-family: var(--mono); font-size: 12px; color: var(--text); }
+  .stat-sep { height: 1px; background: var(--border2); margin: 6px 0; }
   .cal-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; margin-top: 16px; overflow: hidden;
+    border-radius: 8px; width: 264px; flex-shrink: 0; overflow: hidden;
   }
   .cal-nav {
     display: flex; align-items: center; padding: 7px 12px; gap: 8px;
@@ -293,7 +313,10 @@
       </div>
       <div id="session-list"><div class="empty"><span class="spinner"></span></div></div>
     </div>
-    <div class="cal-card" id="cal-card"></div>
+    <div class="bottom-row">
+      <div class="stats-card" id="stats-card"></div>
+      <div class="cal-card" id="cal-card"></div>
+    </div>
   </div>
 
   <!-- ── poignée redimensionnement ── -->
@@ -548,6 +571,7 @@ async function loadSessions() {
     setSort(_sortKey);
     renderTagColHeader();
     renderCalendar();
+    renderStats();
     rebuildMarkers();
     loadAllTracks();
   } catch (e) {
@@ -785,6 +809,8 @@ async function confirmImport() {
     const s = await r.json();
     sessions.unshift(s);
     renderSessions();
+    renderStats();
+    renderCalendar();
     rebuildMarkers();
     loadAllTracks();
     showBanner('ok', `Session ${s.lid} créée — ${s.log_meta?.row_count || '?'} points, ${s.log_meta?.duration_s || '?'}s`);
@@ -808,6 +834,7 @@ async function confirmNew() {
     const s = await api('POST', '/api/sessions', { nickname });
     sessions.unshift(s);
     renderSessions();
+    renderStats();
   } catch (e) {
     showBanner('err', 'Erreur création : ' + e.message);
   }
@@ -842,6 +869,7 @@ async function deleteSession(lid) {
     sessions = sessions.filter(s => s.lid !== lid);
     if (selectedLid === lid) { selectedLid = null; }
     renderSessions();
+    renderStats();
     rebuildMarkers();
     loadAllTracks();
   } catch (e) {
@@ -879,6 +907,53 @@ function closeModal(e) {
 
 function esc(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderStats() {
+  const el = document.getElementById('stats-card');
+  if (!el) return;
+
+  const withLog  = sessions.filter(s => s.log_file);
+  const totalDur = withLog.reduce((a, s) => a + (s.log_meta?.duration_s || 0), 0);
+  const totalPts = withLog.reduce((a, s) => a + (s.log_meta?.row_count  || 0), 0);
+  const withMeta  = sessions.filter(s => s.meta_ref).length;
+  const withVideo = sessions.filter(s => s.video_file).length;
+  const withGps   = sessions.filter(s => s.gps_home).length;
+  const allTags   = new Set(sessions.flatMap(s => s.tags || []));
+
+  // Durée minimale / maximale
+  const durs = withLog.map(s => s.log_meta?.duration_s || 0).filter(d => d > 0);
+  const minDur = durs.length ? Math.min(...durs) : 0;
+  const maxDur = durs.length ? Math.max(...durs) : 0;
+
+  const fmtDur = s => {
+    s = Math.round(s);
+    if (s < 60) return s + ' s';
+    if (s < 3600) return Math.floor(s / 60) + ' min ' + (s % 60) + ' s';
+    return Math.floor(s / 3600) + ' h ' + Math.floor((s % 3600) / 60) + ' min';
+  };
+  const fmtPts = n => n >= 1e6 ? (n / 1e6).toFixed(1) + ' M' : n >= 1e3 ? Math.round(n / 1e3) + ' k' : String(n);
+
+  const row = (lbl, val, accent) =>
+    `<div class="stat-row"><span class="stat-lbl">${lbl}</span><span class="stat-val" style="${accent ? 'color:var(--accent)' : ''}">${val}</span></div>`;
+  const sep = '<div class="stat-sep"></div>';
+
+  el.innerHTML =
+    `<div class="stats-hdr">Récapitulatif</div>
+     <div class="stats-body">
+       ${row('Sessions', sessions.length)}
+       ${row('Avec log', withLog.length)}
+       ${row('Durée totale', totalDur > 0 ? fmtDur(totalDur) : '—', true)}
+       ${row('Vol le + court', minDur > 0 ? fmtDur(minDur) : '—')}
+       ${row('Vol le + long',  maxDur > 0 ? fmtDur(maxDur) : '—')}
+       ${row('Points log', totalPts > 0 ? fmtPts(totalPts) : '—')}
+       ${sep}
+       ${row('GPS sync (.meta)', withMeta + ' / ' + withLog.length)}
+       ${row('Avec GPS home', withGps)}
+       ${row('Avec vidéo', withVideo)}
+       ${sep}
+       ${row('Étiquettes', allTags.size)}
+     </div>`;
 }
 
 function renderCalendar() {
