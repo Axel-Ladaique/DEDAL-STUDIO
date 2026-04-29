@@ -515,6 +515,38 @@ def create_app(cfg: Config) -> FastAPI:
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
+    # ── Tag colors persistence ───────────────────────────────────────────────
+
+    def _tag_colors_path() -> Path:
+        xdg = os.environ.get("XDG_CONFIG_HOME")
+        base = Path(xdg) / "dedal-studio" if xdg else Path.home() / ".config" / "dedal-studio"
+        base.mkdir(parents=True, exist_ok=True)
+        return base / "tag_colors.json"
+
+    @app.get("/api/tag-colors")
+    def get_tag_colors() -> JSONResponse:
+        p = _tag_colors_path()
+        if not p.exists():
+            return JSONResponse({})
+        try:
+            return JSONResponse(json.loads(p.read_text()))
+        except Exception:
+            return JSONResponse({})
+
+    @app.put("/api/tag-colors")
+    async def put_tag_colors(request: Request) -> JSONResponse:
+        try:
+            data = await request.json()
+            if not isinstance(data, dict):
+                return JSONResponse({"error": "expected object"}, status_code=400)
+            p = _tag_colors_path()
+            tmp = p.with_suffix(".tmp")
+            tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+            os.replace(tmp, p)
+            return JSONResponse({"ok": True})
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
     if WEB_DIR.exists():
         app.mount(
             "/static",
