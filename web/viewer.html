@@ -12181,19 +12181,21 @@ function removeInfoTag(tag) {
 }
 
 function pickInfoTagColor(tag) {
-  var inp = document.createElement('input');
-  inp.type = 'color';
+  var inp = document.getElementById('_globalColorPicker');
+  if (!inp) {
+    inp = document.createElement('input');
+    inp.type = 'color';
+    inp.id = '_globalColorPicker';
+    // opacity:0.01 (pas 0) + taille non nulle : requis par WebKit pour déclencher le picker natif
+    inp.style.cssText = 'position:fixed;top:0;left:0;width:40px;height:40px;opacity:0.01;border:0;padding:0;cursor:pointer';
+    document.body.appendChild(inp);
+  }
   inp.value = _infoTagColors[tag] || '#7b8fa1';
-  inp.style.cssText = 'position:fixed;opacity:0;top:0;left:0;pointer-events:none';
-  document.body.appendChild(inp);
-  inp.addEventListener('change', function() {
+  inp.onchange = null;
+  inp.onchange = function() {
     setInfoTagColor(tag, inp.value);
-  });
-  inp.addEventListener('blur', function() {
-    setTimeout(function(){ if (inp.parentNode) inp.parentNode.removeChild(inp); }, 300);
-  });
+  };
   inp.click();
-  inp.focus();
 }
 
 function setInfoTagColor(tag, color) {
