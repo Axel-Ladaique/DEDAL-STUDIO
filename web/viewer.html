@@ -12111,7 +12111,8 @@ function _buildInfoTagsHtml(s) {
     html += tags.map(function(t) {
       var col = _infoTagColors[t] || '#7b8fa1';
       return '<span style="display:inline-flex;align-items:center;gap:6px;background:'+col+'22;border:1px solid '+col
-        +';border-radius:3px;padding:3px 10px;font-family:var(--font-mono);font-size:11px;color:'+col+'">'
+        +';border-radius:3px;padding:3px 10px;font-family:var(--font-mono);font-size:11px;color:'+col+';cursor:context-menu" '
+        +'oncontextmenu="showInfoTagMenu(event,\''+t+'\')" title="Clic droit pour options">'
         +'<span style="width:10px;height:10px;border-radius:50%;background:'+col+';cursor:pointer;flex-shrink:0" '
         +'title="Changer la couleur" onclick="pickInfoTagColor(\''+t+'\')"></span>'
         +t
@@ -12133,7 +12134,8 @@ function _buildInfoTagsHtml(s) {
         +'border-radius:3px;padding:2px 8px;font-family:var(--font-mono);font-size:11px;color:var(--dim);cursor:pointer" '
         +'onmouseover="this.style.borderColor=\''+col+'\';this.style.color=\''+col+'\'" '
         +'onmouseout="this.style.borderColor=\'\';this.style.color=\'\'" '
-        +'onclick="addInfoTagDirect(\''+t+'\')" title="Ajouter '+t+'">+ '+t+'</span>';
+        +'onclick="addInfoTagDirect(\''+t+'\')" '
+        +'oncontextmenu="showInfoTagMenu(event,\''+t+'\')" title="Clic pour ajouter · clic droit pour options">+ '+t+'</span>';
     }).join('');
     html += '</div>';
   }
@@ -12197,6 +12199,52 @@ function pickInfoTagColor(tag) {
 function setInfoTagColor(tag, color) {
   _infoTagColors[tag] = color;
   fetch('/api/tag-colors', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_infoTagColors)});
+  _refreshInfoTags();
+}
+
+function showInfoTagMenu(event, tag) {
+  event.preventDefault();
+  event.stopPropagation();
+  hideInfoCtxMenu();
+  var menu = document.createElement('div');
+  menu.id = 'info-tag-ctx';
+  menu.style.cssText = 'position:fixed;background:var(--surface);border:1px solid var(--border2);'
+    +'border-radius:6px;padding:4px;z-index:9999;min-width:200px;'
+    +'box-shadow:0 8px 24px rgba(0,0,0,.6);font-family:var(--font-mono);font-size:11px;';
+  var item = function(label, color, fn) {
+    return '<div style="padding:7px 14px;cursor:pointer;color:'+color+';border-radius:3px" '
+      +'onmouseover="this.style.background=\'var(--surface2)\'" '
+      +'onmouseout="this.style.background=\'\'" '
+      +'onclick="hideInfoCtxMenu();('+fn+')()">'+label+'</div>';
+  };
+  menu.innerHTML =
+    item('🎨 Changer la couleur', 'var(--text)',
+      'function(){pickInfoTagColor(\''+tag+'\')}')
+    +'<div style="height:1px;background:var(--border);margin:3px 0"></div>'
+    +item('🗑 Supprimer de la base de tags', 'var(--danger)',
+      'function(){deleteInfoTagGlobal(\''+tag+'\')}');
+  menu.style.left = Math.min(event.clientX, window.innerWidth - 220) + 'px';
+  menu.style.top  = Math.min(event.clientY, window.innerHeight - 90) + 'px';
+  document.body.appendChild(menu);
+  setTimeout(function() {
+    document.addEventListener('click', hideInfoCtxMenu, {once: true});
+    document.addEventListener('contextmenu', hideInfoCtxMenu, {once: true});
+  }, 0);
+}
+
+function hideInfoCtxMenu() {
+  var m = document.getElementById('info-tag-ctx');
+  if (m) m.parentNode.removeChild(m);
+}
+
+function deleteInfoTagGlobal(tag) {
+  if (!confirm('Supprimer l\'étiquette "' + tag + '" de la base de tags ?\n(Le tag sera retiré de ce log. Les autres logs conserveront leur tag mais sans couleur.)')) return;
+  delete _infoTagColors[tag];
+  fetch('/api/tag-colors', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_infoTagColors)});
+  if (_infoSession && (_infoSession.tags || []).indexOf(tag) !== -1) {
+    _infoSession.tags = _infoSession.tags.filter(function(t){ return t !== tag; });
+    fetch('/api/sessions/' + _infoSession.lid, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({tags:_infoSession.tags})});
+  }
   _refreshInfoTags();
 }
 
