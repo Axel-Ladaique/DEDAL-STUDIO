@@ -12003,6 +12003,8 @@ function deletePanelTemplate(idx) {
 
 // ── ONGLET INFOS ──────────────────────────────────────────────────────────
 var _infoLoaded = false;
+var _infoSession = null;
+var _infoTagColors = {};
 
 function loadInfoTab() {
   if (_infoLoaded) return;
@@ -12013,13 +12015,17 @@ function loadInfoTab() {
       '<p style="font-family:var(--font-mono);font-size:11px;color:var(--dim);">Session non disponible hors mode intégré.</p>';
     return;
   }
-  fetch('/api/sessions/' + lid)
-    .then(function(r) { return r.json(); })
-    .then(function(s) { renderInfoTab(s); })
-    .catch(function() {
-      document.getElementById('info-content').innerHTML =
-        '<p style="font-family:var(--font-mono);font-size:11px;color:var(--danger);">Erreur lors du chargement de la session.</p>';
-    });
+  Promise.all([
+    fetch('/api/sessions/' + lid).then(function(r) { return r.json(); }),
+    fetch('/api/tag-colors').then(function(r) { return r.json(); })
+  ]).then(function(results) {
+    _infoSession = results[0];
+    _infoTagColors = results[1] || {};
+    renderInfoTab(_infoSession);
+  }).catch(function() {
+    document.getElementById('info-content').innerHTML =
+      '<p style="font-family:var(--font-mono);font-size:11px;color:var(--danger);">Erreur lors du chargement de la session.</p>';
+  });
 }
 
 function renderInfoTab(s) {
@@ -12073,6 +12079,15 @@ function renderInfoTab(s) {
     + '<div class="irow"><span class="ilbl">Config</span><span class="ival">' + (lm.config_name || '—') + '</span></div>'
     + '<div class="irow"><span class="ilbl">GPS home</span><span class="ival">' + gpsStr + '</span></div>'
     + '</div>'
+    + '<div class="isec"><div class="isec-title">🏷 Étiquettes</div>'
+    + '<div id="info-tags-list" style="margin-bottom:10px">' + _buildInfoTagsHtml(s) + '</div>'
+    + '<div style="display:flex;gap:8px;align-items:center">'
+    + '<input id="info-tag-input" list="info-tag-datalist" placeholder="Nouvelle étiquette…" '
+    + 'style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:-apple-system,sans-serif;font-size:12px;padding:4px 10px;border-radius:4px;outline:none;flex:1" '
+    + 'onkeydown="if(event.key===\'Enter\')addInfoTag(\'' + (s.lid||'') + '\')">'
+    + '<datalist id="info-tag-datalist">' + Object.keys(_infoTagColors).map(function(t){return '<option value="'+t+'">';}).join('') + '</datalist>'
+    + '<button class="btn sm" onclick="addInfoTag(\'' + (s.lid||'') + '\')">+ Ajouter</button>'
+    + '</div></div>'
     + '<div class="isec"><div class="isec-title">⏱ Référence temporelle</div>' + metaRefHtml + '</div>'
     + '<div class="isec"><div class="isec-title">📝 Commentaires</div>'
     + '<textarea class="inotes" id="info-notes-ta"></textarea>'
@@ -12083,6 +12098,57 @@ function renderInfoTab(s) {
 
   // Set textarea value safely after innerHTML (avoids HTML injection)
   document.getElementById('info-notes-ta').value = s.notes || '';
+}
+
+function _buildInfoTagsHtml(s) {
+  var tags = (s && s.tags) || [];
+  if (!tags.length) return '<span style="font-family:var(--font-mono);font-size:11px;color:var(--dim)">Aucune étiquette</span>';
+  return tags.map(function(t) {
+    var col = _infoTagColors[t] || '#7b8fa1';
+    return '<span style="display:inline-flex;align-items:center;gap:5px;background:'+col+'22;border:1px solid '+col
+      +';border-radius:3px;padding:2px 8px;margin:2px;font-family:var(--font-mono);font-size:11px;color:'+col+'">'
+      +'<input type="color" value="'+col+'" title="Couleur" '
+      +'style="width:12px;height:12px;border:none;padding:0;cursor:pointer;background:none;flex-shrink:0" '
+      +'onchange="setInfoTagColor(\''+t+'\',this.value)">'
+      +t
+      +'<span style="cursor:pointer;margin-left:2px;opacity:.6" onclick="removeInfoTag(\''+t+'\')">×</span>'
+      +'</span>';
+  }).join('');
+}
+
+function _refreshInfoTags() {
+  var el = document.getElementById('info-tags-list');
+  if (el && _infoSession) el.innerHTML = _buildInfoTagsHtml(_infoSession);
+  var dl = document.getElementById('info-tag-datalist');
+  if (dl) dl.innerHTML = Object.keys(_infoTagColors).map(function(t){return '<option value="'+t+'">';}).join('');
+}
+
+function addInfoTag(lid) {
+  var input = document.getElementById('info-tag-input');
+  if (!input || !_infoSession) return;
+  var tag = input.value.trim();
+  if (!tag) return;
+  if (!(_infoSession.tags || []).includes(tag)) {
+    _infoSession.tags = (_infoSession.tags || []).concat([tag]);
+    if (!_infoTagColors[tag]) _infoTagColors[tag] = '#7b8fa1';
+    fetch('/api/sessions/' + lid, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({tags:_infoSession.tags})});
+    fetch('/api/tag-colors', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_infoTagColors)});
+  }
+  input.value = '';
+  _refreshInfoTags();
+}
+
+function removeInfoTag(tag) {
+  if (!_infoSession) return;
+  _infoSession.tags = (_infoSession.tags || []).filter(function(t){return t !== tag;});
+  fetch('/api/sessions/' + (_infoSession.lid||''), {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({tags:_infoSession.tags})});
+  _refreshInfoTags();
+}
+
+function setInfoTagColor(tag, color) {
+  _infoTagColors[tag] = color;
+  fetch('/api/tag-colors', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(_infoTagColors)});
+  _refreshInfoTags();
 }
 
 function saveInfoNotes(lid) {
