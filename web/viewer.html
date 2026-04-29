@@ -4413,8 +4413,8 @@ function altProfileClick(e) {
 //  KEYBOARD SHORTCUTS
 // ================================================================
 document.addEventListener('keydown', e => {
-  // Ignore if typing in an input/select
-  if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  // Ignore if typing in an input/select/textarea
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
   if(!flightData.length) return;
   switch(e.code) {
     case 'Space':        e.preventDefault(); togglePlay(); break;
