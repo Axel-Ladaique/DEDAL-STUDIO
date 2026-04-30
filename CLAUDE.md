@@ -155,6 +155,8 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 
 | GET | `/api/sessions/{lid}/pack` | Lire flight_pack.json |
 | PUT | `/api/sessions/{lid}/pack` | Recevoir flight_pack depuis le HTML |
+| GET | `/api/panel-templates` | Lire les templates de panels sauvegardés |
+| PUT | `/api/panel-templates` | Écrire les templates de panels |
 
 ---
 
@@ -172,20 +174,42 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 | 6 | Carte Leaflet sur home page | ✅ |
 | 7 | HUD — options avancées (fps UI, t_start/t_end, output_path) | ✅ |
 | 8 | Sync vidéo automatique | ⬜ |
+| 9 | Graph explorer — améliorations UX (en cours) | 🔄 |
 
 ---
 
-## HUD — options avancées (étape 7, à implémenter)
+## Graph Explorer — améliorations UX (étape 9, en cours)
 
-Demande utilisateur :
-- **Chemin de sortie personnalisé** — pouvoir spécifier un dossier de sortie autre que `session_dir/hud_output/`
-- **FPS configurable** — déjà dans le body JSON (`fps: int = 25`), mais exposer dans l'UI
-- **Plage temporelle (in/out)** — spécifier un temps de début et de fin (en secondes depuis t0 du log) pour ne générer le HUD que sur une portion du vol
+### Implémenté (session 2026-04-25)
 
-Implémentation suggérée :
-- Body `POST /api/sessions/{lid}/hud` : ajouter `t_start_s: float = 0`, `t_end_s: float | None = None`, `output_path: str | None = None`
-- Dans `generate_hud()` : filtrer les frames par timestamp, écrire dans `output_path` si fourni
-- UI : un formulaire simple dans le viewer avant de lancer la génération
+- **Zoom/pan** : réécrit avec AbortController, re-setup à chaque switch d'onglet
+- **Axe X Chart.js** : `x.min/max` forcés = signal remplit toute la largeur, zoom précis
+- **Zoom-box** : calcul `x1pct/x2pct` via `chart.chartArea` (exclut zone axe Y)
+- **Drag signal → vide** : créé un nouveau panel automatiquement
+- **Clic droit sur légende** : popup couleur (`input[type=color]`) + 4 styles de ligne
+  - `solid` `[]`, `dashed` `[6,3]`, `dotted` `[2,4]`, `dashdot` `[8,3,2,3]`
+  - `curve.style` (string) dans `panel.curves`, lu dans `refreshPanelChart` → `borderDash`
+- **Bouton 💾 sur chaque panel** : `savePanelTemplate(pid)` — prompt nom, stocke via API
+- **Bouton ⊞ SAVED** (à droite de ＋ PANEL) : `toggleSavedMenu()` — dropdown des templates
+- **Persistance templates** : `GET/PUT /api/panel-templates` → `~/.config/dedal-studio/panel_templates.json`
+
+### Bugs connus / non résolus (à reprendre)
+
+- **Popup couleur / savePanelTemplate ne fonctionnent pas** : les fonctions qui accèdent à `gPanels` sont maintenant dans l'IIFE (bonne approche), mais le comportement n'a pas été vérifié après refactoring. Vérifier dans la console si `showCurvePopup` est appelé et si `_cpopState` est bien renseigné.
+- **Attitude 3D shift** : canvas AHI passé à taille fixe `width:130px;height:130px` + setTimeout 50ms pour resizeDrone3D — non vérifié visuellement.
+- **Panels sauvegardés** : le flux save→load via `/api/panel-templates` a été codé mais non testé end-to-end.
+
+### Architecture IIFE / scope — piège critique
+
+Le graph explorer est dans une IIFE strict (`(function() { 'use strict'; ... })()`). Les fonctions qui accèdent à `gPanels`, `gCharts`, `refreshPanelChart` DOIVENT être déclarées **à l'intérieur** de cette IIFE et exportées via `window.fn = fn`. Ne JAMAIS essayer d'accéder à `gPanels` depuis un script extérieur via `window.gPanels = gPanels` — ça ne reste pas synchronisé si `gPanels` est réassigné (ex: `gPanels = gPanels.filter(...)`).
+
+Fonctions actuellement dans l'IIFE et exportées :
+- `showCurvePopup`, `onCurvePopupColor`, `onCurvePopupStyle`, `closeCurvePopup`
+- `savePanelTemplate`, `applyPanelTemplate`
+
+Fonctions dans le script externe (pas besoin de gPanels) :
+- `toggleSavedMenu`, `deletePanelTemplate`, `loadPanelTemplates`, `storePanelTemplates`
+- Fermeture popup/menu sur clic extérieur (mousedown listener)
 
 ---
 
