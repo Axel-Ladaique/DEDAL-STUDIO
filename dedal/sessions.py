@@ -50,6 +50,76 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
+def parse_meta_file(path: Path) -> dict | None:
+    """Parse a DEDAL .meta file. Returns dict or None if absent/malformed.
+
+    Expected keys: gps_utc_ref (str), micros_ref (int), log_file (str, optional).
+    Unknown keys are silently ignored.
+    """
+    if not path.exists():
+        return None
+    result: dict = {}
+    try:
+        with path.open(encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                key = key.strip()
+                val = val.strip()
+                if key == "GPS_UTC_REF":
+                    result["gps_utc_ref"] = val
+                elif key == "MICROS_REF":
+                    try:
+                        result["micros_ref"] = int(val)
+                    except ValueError:
+                        return None
+                elif key == "LOG_FILE":
+                    result["log_file"] = val
+    except OSError:
+        return None
+    if "gps_utc_ref" not in result or "micros_ref" not in result:
+        return None
+    result.setdefault("log_file", "")
+    return result
+
+
+def _parse_gps_utc_ref(gps_utc_ref: str) -> datetime | None:
+    """Parse GPS_UTC_REF string to datetime (truncates centiseconds).
+
+    Accepts YYYY-MM-DDTHH:MM:SS and YYYY-MM-DDTHH:MM:SS.CC formats.
+    """
+    try:
+        dt_str = gps_utc_ref.split(".")[0]
+        return datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%S")
+    except (ValueError, AttributeError):
+        return None
+
+
+def _resolve_timezone(lat: float, lon: float, dt_utc: datetime) -> tuple[str, int]:
+    """Return (tz_name, offset_seconds) for given GPS coords at dt_utc (DST-aware).
+
+    Falls back to ("UTC", 0) on any error (no GPS, ocean coords, missing lib).
+    """
+    try:
+        from timezonefinder import TimezoneFinder
+        from zoneinfo import ZoneInfo
+        tf = TimezoneFinder()
+        tz_name = tf.timezone_at(lat=lat, lng=lon)
+        if tz_name is None:
+            return ("UTC", 0)
+        aware_utc = dt_utc.replace(tzinfo=ZoneInfo("UTC"))
+        local = aware_utc.astimezone(ZoneInfo(tz_name))
+        offset_s = int(local.utcoffset().total_seconds())
+        return (tz_name, offset_s)
+    except Exception:
+        return ("UTC", 0)
+
+
 _DT_FMT = "%Y-%m-%dT%H:%M:%S"
 _FOLDER_PREFIX = "flight_"
 
@@ -71,14 +141,18 @@ def _parse_log_meta(path: Path) -> tuple[dict, "dict | None"]:
         "fw_version": "",
         "row_count": 0,
         "duration_s": 0.0,
+        "armed_s": 0.0,
     }
     first_ts: int | None = None
     last_ts: int | None = None
+    first_armed_ts: int | None = None
+    last_armed_ts: int | None = None
     row_count = 0
     gps_home: dict | None = None
     col_valid: int | None = None
     col_lat: int | None = None
     col_lon: int | None = None
+    col_armed: int | None = None
 
     with path.open(encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -102,6 +176,10 @@ def _parse_log_meta(path: Path) -> tuple[dict, "dict | None"]:
                     col_lon   = cols.index("gps_lon")
                 except ValueError:
                     pass
+                try:
+                    col_armed = cols.index("armed")
+                except ValueError:
+                    pass
                 continue
             parts = line.split(",")
             try:
@@ -112,6 +190,14 @@ def _parse_log_meta(path: Path) -> tuple[dict, "dict | None"]:
                 row_count += 1
             except (ValueError, IndexError):
                 pass
+            if col_armed is not None:
+                try:
+                    if parts[col_armed].strip() == "1":
+                        if first_armed_ts is None:
+                            first_armed_ts = ts
+                        last_armed_ts = ts
+                except (ValueError, IndexError):
+                    pass
             if gps_home is None and col_valid is not None:
                 try:
                     if parts[col_valid].strip() == "1":
@@ -125,6 +211,8 @@ def _parse_log_meta(path: Path) -> tuple[dict, "dict | None"]:
     meta["row_count"] = row_count
     if first_ts is not None and last_ts is not None:
         meta["duration_s"] = round((last_ts - first_ts) / 1_000_000, 1)
+    if first_armed_ts is not None and last_armed_ts is not None:
+        meta["armed_s"] = round((last_armed_ts - first_armed_ts) / 1_000_000, 1)
     return meta, gps_home
 
 
@@ -137,24 +225,36 @@ class Session:
     nickname: str
     created_at: datetime
     dir_path: Path
-    log_file: str = ""            # relative path inside dir_path
-    video_file: str | None = None # relative path inside dir_path
+    log_file: str = ""
+    video_file: str | None = None
     tags: list[str] = field(default_factory=list)
-    location: dict | None = None   # {lat, lon, place_name}
-    log_meta: dict | None = None   # populated on CSV import
-    gps_home: dict | None = None   # {lat, lon} — first valid GPS fix
+    location: dict | None = None
+    log_meta: dict | None = None
+    gps_home: dict | None = None
+    imported_at: datetime | None = None
+    flight_date_utc: str | None = None
+    tz_name: str | None = None
+    tz_offset_s: int | None = None
+    meta_ref: dict | None = None
+    notes: str = ""
 
     def to_dict(self) -> dict:
         return {
             "lid": self.lid,
             "nickname": self.nickname,
             "created_at": self.created_at.strftime(_DT_FMT),
+            "imported_at": self.imported_at.strftime(_DT_FMT) if self.imported_at else None,
             "log_file": self.log_file,
             "video_file": self.video_file,
             "tags": self.tags,
             "location": self.location,
             "log_meta": self.log_meta,
             "gps_home": self.gps_home,
+            "flight_date_utc": self.flight_date_utc,
+            "tz_name": self.tz_name,
+            "tz_offset_s": self.tz_offset_s,
+            "meta_ref": self.meta_ref,
+            "notes": self.notes,
         }
 
 
@@ -172,6 +272,7 @@ def save_session(session: Session) -> None:
 def load_session(dir_path: Path) -> Session:
     """Load a Session from its folder. Raises on missing / malformed JSON."""
     data = json.loads((dir_path / "session.json").read_text(encoding="utf-8"))
+    imported_at_str = data.get("imported_at")
     return Session(
         lid=data["lid"],
         nickname=data.get("nickname", ""),
@@ -183,6 +284,12 @@ def load_session(dir_path: Path) -> Session:
         location=data.get("location"),
         log_meta=data.get("log_meta"),
         gps_home=data.get("gps_home"),
+        imported_at=datetime.strptime(imported_at_str, _DT_FMT) if imported_at_str else None,
+        flight_date_utc=data.get("flight_date_utc"),
+        tz_name=data.get("tz_name"),
+        tz_offset_s=data.get("tz_offset_s"),
+        meta_ref=data.get("meta_ref"),
+        notes=data.get("notes", ""),
     )
 
 
@@ -213,7 +320,7 @@ def create_empty_session(flights_root: Path, nickname: str = "",
     folder = flights_root / _lid_to_folder(lid)
     folder.mkdir(parents=True, exist_ok=True)
     s = Session(lid=lid, nickname=nickname, created_at=now,
-                dir_path=folder, tags=tags or [])
+                dir_path=folder, tags=tags or [], imported_at=now)
     save_session(s)
     return s
 
@@ -238,8 +345,8 @@ def generate_lid(log_csv_path: Path, flights_root: Path) -> str:
 def import_log(csv_path: Path, flights_root: Path, nickname: str = "") -> Session:
     """Create a new session from a CSV log file.
 
-    Copies (never moves) ``csv_path`` into a new session folder as ``log.csv``.
-    Extracts metadata from the CSV and writes ``session.json``.
+    Copies (never moves) csv_path into a new session folder.
+    Also copies {csv_stem}.meta from the same directory if present.
     """
     lid = generate_lid(csv_path, flights_root)
     folder_name = _lid_to_folder(lid)
@@ -255,7 +362,33 @@ def import_log(csv_path: Path, flights_root: Path, nickname: str = "") -> Sessio
     except OSError:
         created_at = datetime.now().replace(microsecond=0)
 
+    imported_at = datetime.now().replace(microsecond=0)
     log_meta, gps_home = _parse_log_meta(dest)
+
+    meta_ref: dict | None = None
+    flight_date_utc: str | None = None
+    tz_name: str | None = None
+    tz_offset_s: int | None = None
+
+    source_meta = csv_path.parent / (csv_path.stem + ".meta")
+    if source_meta.exists():
+        parsed = parse_meta_file(source_meta)
+        if parsed:
+            shutil.copy2(source_meta, folder / "log.meta")
+            meta_ref = parsed
+            dt = _parse_gps_utc_ref(parsed["gps_utc_ref"])
+            if dt:
+                flight_date_utc = dt.strftime(_DT_FMT)
+                if gps_home:
+                    tz_name, tz_offset_s = _resolve_timezone(
+                        gps_home["lat"], gps_home["lon"], dt
+                    )
+            if parsed.get("log_file") and parsed["log_file"] != csv_path.name:
+                logger.warning(
+                    "meta LOG_FILE=%r doesn't match CSV name %r — loading anyway",
+                    parsed["log_file"], csv_path.name,
+                )
+
     session = Session(
         lid=lid,
         nickname=nickname,
@@ -264,6 +397,11 @@ def import_log(csv_path: Path, flights_root: Path, nickname: str = "") -> Sessio
         log_file="log.csv",
         log_meta=log_meta,
         gps_home=gps_home,
+        imported_at=imported_at,
+        flight_date_utc=flight_date_utc,
+        tz_name=tz_name,
+        tz_offset_s=tz_offset_s,
+        meta_ref=meta_ref,
     )
     save_session(session)
     return session
@@ -312,6 +450,36 @@ def extract_gps_track(csv_path: Path, max_pts: int = 500) -> "list[list[float]]"
         return []
     step = max(1, len(points) // max_pts)
     return points[::step]
+
+
+def reload_meta(session: Session) -> bool:
+    """Read log.meta from session folder, update session fields, save atomically.
+
+    Returns True if log.meta was found and parsed successfully, False otherwise.
+    Clears meta fields if no valid log.meta is present.
+    """
+    meta_path = session.dir_path / "log.meta"
+    if not meta_path.exists() and session.log_file:
+        meta_path = session.dir_path / (Path(session.log_file).stem + ".meta")
+    parsed = parse_meta_file(meta_path)
+    if not parsed:
+        session.meta_ref = None
+        session.flight_date_utc = None
+        session.tz_name = None
+        session.tz_offset_s = None
+        save_session(session)
+        return False
+
+    session.meta_ref = parsed
+    dt = _parse_gps_utc_ref(parsed["gps_utc_ref"])
+    if dt:
+        session.flight_date_utc = dt.strftime(_DT_FMT)
+        if session.gps_home:
+            session.tz_name, session.tz_offset_s = _resolve_timezone(
+                session.gps_home["lat"], session.gps_home["lon"], dt
+            )
+    save_session(session)
+    return True
 
 
 def scan_sessions(flights_root: Path) -> list[Session]:

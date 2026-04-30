@@ -106,15 +106,18 @@
   }
   .sessions-header {
     display: grid;
-    grid-template-columns: 170px 1fr 110px 220px 160px;
+    grid-template-columns: 170px 1fr 110px 110px 155px 110px 110px;
     padding: 10px 20px;
     background: var(--surface2); border-bottom: 1px solid var(--border);
     font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
     text-transform: uppercase; color: var(--dim);
   }
+  .sessions-header [data-sort] { cursor: pointer; user-select: none; }
+  .sessions-header [data-sort]:hover { color: var(--dim2); }
+  .sessions-header [data-sort].active { color: var(--accent); }
   .session-row {
     display: grid;
-    grid-template-columns: 170px 1fr 110px 220px 160px;
+    grid-template-columns: 170px 1fr 110px 110px 155px 110px 110px;
     align-items: center; padding: 12px 20px;
     border-bottom: 1px solid var(--border); transition: background .1s;
     cursor: pointer;
@@ -131,13 +134,91 @@
   .session-nickname.empty { color: var(--dim); font-style: italic; }
   .date { font-family: var(--mono); font-size: 11px; color: var(--dim); }
 
-  .tags { display: flex; flex-wrap: wrap; gap: 4px; }
-  .tag {
+  .tag-chip {
+    display: inline-flex; align-items: center;
     font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
-    color: var(--dim); background: var(--surface2);
-    border: 1px solid var(--border2); border-radius: 3px;
-    padding: 1px 6px;
+    border: 1px solid; border-radius: 3px; padding: 2px 8px;
+    cursor: pointer;
   }
+  .tag-mini {
+    font-family: var(--mono); font-size: 9px; border: 1px solid;
+    border-radius: 2px; padding: 1px 5px; cursor: pointer;
+    white-space: nowrap; display: inline-block; transition: opacity .1s;
+  }
+  .tag-mini:hover { opacity: .75; }
+  .tag-dd-wrap { position: relative; }
+  .tag-dd {
+    position: fixed; background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 10px 12px; z-index: 500; min-width: 180px;
+    display: flex; flex-direction: column; gap: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.55);
+  }
+  .tag-dd-title { font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--dim); }
+  .tag-dd-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag-dd-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: var(--mono); font-size: 10px; border: 1px solid;
+    border-radius: 3px; padding: 3px 8px; cursor: pointer; transition: opacity .1s;
+  }
+  .tag-dd-chip:hover { opacity: .8; }
+  /* Bottom row : stats + calendrier */
+  .bottom-row { display: flex; gap: 16px; margin-top: 16px; align-items: flex-start; }
+  /* Stats KPI */
+  .stats-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; flex: 1; min-width: 0; overflow: hidden;
+  }
+  .stats-hdr {
+    padding: 8px 14px; background: var(--surface2); border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .kpi-grid { display: grid; grid-template-columns: repeat(3,1fr); }
+  .kpi { padding: 11px 14px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .kpi:nth-child(3n) { border-right: none; }
+  .kpi:nth-last-child(-n+3) { border-bottom: none; }
+  .kpi-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: #8aaabb; margin-bottom: 4px; }
+  .kpi-val { font-family: var(--mono); font-size: 18px; color: var(--text); line-height: 1.2; }
+  .kpi-sub { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 1px; }
+  /* Calendrier */
+  .cal-panel { display: flex; gap: 0; align-items: stretch; flex-shrink: 0; }
+  .cal-sidebar {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px 0 0 8px; width: 100px; flex-shrink: 0; overflow: hidden;
+    border-right: none;
+  }
+  .cal-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 0 8px 8px 0; flex-shrink: 0; overflow: hidden;
+  }
+  .cal-nav {
+    display: flex; align-items: center; padding: 7px 12px; gap: 8px;
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+  }
+  .cal-nav-title {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; flex: 1; text-align: center;
+    cursor: pointer; color: var(--dim); transition: color .12s;
+  }
+  .cal-nav-title:hover { color: var(--accent); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; padding: 8px 12px; }
+  .cal-day { text-align: center; padding: 3px 2px; font-family: var(--mono); font-size: 10px;
+             border-radius: 3px; cursor: default; min-height: 26px; }
+  .cal-day.has-log { cursor: pointer; }
+  .cal-day.has-log:hover { background: var(--surface2); }
+  .cal-day.selected { background: var(--accent)33 !important; color: var(--accent); }
+  .cal-day.today { font-weight: bold; color: var(--text); }
+  .cal-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); margin: 2px auto 0; }
+  .cal-pick { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; padding: 12px; }
+  .cal-pick-m {
+    text-align: center; padding: 7px 4px; border-radius: 3px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    cursor: pointer; border: 1px solid transparent; transition: all .1s;
+  }
+  .cal-pick-m:hover { background: var(--surface2); border-color: var(--border2); }
+  .cal-pick-m.cal-cur { border-color: var(--accent); color: var(--accent); }
 
   .log-badge { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; }
   .log-badge .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
@@ -192,12 +273,13 @@
   .btn.cancel:hover { background: rgba(255,255,255,0.05); }
 
   .banner {
-    padding: 8px 16px; border-radius: 4px;
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    padding: 8px 20px; border-radius: 4px; z-index: 999;
     font-family: var(--mono); font-size: 11px;
-    margin-bottom: 16px; display: none;
+    white-space: nowrap; display: none; pointer-events: none;
   }
-  .banner.err { display: block; background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.3); color: #ff6b35; }
-  .banner.ok  { display: block; background: rgba(57,255,20,0.06); border: 1px solid rgba(57,255,20,0.3); color: var(--accent3); }
+  .banner.err { display: block; background: rgba(255,77,77,0.12); border: 1px solid rgba(255,77,77,0.4); color: #ff6b35; }
+  .banner.ok  { display: block; background: rgba(57,255,20,0.08); border: 1px solid rgba(57,255,20,0.35); color: var(--accent3); }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner {
@@ -216,23 +298,33 @@
 
 <div class="app-layout">
 
+  <div id="banner" class="banner"></div>
   <!-- ── liste ── -->
   <div class="list-panel">
-    <div id="banner" class="banner"></div>
     <div class="toolbar">
       <button class="btn" onclick="openImportModal()">+ Importer un log</button>
       <button class="btn cancel" onclick="openNewModal()">+ Session vide</button>
       <input type="search" id="search" placeholder="Filtrer…" oninput="renderSessions()">
     </div>
+    <div id="active-filters" style="display:none;flex-wrap:wrap;gap:4px;padding:0 0 12px 0"></div>
     <div class="sessions-wrap">
       <div class="sessions-header">
         <div>LID</div>
-        <div>Nom</div>
-        <div>Date</div>
-        <div>Log</div>
+        <div data-sort="name" onclick="setSort('name')">Nom</div>
+        <div data-sort="flight" onclick="setSort('flight')">Vol</div>
+        <div data-sort="import" onclick="setSort('import')">Import</div>
+        <div data-sort="duration" onclick="setSort('duration')">Log</div>
+        <div class="tag-dd-wrap" id="tags-col-hdr" style="position:relative"></div>
         <div></div>
       </div>
       <div id="session-list"><div class="empty"><span class="spinner"></span></div></div>
+    </div>
+    <div class="bottom-row">
+      <div class="stats-card" id="stats-card"></div>
+      <div class="cal-panel">
+        <div class="cal-sidebar" id="cal-sidebar"></div>
+        <div class="cal-card" id="cal-card"></div>
+      </div>
     </div>
   </div>
 
@@ -259,11 +351,11 @@
 <div class="overlay" id="modal-import" onclick="closeModal(event)">
   <div class="modal">
     <h2>Importer un log CSV</h2>
-    <label for="import-file">Fichier CSV</label>
+    <label for="import-file">Fichier CSV (+ .meta optionnel — sélection multiple)</label>
     <input type="text" id="import-file-display" placeholder="Aucun fichier sélectionné" readonly
            onclick="document.getElementById('import-file-input').click()" style="cursor:pointer">
-    <input type="file" id="import-file-input" accept=".csv" style="display:none"
-           onchange="document.getElementById('import-file-display').value=this.files[0]?.name||''">
+    <input type="file" id="import-file-input" accept=".csv,.meta" multiple style="display:none"
+           onchange="document.getElementById('import-file-display').value=Array.from(this.files).map(f=>f.name).join(', ')">
     <label for="import-nickname">Nom (optionnel)</label>
     <input type="text" id="import-nickname" placeholder="Ex : Mission Alpha" autocomplete="off"
            onkeydown="if(event.key==='Enter') confirmImport()">
@@ -294,6 +386,12 @@
 let sessions = [];
 let selectedLid = null;
 let mapMode = 'trace'; // 'marker' | 'trace'
+let _tagColors = {};   // {tagname: hexcolor} — loaded from /api/tag-colors
+let _filterTags = new Set();
+let _filterDate = null; // 'YYYY-MM-DD' or null
+let _calYear = new Date().getFullYear();
+let _calMonth = new Date().getMonth();
+let _tagDropdownOpen = false;
 
 // ── API ────────────────────────────────────────────────────────────────────
 
@@ -474,7 +572,15 @@ async function loadAllTracks() {
 
 async function loadSessions() {
   try {
-    sessions = await api('GET', '/api/sessions');
+    [sessions, _tagColors] = await Promise.all([
+      api('GET', '/api/sessions'),
+      api('GET', '/api/tag-colors'),
+    ]);
+    _applySortHeader();
+    renderTagColHeader();
+    renderCalSidebar();
+    renderCalendar();
+    renderStats();
     renderSessions();
     rebuildMarkers();
     loadAllTracks();
@@ -483,21 +589,167 @@ async function loadSessions() {
   }
 }
 
+let _sortKey = 'flight';
+let _sortDir = -1; // -1 = desc, 1 = asc
+
+function _applySortHeader() {
+  document.querySelectorAll('.sessions-header [data-sort]').forEach(el => {
+    const isActive = el.dataset.sort === _sortKey;
+    el.classList.toggle('active', isActive);
+    const labels = {name:'Nom', flight:'Vol', import:'Import', duration:'Log'};
+    el.textContent = (labels[el.dataset.sort] || el.dataset.sort)
+      + (isActive ? (_sortDir === -1 ? ' ↓' : ' ↑') : '');
+  });
+}
+
+function setSort(key) {
+  if (_sortKey === key) { _sortDir *= -1; }
+  else { _sortKey = key; _sortDir = -1; }
+  _applySortHeader();
+  renderSessions();
+}
+
+function _sortValue(s) {
+  if (_sortKey === 'name')     return (s.nickname || '').toLowerCase();
+  if (_sortKey === 'flight')   return s.flight_date_utc || s.created_at || '';
+  if (_sortKey === 'import')   return s.imported_at || s.created_at || '';
+  if (_sortKey === 'duration') return s.log_meta?.duration_s || 0;
+  return '';
+}
+
+function tagColor(name) {
+  return _tagColors[name] || '#7b8fa1';
+}
+
+function toggleTagFilter(tag) {
+  if (_filterTags.has(tag)) _filterTags.delete(tag); else _filterTags.add(tag);
+  renderTagColHeader();
+  renderActiveFilters();
+  renderSessions();
+}
+
+function _fmtFilterDate(d) {
+  if (!d) return '';
+  if (d.length === 4) return d;
+  if (d.length === 7) {
+    const MN = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+    const [y, m] = d.split('-');
+    return MN[parseInt(m,10)-1] + ' ' + y;
+  }
+  const [y, m, day] = d.split('-');
+  return day + '/' + m + '/' + y;
+}
+
+function renderActiveFilters() {
+  const el = document.getElementById('active-filters');
+  if (!el) return;
+  const hasFilters = _filterTags.size > 0 || _filterDate;
+  el.style.display = hasFilters ? 'flex' : 'none';
+  if (!hasFilters) { el.innerHTML = ''; return; }
+  const chips = [..._filterTags].map(t =>
+    `<span class="tag-chip" style="background:${tagColor(t)}22;border-color:${tagColor(t)};color:${tagColor(t)}"
+      onclick="toggleTagFilter('${esc(t)}')">${esc(t)} ×</span>`
+  ).join('');
+  const dateChip = _filterDate
+    ? `<span class="tag-chip" style="background:var(--accent)22;border-color:var(--accent);color:var(--accent)"
+        onclick="setDateFilter(null)">${_fmtFilterDate(_filterDate)} ×</span>`
+    : '';
+  el.innerHTML = chips + dateChip
+    + `<span style="font-family:var(--mono);font-size:10px;color:var(--dim);cursor:pointer;padding:2px 8px"
+        onclick="_filterTags.clear();setDateFilter(null)">effacer tout</span>`;
+}
+
+function setDateFilter(dateStr) {
+  _filterDate = dateStr;
+  renderActiveFilters();
+  renderCalSidebar();
+  renderCalendar();
+  renderSessions();
+}
+
+function renderTagColHeader() {
+  const hdr = document.getElementById('tags-col-hdr');
+  if (!hdr) return;
+  // Remove any previous body-level dropdown
+  const old = document.getElementById('_tagdd');
+  if (old) old.remove();
+
+  const n = _filterTags.size;
+  const label = 'TAGS' + (n ? ` (${n})` : '') + ' ▾';
+  hdr.innerHTML = `<span id="_tagTrigger" onclick="toggleTagDropdown(event)"
+    style="cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:${n ? 'var(--accent)' : 'var(--dim)'}">${label}</span>`;
+
+  if (!_tagDropdownOpen) return;
+
+  const allTags = Object.keys(_tagColors);
+  const trigger = document.getElementById('_tagTrigger');
+  const rect = (trigger || hdr).getBoundingClientRect();
+  const dd = document.createElement('div');
+  dd.id = '_tagdd';
+  dd.className = 'tag-dd';
+  dd.style.top  = (rect.bottom + 4) + 'px';
+  dd.style.left = rect.left + 'px';
+
+  if (!allTags.length) {
+    dd.innerHTML = `<div class="tag-dd-title" style="font-style:italic">Aucune étiquette créée</div>`;
+  } else {
+    const chips = allTags.map(t => {
+      const col = _tagColors[t] || '#7b8fa1';
+      const active = _filterTags.has(t);
+      return `<span class="tag-dd-chip" style="color:${col};border-color:${col};background:${active?col+'33':'transparent'}"
+        onclick="event.stopPropagation();toggleTagFilter('${esc(t)}')">${esc(t)}${active?' ✓':''}</span>`;
+    }).join('');
+    dd.innerHTML = `<div class="tag-dd-title">Filtrer par étiquette</div>
+      <div class="tag-dd-chips">${chips}</div>`
+      + (n ? `<span style="font-family:var(--mono);font-size:9px;color:var(--dim);cursor:pointer;padding-top:2px"
+          onclick="event.stopPropagation();_filterTags.clear();renderTagColHeader();renderActiveFilters();renderSessions()">Tout effacer</span>` : '');
+  }
+  document.body.appendChild(dd);
+}
+
+function toggleTagDropdown(event) {
+  event.stopPropagation();
+  _tagDropdownOpen = !_tagDropdownOpen;
+  renderTagColHeader();
+  if (_tagDropdownOpen) {
+    document.addEventListener('click', function _close(e) {
+      const dd = document.getElementById('_tagdd');
+      if (dd && dd.contains(e.target)) return;
+      _tagDropdownOpen = false;
+      renderTagColHeader();
+      document.removeEventListener('click', _close);
+    });
+  }
+}
+
 function renderSessions() {
   const q = document.getElementById('search').value.trim().toLowerCase();
   const list = document.getElementById('session-list');
-  const filtered = q
+  let filtered = (q
     ? sessions.filter(s => s.lid.toLowerCase().includes(q) ||
                            s.nickname.toLowerCase().includes(q) ||
                            (s.tags || []).some(t => t.toLowerCase().includes(q)))
-    : sessions;
+    : [...sessions]
+  ).sort((a, b) => {
+    const va = _sortValue(a), vb = _sortValue(b);
+    return va < vb ? _sortDir : va > vb ? -_sortDir : 0;
+  });
+  if (_filterTags.size > 0)
+    filtered = filtered.filter(s => [..._filterTags].every(t => (s.tags || []).includes(t)));
+  if (_filterDate)
+    filtered = filtered.filter(s => ((s.flight_date_utc || s.created_at) || '').startsWith(_filterDate));
 
   if (filtered.length === 0) {
     list.innerHTML = '<div class="empty">Aucune session — importez un log CSV pour commencer.</div>';
     return;
   }
 
-  list.innerHTML = filtered.map(s => `
+  list.innerHTML = filtered.map(s => {
+    const tagsMini = (s.tags||[]).map(t =>
+      `<span class="tag-mini" style="color:${tagColor(t)};border-color:${tagColor(t)}66"
+        onclick="event.stopPropagation();toggleTagFilter('${esc(t)}')" title="${esc(t)}">${esc(t)}</span>`
+    ).join(' ');
+    return `
     <div class="session-row${s.lid === selectedLid ? ' selected' : ''}" id="row-${s.lid}"
          onclick="handleRowClick(event, '${s.lid}')"
          ondblclick="openSession(event, '${s.lid}')"
@@ -505,20 +757,19 @@ function renderSessions() {
          onmouseenter="hoverSession('${s.lid}')"
          onmouseleave="unhoverSession('${s.lid}')">
       <div class="lid">${s.lid}</div>
-      <div>
-        <span class="session-nickname${s.nickname ? '' : ' empty'}">${esc(s.nickname) || 'Sans nom'}</span>
-      </div>
-      <div class="date" title="Date du vol (mtime CSV)">VOL ${fmtDate(s.created_at)}</div>
+      <div><span class="session-nickname${s.nickname ? '' : ' empty'}">${esc(s.nickname) || 'Sans nom'}</span></div>
+      <div class="date">${fmtFlightDate(s)}</div>
+      <div class="date">${fmtImportDate(s)}</div>
       <div class="log-badge">${logBadge(s)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;align-items:center">${tagsMini}</div>
       <div class="row-actions" onclick="event.stopPropagation()">
-        <label class="import-label" title="Attacher une vidéo">
-          VID
-          <input type="file" accept="video/*" onchange="attachVideo('${s.lid}', this)">
-        </label>
+        ${s.log_file ? (s.meta_ref
+          ? `<button class="btn sm" style="color:var(--accent3);border-color:var(--accent3)" title="Métadonnées GPS chargées — cliquer pour recharger" onclick="reloadMeta('${s.lid}')">✓ META</button>`
+          : `<button class="btn sm" style="opacity:.55" title="Aucune référence .meta — cliquer pour recharger" onclick="reloadMeta('${s.lid}')">⟳ META</button>`) : ''}
         <button class="btn sm danger" onclick="deleteSession('${s.lid}')">✕</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function handleRowClick(event, lid) {
@@ -535,9 +786,13 @@ function openSession(event, lid) {
 }
 
 let _hoverTimer = null;
+let _hoveredLid = null;
 
 function hoverSession(lid) {
+  _hoveredLid = lid;
+  clearTimeout(_hoverTimer); // annule le re-fit éventuel d'un unhover précédent
   _hoverTimer = setTimeout(() => {
+    if (_hoveredLid !== lid) return;
     if (mapMode === 'trace' && mapTracks[lid]) {
       if (lid !== selectedLid) {
         mapTracks[lid].setStyle({ color: '#00d4ff', opacity: 0.65, weight: 2 });
@@ -547,14 +802,30 @@ function hoverSession(lid) {
       const s = sessions.find(x => x.lid === lid);
       if (s && s.gps_home) map.flyTo([s.gps_home.lat, s.gps_home.lon], 14, { duration: 0.5 });
     }
-  }, 180);
+  }, 250);
 }
 
 function unhoverSession(lid) {
+  _hoveredLid = null;
   clearTimeout(_hoverTimer);
   _hoverTimer = null;
   if (mapMode === 'trace' && mapTracks[lid] && lid !== selectedLid) {
     mapTracks[lid].setStyle({ color: '#00d4ff', opacity: 0.25, weight: 1.5 });
+  }
+  // Re-fit vers tous les vols seulement si rien n'est sélectionné ni survolé
+  if (!selectedLid) {
+    _hoverTimer = setTimeout(() => {
+      if (selectedLid || _hoveredLid) return;
+      if (mapMode === 'trace') {
+        const bounds = Object.values(mapTracks)
+          .map(pl => pl.getBounds()).filter(b => b.isValid());
+        if (bounds.length)
+          map.fitBounds(bounds.reduce((a, b) => a.extend(b)), { padding: [32, 32], maxZoom: 14 });
+      } else {
+        const pts = sessions.filter(s => s.gps_home).map(s => [s.gps_home.lat, s.gps_home.lon]);
+        if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [32, 32], maxZoom: 14 });
+      }
+    }, 700);
   }
 }
 
@@ -584,13 +855,16 @@ function openImportModal() {
 
 async function confirmImport() {
   const fileInput = document.getElementById('import-file-input');
-  const file = fileInput.files[0];
-  if (!file) { showBanner('err', 'Sélectionnez un fichier CSV.'); return; }
+  const files = Array.from(fileInput.files);
+  const csvFile = files.find(f => f.name.toLowerCase().endsWith('.csv'));
+  const metaFile = files.find(f => f.name.toLowerCase().endsWith('.meta'));
+  if (!csvFile) { showBanner('err', 'Sélectionnez un fichier CSV.'); return; }
   const nickname = document.getElementById('import-nickname').value.trim();
   document.getElementById('modal-import').classList.remove('open');
 
   const fd = new FormData();
-  fd.append('file', file);
+  fd.append('file', csvFile);
+  if (metaFile) fd.append('meta_file', metaFile);
   try {
     const r = await fetch(`/api/sessions/import?nickname=${encodeURIComponent(nickname)}`,
                           { method: 'POST', body: fd });
@@ -598,6 +872,8 @@ async function confirmImport() {
     const s = await r.json();
     sessions.unshift(s);
     renderSessions();
+    renderStats();
+    renderCalendar();
     rebuildMarkers();
     loadAllTracks();
     showBanner('ok', `Session ${s.lid} créée — ${s.log_meta?.row_count || '?'} points, ${s.log_meta?.duration_s || '?'}s`);
@@ -621,6 +897,7 @@ async function confirmNew() {
     const s = await api('POST', '/api/sessions', { nickname });
     sessions.unshift(s);
     renderSessions();
+    renderStats();
   } catch (e) {
     showBanner('err', 'Erreur création : ' + e.message);
   }
@@ -655,6 +932,7 @@ async function deleteSession(lid) {
     sessions = sessions.filter(s => s.lid !== lid);
     if (selectedLid === lid) { selectedLid = null; }
     renderSessions();
+    renderStats();
     rebuildMarkers();
     loadAllTracks();
   } catch (e) {
@@ -692,6 +970,193 @@ function closeModal(e) {
 
 function esc(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderStats() {
+  const el = document.getElementById('stats-card');
+  if (!el) return;
+
+  const withLog   = sessions.filter(s => s.log_file);
+  // Use armed_s (actual flight time) when available, fallback to duration_s (total log time)
+  const durs      = withLog.map(s => s.log_meta?.armed_s || s.log_meta?.duration_s || 0).filter(d => d > 0);
+  const totalDur  = durs.reduce((a, d) => a + d, 0);
+  const avgDur    = durs.length ? totalDur / durs.length : 0;
+  const minDur    = durs.length ? Math.min(...durs) : 0;
+  const maxDur    = durs.length ? Math.max(...durs) : 0;
+  const totalPts  = withLog.reduce((a, s) => a + (s.log_meta?.row_count || 0), 0);
+  const withMeta  = sessions.filter(s => s.meta_ref).length;
+  const withVideo = sessions.filter(s => s.video_file).length;
+  const allTags   = new Set(sessions.flatMap(s => s.tags || []));
+
+  const fmtDur = s => {
+    s = Math.round(s);
+    if (s < 60) return s + 's';
+    if (s < 3600) return Math.floor(s/60) + 'min ' + String(s%60).padStart(2,'0') + 's';
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+    return h + 'h' + String(m).padStart(2,'0');
+  };
+  const fmtPts = n => n >= 1e6 ? (n/1e6).toFixed(1)+' M' : n >= 1e3 ? Math.round(n/1e3)+' k' : String(n);
+  const pct = (n, t) => t ? Math.round(n/t*100)+'%' : '—';
+
+  const kpi = (lbl, val, sub) =>
+    `<div class="kpi"><div class="kpi-lbl">${lbl}</div><div class="kpi-val">${val}</div>`
+    + (sub ? `<div class="kpi-sub">${sub}</div>` : '') + `</div>`;
+
+  el.innerHTML = `<div class="stats-hdr">Récapitulatif</div><div class="kpi-grid">`
+    + kpi('Vols',          sessions.length,                            withLog.length + ' avec log')
+    + kpi('Durée totale',  totalDur > 0 ? fmtDur(totalDur) : '—',    durs.length + ' vols')
+    + kpi('Moy. / vol',    avgDur   > 0 ? fmtDur(avgDur)   : '—',    durs.length ? fmtDur(minDur) + ' – ' + fmtDur(maxDur) : '')
+    + kpi('Vol + long',    maxDur   > 0 ? fmtDur(maxDur)   : '—',    '')
+    + kpi('Vol + court',   minDur   > 0 ? fmtDur(minDur)   : '—',    '')
+    + kpi('Points log',    totalPts > 0 ? fmtPts(totalPts) : '—',    withLog.length ? '~' + fmtPts(Math.round(totalPts/withLog.length)) + '/vol' : '')
+    + kpi('GPS sync',      withMeta + ' / ' + withLog.length,         pct(withMeta, withLog.length))
+    + kpi('Avec vidéo',    withVideo,                                  pct(withVideo, sessions.length))
+    + kpi('Étiquettes',    allTags.size,                               allTags.size ? [...allTags].slice(0,3).join(', ') + (allTags.size > 3 ? '…' : '') : 'aucune')
+    + '</div>';
+}
+
+function selectCalMonth(m) {
+  _calMonth = m;
+  const ym = _calYear + '-' + String(m+1).padStart(2,'0');
+  setDateFilter(_filterDate === ym ? null : ym);
+}
+
+function selectCalYear() {
+  const y = String(_calYear);
+  setDateFilter(_filterDate === y ? null : y);
+}
+
+function renderCalSidebar() {
+  const el = document.getElementById('cal-sidebar');
+  if (!el) return;
+  const MN = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+
+  const mCounts = {}, yCounts = {};
+  sessions.forEach(s => {
+    const d = ((s.flight_date_utc || s.created_at) || '').slice(0,10);
+    if (!d) return;
+    const ym = d.slice(0,7), y = d.slice(0,4);
+    mCounts[ym] = (mCounts[ym]||0) + 1;
+    yCounts[y]  = (yCounts[y] ||0) + 1;
+  });
+
+  const yearStr = String(_calYear);
+  const isYearSel = _filterDate === yearStr;
+
+  let html = `<div style="display:flex;align-items:center;padding:5px 6px;background:var(--surface2);border-bottom:1px solid var(--border);gap:3px">
+    <button class="btn sm" style="padding:2px 6px;flex-shrink:0" onclick="_calYear--;renderCalSidebar();renderCalendar()">‹</button>
+    <span onclick="selectCalYear()" title="${isYearSel?'Désélectionner':'Filtrer '+_calYear}"
+      style="font-family:var(--mono);font-size:11px;flex:1;text-align:center;cursor:pointer;
+        color:${isYearSel?'var(--accent)':'var(--text)'};font-weight:${isYearSel?'700':'400'}"
+    >${_calYear}${yCounts[yearStr]?'<span style="color:var(--accent);font-size:7px;vertical-align:super"> ●</span>':''}</span>
+    <button class="btn sm" style="padding:2px 6px;flex-shrink:0" onclick="_calYear++;renderCalSidebar();renderCalendar()">›</button>
+  </div><div>`;
+
+  for (let m = 0; m < 12; m++) {
+    const ym   = `${yearStr}-${String(m+1).padStart(2,'0')}`;
+    const cnt  = mCounts[ym] || 0;
+    const isSel = _filterDate === ym
+      || (_filterDate && _filterDate.length === 10 && _filterDate.startsWith(ym));
+    const isCur = m === _calMonth;
+    html += `<div onclick="selectCalMonth(${m})"
+      style="display:flex;align-items:center;justify-content:space-between;
+        padding:4px 8px 4px 6px;cursor:pointer;
+        background:${isSel?'rgba(0,212,255,0.1)':'transparent'};
+        border-left:2px solid ${isCur?'var(--accent)':'transparent'}"
+      onmouseover="this.style.background='${isSel?'rgba(0,212,255,0.14)':'var(--surface2)'}'"
+      onmouseout="this.style.background='${isSel?'rgba(0,212,255,0.1)':'transparent'}'">
+      <span style="font-family:var(--mono);font-size:10px;letter-spacing:1px;
+        color:${isSel?'var(--accent)':cnt?'var(--text)':'var(--dim)'}">${MN[m]}</span>
+      <span style="font-size:7px;color:${cnt?'var(--accent)':'var(--border2)'}">●</span>
+    </div>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderCalendar() {
+  const el = document.getElementById('cal-card');
+  if (!el) return;
+  const MONTHS_FULL = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const DAYS = ['L','M','M','J','V','S','D'];
+  const today = new Date();
+  const pad = n => String(n).padStart(2,'0');
+
+  // Dates with sessions
+  const datesWithLog = {};
+  sessions.forEach(s => {
+    const d = ((s.flight_date_utc || s.created_at) || '').slice(0, 10);
+    if (d) datesWithLog[d] = (datesWithLog[d] || 0) + 1;
+  });
+
+  // Header month nav
+  let html = `<div class="cal-nav">
+    <button class="btn sm" onclick="_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--;}renderCalSidebar();renderCalendar()">‹</button>
+    <span class="cal-nav-title" style="cursor:default">${MONTHS_FULL[_calMonth]}</span>
+    <button class="btn sm" onclick="_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++;}renderCalSidebar();renderCalendar()">›</button>
+  </div>`;
+
+  // Day grid
+  const firstDay = new Date(_calYear, _calMonth, 1);
+  const lastDay  = new Date(_calYear, _calMonth + 1, 0);
+  const startDow = (firstDay.getDay() + 6) % 7;
+
+  html += `<div class="cal-grid">`;
+  html += DAYS.map(d => `<div style="text-align:center;font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--dim);padding:2px">${d}</div>`).join('');
+  for (let i = 0; i < startDow; i++) html += `<div class="cal-day"></div>`;
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    const dateStr = `${_calYear}-${pad(_calMonth+1)}-${pad(day)}`;
+    const count   = datesWithLog[dateStr] || 0;
+    const isToday = today.getFullYear()===_calYear && today.getMonth()===_calMonth && today.getDate()===day;
+    const isSelected = _filterDate === dateStr;
+    const cls = ['cal-day', count?'has-log':'', isToday?'today':'', isSelected?'selected':''].filter(Boolean).join(' ');
+    const click = count ? `onclick="setDateFilter(${isSelected?'null':`'${dateStr}'`})"` : '';
+    html += `<div class="${cls}" ${click}>${day}${count ? `<div class="cal-dot"></div>` : ''}</div>`;
+  }
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+function fmtFlightDate(s) {
+  // Use flight_date_utc + tz_offset_s if available, else created_at
+  if (s.flight_date_utc && s.tz_offset_s != null) {
+    const utcMs = new Date(s.flight_date_utc + 'Z').getTime();
+    const localMs = utcMs + s.tz_offset_s * 1000;
+    const d = new Date(localMs);
+    const pad = n => String(n).padStart(2, '0');
+    const dateStr = `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+    const timeStr = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    const tzLabel = s.tz_name ? ` <span style="color:var(--dim);font-size:9px;">[${s.tz_name.split('/').pop()}]</span>` : '';
+    return dateStr + ' ' + timeStr + tzLabel;
+  }
+  if (s.flight_date_utc) {
+    return s.flight_date_utc.replace('T', ' ').slice(0, 16) + ' <span style="color:var(--dim);font-size:9px;">UTC</span>';
+  }
+  return fmtDate(s.created_at) + ' <span style="color:var(--dim);font-size:9px;">≈mtime</span>';
+}
+
+function fmtImportDate(s) {
+  return fmtDate(s.imported_at || s.created_at);
+}
+
+async function reloadMeta(lid) {
+  try {
+    const r = await fetch(`/api/sessions/${lid}/reload-meta`, { method: 'POST' });
+    const data = await r.json();
+    if (!r.ok) { showBanner('err', 'Erreur reload-meta : ' + (data.error || r.status)); return; }
+    if (data.warning) {
+      showBanner('err', `${lid} : aucun log.meta trouvé dans le dossier session.`);
+    } else {
+      showBanner('ok', `${lid} : métadonnées rechargées — ${data.flight_date_utc || 'pas de date GPS'}`);
+    }
+    // Refresh session in local array
+    const idx = sessions.findIndex(s => s.lid === lid);
+    if (idx >= 0) sessions[idx] = data;
+    renderSessions();
+  } catch(e) {
+    showBanner('err', 'Erreur réseau : ' + e.message);
+  }
 }
 
 function fmtDate(iso) {

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -228,3 +229,61 @@ def test_layout_templates_put_overwrites(client: TestClient) -> None:
     data = r.json()
     assert len(data) == 1
     assert data[0]["name"] == "B"
+
+
+# ── notes field in PATCH ──────────────────────────────────────────────────
+
+
+def test_patch_notes(client) -> None:
+    r = client.post("/api/sessions/import",
+                    files={"file": ("log.csv", io.BytesIO(_MINIMAL_CSV.encode()), "text/csv")})
+    lid = r.json()["lid"]
+    r2 = client.patch(f"/api/sessions/{lid}", json={"notes": "Premier test."})
+    assert r2.status_code == 200
+    assert r2.json()["notes"] == "Premier test."
+    # Verify persisted
+    r3 = client.get(f"/api/sessions/{lid}")
+    assert r3.json()["notes"] == "Premier test."
+
+
+def test_patch_notes_empty_string(client) -> None:
+    r = client.post("/api/sessions/import",
+                    files={"file": ("log.csv", io.BytesIO(_MINIMAL_CSV.encode()), "text/csv")})
+    lid = r.json()["lid"]
+    client.patch(f"/api/sessions/{lid}", json={"notes": "some text"})
+    r2 = client.patch(f"/api/sessions/{lid}", json={"notes": ""})
+    assert r2.json()["notes"] == ""
+
+
+# ── reload-meta endpoint ──────────────────────────────────────────────────
+
+
+def test_reload_meta_no_meta_file(client) -> None:
+    r = client.post("/api/sessions/import",
+                    files={"file": ("log.csv", io.BytesIO(_MINIMAL_CSV.encode()), "text/csv")})
+    lid = r.json()["lid"]
+    r2 = client.post(f"/api/sessions/{lid}/reload-meta")
+    assert r2.status_code == 200
+    assert "warning" in r2.json()
+
+
+def test_reload_meta_with_meta_file(client, flights_root: Path) -> None:
+    """After depositing log.meta manually, reload-meta picks it up."""
+    r = client.post("/api/sessions/import",
+                    files={"file": ("log.csv", io.BytesIO(_MINIMAL_CSV.encode()), "text/csv")})
+    lid = r.json()["lid"]
+    # Simulate manual deposit of log.meta
+    from dedal.sessions import _lid_to_folder
+    folder = flights_root / _lid_to_folder(lid)
+    meta_content = "GPS_UTC_REF=2026-04-23T14:32:05.67\nMICROS_REF=1234567890\nLOG_FILE=log.csv\n"
+    (folder / "log.meta").write_text(meta_content, encoding="utf-8")
+    r2 = client.post(f"/api/sessions/{lid}/reload-meta")
+    assert r2.status_code == 200
+    data = r2.json()
+    assert data["flight_date_utc"] == "2026-04-23T14:32:05"
+    assert data["meta_ref"]["micros_ref"] == 1234567890
+
+
+def test_reload_meta_not_found(client) -> None:
+    r = client.post(f"/api/sessions/DEDAL-20990101-999/reload-meta")
+    assert r.status_code == 404

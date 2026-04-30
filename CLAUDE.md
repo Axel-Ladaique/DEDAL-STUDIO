@@ -91,7 +91,17 @@ dedal-studio/
     "fw_version":  "Beta 1.3",
     "row_count":   21543,
     "duration_s":  87.4
-  }
+  },
+  "imported_at":     "2026-04-27T10:15:00",
+  "flight_date_utc": "2026-04-23T14:32:05",
+  "tz_name":         "Europe/Paris",
+  "tz_offset_s":     7200,
+  "meta_ref": {
+    "gps_utc_ref": "2026-04-23T14:32:05.67",
+    "micros_ref":  1234567890,
+    "log_file":    "LOG_017.csv"
+  },
+  "notes": ""
 }
 ```
 
@@ -145,7 +155,7 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 | POST | `/api/sessions` | Créer session vide (body: {nickname, tags}) |
 | POST | `/api/sessions/import` | Importer CSV → crée session (query: nickname) |
 | GET | `/api/sessions/{lid}` | Lire une session |
-| PATCH | `/api/sessions/{lid}` | Modifier nickname / tags |
+| PATCH | `/api/sessions/{lid}` | Modifier nickname / tags / notes |
 | DELETE | `/api/sessions/{lid}` | Supprimer session + dossier |
 | POST | `/api/sessions/{lid}/video` | Attacher une vidéo |
 | POST | `/api/sessions/{lid}/hud` | Générer séquence PNG HUD (SSE progress) — params: fps, width, height, cells, min_gps_sats, t_start_s, t_end_s, output_path |
@@ -157,6 +167,7 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 | PUT | `/api/sessions/{lid}/pack` | Recevoir flight_pack depuis le HTML |
 | GET | `/api/panel-templates` | Lire les templates de panels sauvegardés |
 | PUT | `/api/panel-templates` | Écrire les templates de panels |
+| POST | `/api/sessions/{lid}/reload-meta` | Recharger les métadonnées depuis `log.meta` sur disque |
 
 ---
 
@@ -174,7 +185,8 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 | 6 | Carte Leaflet sur home page | ✅ |
 | 7 | HUD — options avancées (fps UI, t_start/t_end, output_path) | ✅ |
 | 8 | Sync vidéo automatique | ⬜ |
-| 9 | Graph explorer — améliorations UX (en cours) | 🔄 |
+| 9 | Graph explorer — améliorations UX (panels, templates, drag-to-swap) | ✅ |
+| 10 | Support fichiers .meta (timezone, dates, onglet INFOS, notes) | ✅ |
 
 ---
 

@@ -9,7 +9,7 @@ import threading
 from pathlib import Path
 from queue import Empty, Queue
 
-from fastapi import APIRouter, FastAPI, Query, Request, UploadFile
+from fastapi import APIRouter, FastAPI, File, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -23,6 +23,7 @@ from .sessions import (
     extract_gps_track,
     get_session,
     import_log,
+    reload_meta,
     save_session,
     scan_sessions,
 )
@@ -42,6 +43,7 @@ class _SessionCreate(BaseModel):
 class _SessionPatch(BaseModel):
     nickname: str | None = None
     tags: list[str] | None = None
+    notes: str | None = None
 
 
 _sessions = APIRouter(prefix="/api/sessions", tags=["sessions"])
@@ -93,6 +95,7 @@ async def session_import(
     request: Request,
     file: UploadFile,
     nickname: str = Query(default=""),
+    meta_file: UploadFile | None = File(default=None),
 ) -> JSONResponse:
     """Import a CSV log — automatically creates a new session."""
     cfg = request.app.state.cfg
@@ -110,6 +113,11 @@ async def session_import(
             if s.log_meta:
                 s.log_meta["filename"] = file.filename
             save_session(s)
+        # Save and apply .meta if provided alongside the CSV.
+        if meta_file is not None:
+            meta_bytes = await meta_file.read()
+            (s.dir_path / "log.meta").write_bytes(meta_bytes)
+            reload_meta(s)
     finally:
         tmp_path.unlink(missing_ok=True)
     return JSONResponse(s.to_dict(), status_code=201)
@@ -133,6 +141,8 @@ def session_update(lid: str, body: _SessionPatch, request: Request) -> JSONRespo
         s.nickname = body.nickname
     if body.tags is not None:
         s.tags = body.tags
+    if body.notes is not None:
+        s.notes = body.notes
     save_session(s)
     return JSONResponse(s.to_dict())
 
@@ -270,6 +280,22 @@ def session_put_sync(lid: str, body: _SyncBody, request: Request) -> JSONRespons
     tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
     tmp.replace(sync_file)
     return JSONResponse(data)
+
+
+@_sessions.post("/{lid}/reload-meta")
+def session_reload_meta(lid: str, request: Request) -> JSONResponse:
+    """Re-read log.meta from the session folder and update cached fields.
+
+    Use after manually depositing a .meta file into the session directory.
+    """
+    s = get_session(request.app.state.cfg.flights_root, lid)
+    if s is None:
+        return JSONResponse({"error": f"session '{lid}' not found"}, status_code=404)
+    found = reload_meta(s)
+    result = s.to_dict()
+    if not found:
+        result["warning"] = "no log.meta found in session folder"
+    return JSONResponse(result)
 
 
 class _HudParams(BaseModel):
@@ -482,6 +508,38 @@ def create_app(cfg: Config) -> FastAPI:
             if not isinstance(data, list):
                 return JSONResponse({"error": "expected array"}, status_code=400)
             p = _layout_templates_path()
+            tmp = p.with_suffix(".tmp")
+            tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+            os.replace(tmp, p)
+            return JSONResponse({"ok": True})
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+    # ── Tag colors persistence ───────────────────────────────────────────────
+
+    def _tag_colors_path() -> Path:
+        xdg = os.environ.get("XDG_CONFIG_HOME")
+        base = Path(xdg) / "dedal-studio" if xdg else Path.home() / ".config" / "dedal-studio"
+        base.mkdir(parents=True, exist_ok=True)
+        return base / "tag_colors.json"
+
+    @app.get("/api/tag-colors")
+    def get_tag_colors() -> JSONResponse:
+        p = _tag_colors_path()
+        if not p.exists():
+            return JSONResponse({})
+        try:
+            return JSONResponse(json.loads(p.read_text()))
+        except Exception:
+            return JSONResponse({})
+
+    @app.put("/api/tag-colors")
+    async def put_tag_colors(request: Request) -> JSONResponse:
+        try:
+            data = await request.json()
+            if not isinstance(data, dict):
+                return JSONResponse({"error": "expected object"}, status_code=400)
+            p = _tag_colors_path()
             tmp = p.with_suffix(".tmp")
             tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
             os.replace(tmp, p)
