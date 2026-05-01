@@ -1903,8 +1903,464 @@ canvas.chart { width: 100%; height: 100%; }
 
 <!-- ══ TAB ANALYSE ══ -->
 <div class="tab-pane" id="pane-analyse">
+  <div id="an-layout">
 
+    <!-- ── Sidebar ── -->
+    <div id="an-sidebar">
+      <div class="an-sidebar-item" data-key="energy" onclick="showAnalysis('energy')">
+        <span>⚡ ÉNERGIE</span><span class="an-badge" id="an-badge-energy"></span>
+      </div>
+      <div class="an-sidebar-item" data-key="pid" onclick="showAnalysis('pid')">
+        <span>📐 PID</span><span class="an-badge" id="an-badge-pid"></span>
+      </div>
+      <div class="an-sidebar-item" data-key="fft" onclick="showAnalysis('fft')">
+        <span>〰 VIBRATIONS</span><span class="an-badge" id="an-badge-fft"></span>
+      </div>
+      <div class="an-sidebar-item" data-key="ekf" onclick="showAnalysis('ekf')">
+        <span>🧭 EKF</span><span class="an-badge" id="an-badge-ekf"></span>
+      </div>
+      <div class="an-sidebar-item" data-key="traj" onclick="showAnalysis('traj')">
+        <span>🌐 TRAJECTOIRE</span><span class="an-badge" id="an-badge-traj"></span>
+      </div>
+      <div class="an-sidebar-item" data-key="motor" onclick="showAnalysis('motor')">
+        <span>🔧 MOTEUR</span><span class="an-badge" id="an-badge-motor"></span>
+      </div>
+    </div>
 
+    <!-- ── Content area (6 panels, one active at a time) ── -->
+    <div id="an-content">
+
+      <!-- ⚡ ÉNERGIE -->
+      <div class="an-panel" id="an-panel-energy">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">⚡ ÉNERGIE & BATTERIE</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
+        </div>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">⚡ ÉNERGIE & BATTERIE</span>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="panel-badge" id="bat-type-badge">LiPo/Li-Ion</span>
+                <select id="bat-type-select" onchange="rebuildEnergyPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                  <option value="lipo">LiPo</option>
+                  <option value="liion">Li-Ion</option>
+                </select>
+              </div>
+            </div>
+            <div class="panel-body" id="energy-panel-body">
+              <span style="color:var(--dim);font-family:var(--font-mono);font-size:12px;">— charger un vol —</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 📐 PID -->
+      <div class="an-panel" id="an-panel-pid">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">📐 ANALYSE PID</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
+        </div>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">🎯 ANALYSE PID — CONSIGNE vs RÉPONSE</span>
+              <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">Cliquer sur le graphique pour naviguer</span>
+            </div>
+            <div class="panel-body" style="padding:10px 12px;">
+              <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:stretch;">
+
+                <!-- COLONNE GAUCHE : graphique + range selector -->
+                <div style="display:flex;flex-direction:column;">
+                  <!-- Légende -->
+                  <div style="display:flex;gap:14px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
+                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#00d4ff" stroke-width="2" stroke-dasharray="4 3"/></svg>Consigne</span>
+                    <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
+                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#fff" stroke-width="2"/></svg>Mesure IMU</span>
+                    <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
+                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="2 2"/></svg>Erreur</span>
+                    <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
+                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#39ff14" stroke-width="2"/></svg>Sortie PID →</span>
+                    <span style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.2);margin-left:auto;">Clic=seek · Drag=pan · Shift+Drag=zoom · Ctrl+Scroll=zoom · DblClic=reset</span>
+                  </div>
+                  <!-- Canvas principal -->
+                  <div style="position:relative;flex:1;min-height:200px;background:#030810;border:1px solid var(--border);border-radius:4px;">
+                    <canvas id="pid-canvas-main" style="width:100%;height:100%;display:block;cursor:crosshair;"></canvas>
+                    <div id="pid-cursor-main" style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,0,0.75);pointer-events:none;display:none;"></div>
+                  </div>
+                  <!-- Valeurs courantes -->
+                  <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:9px;margin-top:3px;padding:0 3px;">
+                    <span id="pid-main-cur" style="color:var(--dim);">des:--  imu:--  err:--  pid:--</span>
+                    <span style="color:rgba(57,255,20,0.45);">axe PID → droite</span>
+                  </div>
+                  <!-- PID range selector -->
+                  <div style="position:relative;background:#020508;border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:crosshair;margin-top:6px;" id="pid-selector-wrap">
+                    <canvas id="pid-selector-canvas" style="display:block;width:100%;height:44px;"></canvas>
+                    <div id="pid-selection-box" style="position:absolute;top:0;bottom:0;background:rgba(0,212,255,0.12);border-left:1px solid rgba(0,212,255,0.6);border-right:1px solid rgba(0,212,255,0.6);pointer-events:none;display:none;"></div>
+                    <div id="pid-cursor-line-sel" style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.35);pointer-events:none;display:none;"></div>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px;">
+                    <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);" id="pid-range-info">tout le vol</span>
+                    <button onclick="pidResetRange()" style="background:transparent;border:1px solid var(--border);color:var(--dim);border-radius:3px;padding:1px 6px;cursor:pointer;font-family:var(--font-mono);font-size:9px;">↺ RESET</button>
+                  </div>
+                </div>
+
+                <!-- COLONNE DROITE : contrôles + conseiller -->
+                <div style="display:flex;flex-direction:column;gap:12px;">
+
+                  <!-- Sélecteur d'axe -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">AXLE</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">
+                      <button class="map-opt-btn active" id="pid-tab-roll"  onclick="setPIDTab('roll')"  style="font-size:11px;padding:5px 0;text-align:center;">🔵 ROLL</button>
+                      <button class="map-opt-btn"        id="pid-tab-pitch" onclick="setPIDTab('pitch')" style="font-size:11px;padding:5px 0;text-align:center;">🟢 PITCH</button>
+                      <button class="map-opt-btn"        id="pid-tab-yaw"   onclick="setPIDTab('yaw')"   style="font-size:11px;padding:5px 0;text-align:center;">🟡 YAW</button>
+                    </div>
+                  </div>
+
+                  <!-- Fenêtre temporelle -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">FENÊTRE</div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+                      <button class="map-opt-btn" id="pidw-all" onclick="setPIDWindow('all')"  style="font-size:10px;padding:4px 0;">TOUT</button>
+                      <button class="map-opt-btn" id="pidw-5"   onclick="setPIDWindow('5')"    style="font-size:10px;padding:4px 0;">±5s</button>
+                      <button class="map-opt-btn active" id="pidw-10"  onclick="setPIDWindow('10')"   style="font-size:10px;padding:4px 0;">±10s</button>
+                      <button class="map-opt-btn" id="pidw-30"  onclick="setPIDWindow('30')"   style="font-size:10px;padding:4px 0;">±30s</button>
+                    </div>
+                  </div>
+
+                  <!-- Couches visibles -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">COUCHES</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                      <button class="map-opt-btn active" id="pidl-des"  onclick="togglePIDLayer('des')"  style="font-size:10px;padding:4px 6px;">Consigne</button>
+                      <button class="map-opt-btn active" id="pidl-imu"  onclick="togglePIDLayer('imu')"  style="font-size:10px;padding:4px 6px;">Mesure</button>
+                      <button class="map-opt-btn active" id="pidl-err"  onclick="togglePIDLayer('err')"  style="font-size:10px;padding:4px 6px;">Erreur</button>
+                      <button class="map-opt-btn active" id="pidl-pid"  onclick="togglePIDLayer('pid')"  style="font-size:10px;padding:4px 6px;">PID out</button>
+                    </div>
+                  </div>
+
+                  <!-- Echelle Y -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">ÉCHELLE Y</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                      <button class="map-opt-btn active" id="pidy-fixed" onclick="setPIDYScale('fixed')" style="font-size:10px;padding:4px 6px;" title="Axe Y fixé sur l'amplitude max du vol entier (symétrique)">FIXE</button>
+                      <button class="map-opt-btn"        id="pidy-auto"  onclick="setPIDYScale('auto')"  style="font-size:10px;padding:4px 6px;" title="Axe Y s'adapte à la zone visible après pan/zoom">AUTO</button>
+                    </div>
+                  </div>
+
+                  <!-- Métriques calculées -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">MÉTRIQUES</div>
+                    <div id="pid-metrics" style="font-family:var(--font-mono);font-size:10px;display:flex;flex-direction:column;gap:3px;">
+                      <span style="color:var(--dim);">— charger un vol —</span>
+                    </div>
+                  </div>
+
+                  <!-- FFT spectre -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:4px;">📊 SPECTRE FFT — ERREUR</div>
+                    <div style="position:relative;height:80px;background:#030810;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
+                      <canvas id="pid-fft-canvas" style="width:100%;height:100%;display:block;"></canvas>
+                    </div>
+                    <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-top:2px;" id="pid-fft-info">-- Hz dom.</div>
+                  </div>
+
+                  <!-- Réponse en échelon -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:4px;">📈 RÉPONSE EN ÉCHELON</div>
+                    <div id="pid-step-info" style="font-family:var(--font-mono);font-size:10px;display:flex;flex-direction:column;gap:3px;">
+                      <span style="color:var(--dim);">— en attente d'un échelon —</span>
+                    </div>
+                  </div>
+
+                  <!-- Séparateur -->
+                  <div style="border-top:1px solid var(--border);"></div>
+
+                  <!-- Conseiller PID -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">💡 CONSEILLER PID</div>
+                    <div id="pid-advisor" style="font-family:var(--font-mono);font-size:10px;display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;">
+                      <span style="color:var(--dim);">— analyser un vol —</span>
+                    </div>
+                  </div>
+
+                </div><!-- /colonne droite -->
+              </div><!-- /grid -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 〰 VIBRATIONS -->
+      <div class="an-panel" id="an-panel-fft">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">〰 VIBRATIONS</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
+        </div>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">📳 ANALYSE VIBRATIONS & BRUIT IMU</span>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="panel-badge" id="vib-quality-badge">--</span>
+                <select id="vib-source" onchange="rebuildVibPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                  <option value="acc">Accéléromètre</option>
+                  <option value="gyro">Gyroscope</option>
+                </select>
+                <button class="btn" onclick="vibResetRange()" style="font-size:10px;padding:3px 10px;" title="Utiliser toute la plage armée">⟲ TOUT</button>
+                <button class="btn" onclick="openVibModal()" style="font-size:10px;padding:3px 10px;" title="Ouvrir en plein écran">⛶ EXPAND</button>
+              </div>
+            </div>
+            <!-- Range selector graph -->
+            <div style="padding:8px 14px 0;border-bottom:1px solid var(--border);">
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+                <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">
+                  PLAGE — <span id="vib-range-info" style="color:var(--accent)">toute la période armée</span>
+                  <span style="margin-left:8px;color:rgba(255,255,255,0.2);">Drag pour sélectionner · Dbl-clic reset</span>
+                </div>
+                <!-- Frequency filter -->
+                <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;">
+                  <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">FILTRE FREQ.</span>
+                  <select id="vib-filter-type" onchange="rebuildVibPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 6px;border-radius:3px;font-family:var(--font-mono);font-size:9px;">
+                    <option value="none">Aucun</option>
+                    <option value="lp">Passe-bas</option>
+                    <option value="hp">Passe-haut</option>
+                    <option value="bp">Passe-bande</option>
+                    <option value="bs">Coupe-bande (notch)</option>
+                  </select>
+                  <input id="vib-filter-f1" type="number" min="1" max="499" value="50" step="1"
+                    style="width:52px;background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 5px;border-radius:3px;font-family:var(--font-mono);font-size:9px;"
+                    oninput="rebuildVibPanel()" title="Fréquence de coupure (Hz)">
+                  <span id="vib-filter-f2-wrap" style="display:none;align-items:center;gap:4px;">
+                    <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">–</span>
+                    <input id="vib-filter-f2" type="number" min="1" max="499" value="100" step="1"
+                      style="width:52px;background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 5px;border-radius:3px;font-family:var(--font-mono);font-size:9px;"
+                      oninput="rebuildVibPanel()" title="Fréquence haute (Hz)">
+                  </span>
+                  <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">Hz</span>
+                </div>
+              </div>
+              <div style="position:relative;background:#020508;border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:crosshair;" id="vib-selector-wrap">
+                <canvas id="vib-selector-canvas" style="display:block;width:100%;height:60px;"></canvas>
+                <div id="vib-selection-box" style="position:absolute;top:0;bottom:0;background:rgba(0,212,255,0.15);border-left:1px solid rgba(0,212,255,0.7);border-right:1px solid rgba(0,212,255,0.7);pointer-events:none;display:none;"></div>
+                <div id="vib-cursor-line" style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.4);pointer-events:none;display:none;"></div>
+              </div>
+            </div>
+            <div class="panel-body" id="vib-panel-body">
+              <span style="color:var(--dim);font-family:var(--font-mono);font-size:12px;">— charger un vol —</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🧭 EKF -->
+      <div class="an-panel" id="an-panel-ekf">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">🧭 EKF</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
+        </div>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">🧭 VITESSES EKF  (IMU + GPS)</span>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span class="panel-badge" id="ekf-badge">--</span>
+                <span id="ekf-sigma-badge">σ: --</span>
+              </div>
+            </div>
+            <!-- Curve selector -->
+            <div style="display:flex;gap:5px;flex-wrap:wrap;padding:7px 10px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);">
+              <span style="font-family:var(--font-mono);font-size:10px;color:var(--dim);align-self:center;margin-right:4px;">COURBE :</span>
+              <button class="ekf-curve-btn" id="ekf-btn-Vn"   onclick="setEKFCurve('Vn')"  >Vn (Nord)</button>
+              <button class="ekf-curve-btn" id="ekf-btn-Ve"   onclick="setEKFCurve('Ve')"  >Ve (Est)</button>
+              <button class="ekf-curve-btn" id="ekf-btn-Vz"   onclick="setEKFCurve('Vz')"  >Vz (↑)</button>
+              <button class="ekf-curve-btn active" id="ekf-btn-Vh" onclick="setEKFCurve('Vh')">|Vh|</button>
+              <button class="ekf-curve-btn" id="ekf-btn-Vfwd" onclick="setEKFCurve('Vfwd')">Vfwd</button>
+              <button class="ekf-curve-btn" id="ekf-btn-Vlat" onclick="setEKFCurve('Vlat')">Vlat</button>
+              <button class="ekf-curve-btn" id="ekf-btn-ALL"  onclick="setEKFCurve('ALL')" >TOUT</button>
+            </div>
+            <!-- Main chart -->
+            <div style="padding:10px;height:220px;position:relative;">
+              <canvas id="ekf-chart-canvas" style="width:100%;height:100%;"></canvas>
+            </div>
+            <!-- Bottom row: top-down + alt bar -->
+            <div style="display:flex;gap:10px;padding:0 10px 10px;border-top:1px solid var(--border);padding-top:10px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Plan horizontal  N/E</div>
+                <canvas id="ekf-topdown" width="260" height="200" style="width:100%;max-width:300px;display:block;"></canvas>
+              </div>
+              <div style="width:110px;flex-shrink:0;">
+                <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Altitude & Vz</div>
+                <canvas id="ekf-altbar" width="110" height="200" style="width:110px;height:200px;display:block;"></canvas>
+              </div>
+              <div style="width:130px;flex-shrink:0;font-family:var(--font-mono);font-size:11px;display:flex;flex-direction:column;gap:6px;justify-content:center;">
+                <div style="color:var(--dim);font-size:9px;letter-spacing:1px;">VITESSES ACTUELLES</div>
+                <div>Vn <span id="ekf-live-Vn" style="color:#39ff14;float:right;">--</span></div>
+                <div>Ve <span id="ekf-live-Ve" style="color:#ff6b35;float:right;">--</span></div>
+                <div>Vz <span id="ekf-live-Vz" style="color:#ffcc00;float:right;">--</span></div>
+                <div style="border-top:1px solid var(--border);padding-top:6px;">
+                Vfwd <span id="ekf-live-Vfwd" style="color:#39ff14;float:right;">--</span></div>
+                <div>Vlat <span id="ekf-live-Vlat" style="color:#ff6b35;float:right;">--</span></div>
+                <div style="border-top:1px solid var(--border);padding-top:6px;">
+                |Vh| <span id="ekf-live-Vh" style="color:var(--accent);float:right;">--</span></div>
+                <div style="font-size:9px;color:var(--dim);margin-top:4px;">σVn <span id="ekf-live-sig" style="float:right;">--</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🌐 TRAJECTOIRE -->
+      <div class="an-panel" id="an-panel-traj">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">🌐 TRAJECTOIRE</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
+        </div>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">🌐 TRAJECTOIRE 3D GPS</span>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span class="panel-badge" id="gps3d-badge">--</span>
+              </div>
+            </div>
+            <!-- Controls -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);">
+              <button class="map-opt-btn active" id="gps3d-autorot" onclick="toggleGPS3DAutoRot()">🔄 AUTO</button>
+              <span style="width:1px;background:var(--border);margin:0 2px;"></span>
+              <button class="map-opt-btn active" id="gps3d-mode" onclick="toggleGPS3DMode()" title="Colorier par mode vol">🎨 MODE VOL</button>
+              <button class="map-opt-btn active" id="gps3d-grid" onclick="toggleGPS3DGrid()" title="Afficher la grille">⊞ GRILLE</button>
+              <button class="map-opt-btn active" id="gps3d-home" onclick="toggleGPS3DHome()" title="Afficher le home">🏠 HOME</button>
+              <span style="width:1px;background:var(--border);margin:0 2px;"></span>
+              <button class="map-opt-btn" id="gps3d-top" onclick="setGPS3DView('top')">⬛ TOP</button>
+              <button class="map-opt-btn" id="gps3d-side" onclick="setGPS3DView('side')">⬛ CÔTÉ</button>
+              <button class="map-opt-btn active" id="gps3d-iso" onclick="setGPS3DView('iso')">◈ ISO</button>
+              <span style="margin-left:auto;display:flex;align-items:center;gap:8px;"><span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">SAT MIN</span><select id="gps3d-minsats" onchange="rebuildGPS3D()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 6px;border-radius:3px;font-family:var(--font-mono);font-size:10px;"><option value="0">0</option><option value="4" selected>4</option><option value="6">6</option><option value="8">8</option></select><span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">🖱 Drag · Ctrl+Scroll zoom</span></span>
+            </div>
+            <!-- Range selector -->
+            <div style="padding:6px 10px 4px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">PLAGE ·</span>
+                <span id="gps3d-range-info" style="font-family:var(--font-mono);font-size:9px;color:var(--accent);">tout le vol</span>
+                <button onclick="gps3dResetRange()" style="margin-left:auto;font-family:var(--font-mono);font-size:9px;padding:2px 8px;background:transparent;border:1px solid var(--border);color:var(--dim);border-radius:3px;cursor:pointer;">↺ RESET</button>
+              </div>
+              <div style="position:relative;background:#010306;border:1px solid var(--border);border-radius:3px;overflow:hidden;cursor:crosshair;" id="gps3d-selector-wrap">
+                <canvas id="gps3d-selector-canvas" style="display:block;width:100%;height:52px;"></canvas>
+                <div id="gps3d-selection-box" style="position:absolute;top:0;bottom:0;background:rgba(0,212,255,0.12);border-left:1px solid rgba(0,212,255,0.6);border-right:1px solid rgba(0,212,255,0.6);pointer-events:none;display:none;"></div>
+                <div id="gps3d-cursor-line" style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.35);pointer-events:none;display:none;"></div>
+              </div>
+            </div>
+            <div style="background:#020508;position:relative;">
+              <canvas id="gps3d-canvas"></canvas>
+              <div id="gps3d-scroll-hint" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(8,12,16,0.6);pointer-events:none;">
+                <span style="font-family:var(--font-mono);font-size:12px;color:var(--accent);background:rgba(0,0,0,0.8);border:1px solid var(--accent);padding:8px 16px;border-radius:4px;letter-spacing:1px;">🖱 CTRL + scroll pour zoomer</span>
+              </div>
+            </div>
+            <div style="padding:6px 12px;border-top:1px solid var(--border);display:flex;gap:20px;flex-wrap:wrap;">
+              <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-stats-dist">Dist: --</span>
+              <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-stats-alt">Alt max: --</span>
+              <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-stats-pts">Points: --</span>
+              <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-cursor-pos" style="color:var(--accent);">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🔧 MOTEUR -->
+      <div class="an-panel" id="an-panel-motor">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">🔧 MOTEUR</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
+        </div>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">🔧 PERFORMANCE MOTEUR — POINT DE FONCTIONNEMENT</span>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <select id="motor-config-select" onchange="rebuildMotorPerfPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                  <option value="mn5008_340">2× T-Motor MN5008 KV340 + T-Props 18"×6,1"</option>
+                </select>
+                <span class="panel-badge" id="motor-perf-badge">--</span>
+              </div>
+            </div>
+            <div class="panel-body" style="padding:12px;">
+              <!-- Config info strip -->
+              <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:rgba(0,0,0,0.2);border-radius:4px;border-left:3px solid var(--accent);">
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">TYPE <span style="color:var(--accent)">MN5008 KV340</span></span>
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">HÉLICE <span style="color:var(--accent)">T-Props 18"×6,1" CF</span></span>
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">CONFIG <span style="color:var(--accent)">×2 moteurs</span></span>
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">PLAGE <span style="color:var(--accent)">40%–100% throttle</span></span>
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">T° MOTEUR <span style="color:var(--warn)">88°C @ 100%</span></span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr) repeat(4,1fr);gap:6px 10px;margin-bottom:14px;" id="motor-perf-values"></div>
+              <div style="display:grid;grid-template-columns:1fr 220px;gap:14px;">
+                <div>
+                  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+                    <label style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">AXE X</label>
+                    <select id="mperf-xaxis" onchange="redrawMotorPerfChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 7px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                      <option value="throttle_pct">Throttle (%)</option>
+                      <option value="power_w_total">Puissance totale (W)</option>
+                      <option value="current_a_total">Courant total (A)</option>
+                      <option value="rpm">RPM</option>
+                      <option value="rps">Tours/sec (RPS)</option>
+                      <option value="thrust_g_total">Poussée totale (g)</option>
+                    </select>
+                    <label style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">AXE Y</label>
+                    <select id="mperf-yaxis" onchange="redrawMotorPerfChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 7px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                      <option value="thrust_g_total">Poussée totale (g)</option>
+                      <option value="current_a_total">Courant total (A)</option>
+                      <option value="power_w_total">Puissance totale (W)</option>
+                      <option value="efficiency_g_w">Efficacité (g/W)</option>
+                      <option value="rpm">RPM</option>
+                      <option value="rps">Tours/sec (RPS)</option>
+                      <option value="torque_nm_total">Couple total (N·m)</option>
+                      <option value="voltage_v">Tension (V)</option>
+                    </select>
+                    <label style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">2e Y</label>
+                    <select id="mperf-y2axis" onchange="redrawMotorPerfChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 7px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                      <option value="none">— aucun —</option>
+                      <option value="efficiency_g_w">Efficacité (g/W)</option>
+                      <option value="current_a_total">Courant total (A)</option>
+                      <option value="power_w_total">Puissance totale (W)</option>
+                      <option value="thrust_g_total">Poussée totale (g)</option>
+                      <option value="torque_nm_total">Couple total (N·m)</option>
+                      <option value="rpm">RPM</option>
+                    </select>
+                  </div>
+                  <div style="position:relative;background:#030810;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
+                    <canvas id="motor-perf-canvas" style="display:block;width:100%;height:260px;cursor:crosshair;"></canvas>
+                    <div id="motor-perf-tooltip" style="position:absolute;display:none;background:rgba(8,12,16,0.95);border:1px solid var(--border);padding:6px 10px;border-radius:4px;font-family:var(--font-mono);font-size:10px;pointer-events:none;"></div>
+                  </div>
+                  <div style="font-family:var(--font-mono);font-size:8px;color:rgba(255,255,255,0.2);margin-top:3px;">● Point de fonctionnement actuel (interpolé)</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:2px;">TABLEAU × 2 MOTEURS</div>
+                  <div id="motor-perf-table" style="font-family:var(--font-mono);font-size:9px;overflow-x:auto;"></div>
+                  <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+                    <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px;">AJOUTER À L'EXPLORATEUR</div>
+                    <div style="display:flex;flex-direction:column;gap:3px;" id="motor-explorer-chips"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /an-content -->
+
+    <!-- ── Optional map panel (hidden by default) ── -->
+    <div id="an-map-panel" style="display:none;">
+      <div class="an-map-hdr">
+        <span>🗺 CARTE</span>
+        <span onclick="toggleAnMap()" style="cursor:pointer;">✕</span>
+      </div>
+      <div id="an-map-div"></div>
+    </div>
+
+  </div><!-- /an-layout -->
 </div><!-- /pane-analyse -->
 
 <!-- ══ TAB INFOS ══ -->
