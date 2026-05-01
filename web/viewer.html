@@ -9650,7 +9650,7 @@ if (typeof _origInit === 'function') {
         }, 80);
       }
       if (t.dataset.tab === 'analyse') {
-        renderAnalysisPanels();
+        if (typeof showAnalysis === 'function') showAnalysis(typeof anCurrentKey !== 'undefined' ? anCurrentKey : 'energy');
       }
       if (t.dataset.tab === 'info') {
         loadInfoTab();
@@ -10443,61 +10443,6 @@ function initGraphExplorer() {
   setupGraphCursorSync();
 }
 
-// ── ANALYSE TAB CHIP SELECTOR ──
-var AN_DEFS = {
-  pid:    { title: '📐 ANALYSE PID',      meta: 'roll · pitch · yaw',   srcId: 'an-src-pid' },
-  fft:    { title: '〰 VIBRATIONS FFT',   meta: 'AccX · AccY · AccZ',   srcId: 'an-src-fft' },
-  ekf:    { title: '🧭 ANALYSE EKF',      meta: 'vélocité estimée',      srcId: 'an-src-ekf' },
-  traj:   { title: '🌐 TRAJECTOIRE 3D',   meta: 'GPS lat/lon/alt',       srcId: 'an-src-traj' },
-  energy: { title: '⚡ ÉNERGIE',           meta: 'batterie · puissance',  srcId: 'an-src-energy' },
-  motor:  { title: '🔧 MOTEUR',            meta: 'point de fonctionnement', srcId: 'an-src-motor' },
-};
-
-var anSlotA = 'pid';
-var anSlotB = 'fft';
-
-function selectAnalysis(slot, val) {
-  if (slot === 'a') {
-    anSlotA = (anSlotA === val) ? null : val;
-  } else {
-    anSlotB = (anSlotB === val) ? null : val;
-  }
-  ['a','b'].forEach(function(s) {
-    var cur = s === 'a' ? anSlotA : anSlotB;
-    document.querySelectorAll('#an-chips-' + s + ' .an-chip').forEach(function(c) {
-      c.classList.remove('an-sel-a', 'an-sel-b');
-      if (c.dataset.val === cur) c.classList.add('an-sel-' + s);
-    });
-  });
-  renderAnalysisPanels();
-}
-
-function renderAnalysisPanels() {
-  var empty = document.getElementById('an-empty');
-  var panA  = document.getElementById('an-panel-a');
-  var panB  = document.getElementById('an-panel-b');
-  var hasA  = !!anSlotA;
-  var hasB  = !!anSlotB;
-  if (!empty || !panA || !panB) return;
-  empty.style.display = (!hasA && !hasB) ? 'flex' : 'none';
-  panA.style.display  = hasA ? 'flex' : 'none';
-  panB.style.display  = hasB ? 'flex' : 'none';
-  if (hasA) injectAnalysisPanel('a', anSlotA);
-  if (hasB) injectAnalysisPanel('b', anSlotB);
-}
-
-function injectAnalysisPanel(slot, val) {
-  var def = AN_DEFS[val];
-  if (!def) return;
-  document.getElementById('an-title-' + slot).textContent = def.title;
-  document.getElementById('an-meta-'  + slot).textContent = def.meta;
-  var body = document.getElementById('an-body-' + slot);
-  var src  = document.getElementById(def.srcId);
-  if (body && src) {
-    body.innerHTML = '';
-    body.appendChild(src.cloneNode(true));
-  }
-}
 
 // ════════════════════════════════════════════════════
 //  BOOT
@@ -10507,7 +10452,7 @@ function boot() {
   setupResizeObserver();
   initGraphExplorer();
   setupMapResize();
-  renderAnalysisPanels();
+  showAnalysis('energy');
 }
 
 if (document.readyState === 'loading') {
@@ -10529,8 +10474,6 @@ window.setGraphLayout       = setGraphLayout;
 window.toggleMapPanel       = toggleMapPanel;
 window.toggleZoomLock       = toggleZoomLock;
 window.resetGraphZoom       = resetGraphZoom;
-window.selectAnalysis       = selectAnalysis;
-window.renderAnalysisPanels = renderAnalysisPanels;
 window.buildSignalSidebar   = buildSignalSidebar;
 window.refreshAllPanelCharts = refreshAllPanelCharts;
 window.buildGraphMapTrack   = buildGraphMapTrack;
