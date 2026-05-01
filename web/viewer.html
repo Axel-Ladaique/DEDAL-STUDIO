@@ -2753,6 +2753,8 @@ function initFlight(data) {
   document.getElementById('hdr-dist').textContent     = totalDist > 0 ? (totalDist/1000).toFixed(2)+' km' : '--';
   document.getElementById('hdr-vbat').textContent     = minVbat > 0 ? minVbat.toFixed(2)+' V' : '--';
 
+  if (typeof computeAnalysisBadges === 'function') computeAnalysisBadges();
+
   // Timeline
   const slider = document.getElementById('timeline');
   slider.min = 0;
@@ -5584,6 +5586,7 @@ function applyViewFilterCore() {
   buildFlightStats();
   buildMapLayers();
   initMap();
+  if (typeof computeAnalysisBadges === 'function') computeAnalysisBadges();
 }
 
 // ================================================================
@@ -11138,6 +11141,85 @@ function updatePIDSelectionBox() {
   box.style.left    = x1 + 'px';
   box.style.width   = Math.max(2, x2 - x1) + 'px';
 }
+
+// ── Analysis status badges ──────────────────────────
+var AN_VBAT_OK   = 3.7;  // V/cell — below = warn
+var AN_VBAT_CRIT = 3.5;  // V/cell — below = crit
+var AN_PID_RMSE  = 5.0;  // degrees — above = warn
+var AN_VIB_AMP   = 0.3;  // G (|AccZ|) — above = HIGH
+var AN_MOTOR_IMB = 0.15; // |M1-M3|/avg — above = IMBAL
+
+function setBadge(key, cls, text) {
+  var el = document.getElementById('an-badge-' + key);
+  if (!el) return;
+  el.className = 'an-badge ' + cls;
+  el.textContent = text;
+}
+
+function computeAnalysisBadges() {
+  if (!flightData.length) return;
+  var cells = +(flightConfig['CELLS'] || 6);
+
+  // ÉNERGIE
+  var vbatArmed = flightData.filter(function(r) {
+    return (r.armed===1||r.armed==='1') && r.vbat_V > 0;
+  }).map(function(r) { return r.vbat_V / cells; });
+  if (vbatArmed.length) {
+    var minVcell = Math.min.apply(null, vbatArmed);
+    if (minVcell < AN_VBAT_CRIT)    setBadge('energy', 'crit', '✗ CRIT');
+    else if (minVcell < AN_VBAT_OK) setBadge('energy', 'warn', '⚠ LOW');
+    else                             setBadge('energy', 'ok',   'OK');
+  }
+
+  // PID — RMSE of setpoint vs IMU for each axis
+  var pidWarnAxis = null;
+  ['roll','pitch','yaw'].forEach(function(axis) {
+    if (pidWarnAxis) return;
+    var cfg = (typeof PID_AXES !== 'undefined') ? PID_AXES[axis] : null;
+    if (!cfg) return;
+    var armed = flightData.filter(function(r) { return r.armed===1||r.armed==='1'; });
+    if (!armed.length) return;
+    var sum2 = armed.reduce(function(s, r) {
+      var e = +(r[cfg.des]||0) - +(r[cfg.imu]||0); return s + e*e;
+    }, 0);
+    if (Math.sqrt(sum2 / armed.length) > AN_PID_RMSE) pidWarnAxis = axis.toUpperCase();
+  });
+  if (pidWarnAxis) setBadge('pid', 'warn', '⚠ ' + pidWarnAxis);
+  else             setBadge('pid', 'ok',   'OK');
+
+  // VIBRATIONS — peak |AccZ| in armed segments
+  var accArmed = flightData.filter(function(r) {
+    return r.armed===1||r.armed==='1';
+  }).map(function(r) { return Math.abs(+(r.AccZ||0)); });
+  if (accArmed.length) {
+    if (Math.max.apply(null, accArmed) > AN_VIB_AMP) setBadge('fft', 'warn', '⚠ HIGH');
+    else                                               setBadge('fft', 'ok',   'OK');
+  }
+
+  // EKF
+  var hasGPS = flightData.some(function(r) { return r.gps_valid===1||r.gps_valid==='1'; });
+  setBadge('ekf', hasGPS ? 'ok' : 'warn', hasGPS ? 'OK' : '⚠ NO GPS');
+
+  // TRAJECTOIRE
+  var gpsPts = flightData.filter(function(r) { return r.gps_valid===1||r.gps_valid==='1'; }).length;
+  if (gpsPts > 0) setBadge('traj', 'ok',   gpsPts + ' pts');
+  else            setBadge('traj', 'crit', 'NO GPS');
+
+  // MOTEUR — mean |M1-M3|/avg imbalance
+  var motorArmed = flightData.filter(function(r) {
+    return (r.armed===1||r.armed==='1') && +(r.m1_PWM||0) > 0 && +(r.m3_PWM||0) > 0;
+  });
+  if (motorArmed.length) {
+    var totalImb = motorArmed.reduce(function(s, r) {
+      var m1 = +(r.m1_PWM||0), m3 = +(r.m3_PWM||0), avg = (m1+m3)/2;
+      return s + (avg > 0 ? Math.abs(m1-m3)/avg : 0);
+    }, 0);
+    if (totalImb / motorArmed.length > AN_MOTOR_IMB) setBadge('motor', 'warn', '⚠ IMBAL');
+    else                                               setBadge('motor', 'ok',   'OK');
+  }
+}
+
+window.computeAnalysisBadges = computeAnalysisBadges;
 
 // ── Expose graph explorer + analyse functions to global scope (used by onclick= attributes) ──
 window.sigSidebarToggle     = sigSidebarToggle;
