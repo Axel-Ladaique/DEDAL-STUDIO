@@ -2706,6 +2706,8 @@ function buildConfigPanel() {
 //  INIT
 // ================================================================
 function initFlight(data) {
+  // Reset PID range selector whenever a new flight is loaded
+  if (typeof pidRangeStart !== 'undefined') { pidRangeStart = null; pidRangeEnd = null; }
   // Filtre strict : timestamp_us doit être un nombre > 0
   flightData = data.filter(r =>
     r.timestamp_us !== undefined &&
@@ -4850,9 +4852,9 @@ function rebuildPIDCharts() {
       scales:{
         x:{
           type:'linear',
-          min: (typeof pidRangeStart !== 'undefined' && pidRangeStart !== null) ? flightData[pidRangeStart].timestamp_us/1e6
+          min: (typeof pidRangeStart !== 'undefined' && pidRangeStart !== null && pidRangeStart < flightData.length) ? flightData[pidRangeStart].timestamp_us/1e6
                : (pidWindow !== 'all' ? flightData[currentIdx].timestamp_us/1e6 - (+pidWindow) : undefined),
-          max: (typeof pidRangeEnd !== 'undefined' && pidRangeEnd !== null) ? flightData[pidRangeEnd].timestamp_us/1e6
+          max: (typeof pidRangeEnd !== 'undefined' && pidRangeEnd !== null && pidRangeEnd < flightData.length) ? flightData[pidRangeEnd].timestamp_us/1e6
                : (pidWindow !== 'all' ? flightData[currentIdx].timestamp_us/1e6 + (+pidWindow) : undefined),
           ticks:{ color:'#4a6070', font:fmono, maxTicksLimit:10,
                   callback:v=>v.toFixed(1)+'s' },
@@ -11085,14 +11087,15 @@ function attachPIDSelector(canvas, wrap) {
     updatePIDSelectionBox();
   });
   canvas.addEventListener('mousemove', function(e) {
+    var rect = canvas.getBoundingClientRect();
     var curLine = document.getElementById('pid-cursor-line-sel');
-    var x = e.clientX - canvas.getBoundingClientRect().left;
+    var x = e.clientX - rect.left;
     if (curLine) { curLine.style.display = 'block'; curLine.style.left = x + 'px'; }
     if (!dragging) return;
-    var frac2 = getCanvasFrac(e);
+    var frac2 = (e.clientX - rect.left) / rect.width;
+    var frac1 = Math.max(0, Math.min(1, (dragX0 - rect.left) / rect.width));
     var idx2  = fracToIdx(frac2);
-    var frac1 = (dragX0 - canvas.getBoundingClientRect().left) / canvas.getBoundingClientRect().width;
-    var idx1  = fracToIdx(Math.max(0, Math.min(1, frac1)));
+    var idx1  = fracToIdx(frac1);
     pidRangeStart = Math.min(idx1, idx2); pidRangeEnd = Math.max(idx1, idx2);
     updatePIDSelectionBox();
   });
@@ -11104,6 +11107,9 @@ function attachPIDSelector(canvas, wrap) {
       if (info) info.textContent = 'tout le vol';
       updatePIDSelectionBox();
     } else {
+      // clamp to current data bounds
+      pidRangeStart = Math.max(0, Math.min(pidRangeStart, flightData.length - 1));
+      pidRangeEnd   = Math.max(0, Math.min(pidRangeEnd,   flightData.length - 1));
       var t0 = flightData[pidRangeStart].timestamp_us / 1e6;
       var t1 = flightData[pidRangeEnd].timestamp_us / 1e6;
       var info = document.getElementById('pid-range-info');
