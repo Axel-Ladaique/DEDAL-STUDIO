@@ -11165,10 +11165,12 @@ function computeAnalysisBadges() {
     return (r.armed===1||r.armed==='1') && r.vbat_V > 0;
   }).map(function(r) { return r.vbat_V / cells; });
   if (vbatArmed.length) {
-    var minVcell = Math.min.apply(null, vbatArmed);
+    var minVcell = vbatArmed.reduce(function(m, v) { return v < m ? v : m; }, Infinity);
     if (minVcell < AN_VBAT_CRIT)    setBadge('energy', 'crit', '✗ CRIT');
     else if (minVcell < AN_VBAT_OK) setBadge('energy', 'warn', '⚠ LOW');
     else                             setBadge('energy', 'ok',   'OK');
+  } else {
+    setBadge('energy', 'warn', '⚠ N/A');
   }
 
   // PID — RMSE of setpoint vs IMU for each axis
@@ -11192,8 +11194,9 @@ function computeAnalysisBadges() {
     return r.armed===1||r.armed==='1';
   }).map(function(r) { return Math.abs(+(r.AccZ||0)); });
   if (accArmed.length) {
-    if (Math.max.apply(null, accArmed) > AN_VIB_AMP) setBadge('fft', 'warn', '⚠ HIGH');
-    else                                               setBadge('fft', 'ok',   'OK');
+    var maxAcc = accArmed.reduce(function(m, v) { return v > m ? v : m; }, -Infinity);
+    if (maxAcc > AN_VIB_AMP) setBadge('fft', 'warn', '⚠ HIGH');
+    else                      setBadge('fft', 'ok',   'OK');
   }
 
   // EKF
@@ -11216,6 +11219,8 @@ function computeAnalysisBadges() {
     }, 0);
     if (totalImb / motorArmed.length > AN_MOTOR_IMB) setBadge('motor', 'warn', '⚠ IMBAL');
     else                                               setBadge('motor', 'ok',   'OK');
+  } else {
+    setBadge('motor', 'warn', '⚠ N/A');
   }
 }
 
