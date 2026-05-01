@@ -4340,6 +4340,21 @@ function render() {
     updateMapTrail(row);
   }
 
+  // Sync analyse map marker
+  if (typeof anMap !== 'undefined' && anMap && flightData[currentIdx]) {
+    var _anR = flightData[currentIdx];
+    if (_anR.gps_valid===1||_anR.gps_valid==='1') {
+      var _anLL = [+(_anR.gps_lat||0), +(_anR.gps_lon||0)];
+      if (!anMapMarker) {
+        anMapMarker = L.circleMarker(_anLL, {
+          radius:5, color:'#ffcc00', fillColor:'#ffcc00', fillOpacity:1
+        }).addTo(anMap);
+      } else {
+        anMapMarker.setLatLng(_anLL);
+      }
+    }
+  }
+
   // EKF live display
   if(ekfData.length) updateEKFLive(currentIdx);
 
@@ -11225,6 +11240,44 @@ function computeAnalysisBadges() {
 }
 
 window.computeAnalysisBadges = computeAnalysisBadges;
+
+// ── Analyse map (toggle, lazy Leaflet init) ──────────
+var anMap       = null;
+var anMapMarker = null;
+var anMapTrack  = null;
+
+function toggleAnMap() {
+  var panel = document.getElementById('an-map-panel');
+  if (!panel) return;
+  var show = panel.style.display === 'none';
+  panel.style.display = show ? 'flex' : 'none';
+  document.querySelectorAll('.an-map-btn').forEach(function(btn) {
+    btn.classList.toggle('active', show);
+  });
+  if (show) {
+    if (!anMap) {
+      setTimeout(function() {
+        anMap = L.map('an-map-div', { zoomControl: true, attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(anMap);
+        if (flightData.length) buildAnMapTrack();
+      }, 80);
+    } else {
+      setTimeout(function() { anMap.invalidateSize(); }, 80);
+    }
+  }
+}
+window.toggleAnMap = toggleAnMap;
+
+function buildAnMapTrack() {
+  if (!anMap || !flightData.length) return;
+  var pts = flightData
+    .filter(function(r) { return r.gps_valid===1||r.gps_valid==='1'; })
+    .map(function(r) { return [+(r.gps_lat||0), +(r.gps_lon||0)]; });
+  if (!pts.length) return;
+  if (anMapTrack) { anMap.removeLayer(anMapTrack); anMapTrack = null; }
+  anMapTrack = L.polyline(pts, { color:'#00d4ff', weight:2, opacity:0.7 }).addTo(anMap);
+  anMap.fitBounds(anMapTrack.getBounds(), { padding:[20,20] });
+}
 
 // ── Expose graph explorer + analyse functions to global scope (used by onclick= attributes) ──
 window.sigSidebarToggle     = sigSidebarToggle;
