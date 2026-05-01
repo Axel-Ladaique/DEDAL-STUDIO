@@ -10769,18 +10769,21 @@ function setupMapResize() {
   if (!handle || !sidebar) return;
   var resizing = false, startX = 0, startW = 0;
   handle.addEventListener('mousedown', function(e) {
-    resizing = true; startX = e.clientX; startW = sidebar.offsetWidth;
+    e.stopPropagation();
+    e.preventDefault();
+    resizing = true;
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-    e.preventDefault();
   });
-  document.addEventListener('mousemove', function(e) {
+  window.addEventListener('mousemove', function(e) {
     if (!resizing) return;
     var newW = Math.max(160, Math.min(600, startW - (e.clientX - startX)));
     sidebar.style.width = newW + 'px';
-    if (gMapLeaflet) gMapLeaflet.invalidateSize();
+    if (typeof gMapLeaflet !== 'undefined' && gMapLeaflet) gMapLeaflet.invalidateSize();
   });
-  document.addEventListener('mouseup', function() {
+  window.addEventListener('mouseup', function() {
     if (!resizing) return;
     resizing = false;
     document.body.style.cursor = '';
