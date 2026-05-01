@@ -4745,6 +4745,7 @@ function getPIDRows(axis) {
 
 // ── Update windowed PID X range without full rebuild ─────────────
 function updatePIDWindow() {
+  if (typeof pidRangeStart !== 'undefined' && pidRangeStart !== null) { updatePIDCursors(); return; }
   if(!pidChart || !flightData.length) { rebuildPIDCharts(); return; }
   const w = +pidWindow;
   const curT = flightData[currentIdx].timestamp_us / 1e6;
@@ -4849,8 +4850,10 @@ function rebuildPIDCharts() {
       scales:{
         x:{
           type:'linear',
-          min: pidWindow !== 'all' ? flightData[currentIdx].timestamp_us/1e6 - (+pidWindow) : undefined,
-          max: pidWindow !== 'all' ? flightData[currentIdx].timestamp_us/1e6 + (+pidWindow) : undefined,
+          min: (typeof pidRangeStart !== 'undefined' && pidRangeStart !== null) ? flightData[pidRangeStart].timestamp_us/1e6
+               : (pidWindow !== 'all' ? flightData[currentIdx].timestamp_us/1e6 - (+pidWindow) : undefined),
+          max: (typeof pidRangeEnd !== 'undefined' && pidRangeEnd !== null) ? flightData[pidRangeEnd].timestamp_us/1e6
+               : (pidWindow !== 'all' ? flightData[currentIdx].timestamp_us/1e6 + (+pidWindow) : undefined),
           ticks:{ color:'#4a6070', font:fmono, maxTicksLimit:10,
                   callback:v=>v.toFixed(1)+'s' },
           grid:{ color:'rgba(26,45,69,0.5)' }, border:{ color:'#1a2d45' }
@@ -10972,6 +10975,163 @@ if (document.readyState === 'loading') {
 }
 setTimeout(setupAllPanels, 400);
 setTimeout(setupAllPanels, 1800);
+
+// ════════════════════════════════════════════════════
+//  ANALYSE TAB NAVIGATION
+// ════════════════════════════════════════════════════
+var anCurrentKey = 'energy';
+
+function showAnalysis(key) {
+  anCurrentKey = key;
+  document.querySelectorAll('.an-sidebar-item').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.key === key);
+  });
+  document.querySelectorAll('.an-panel').forEach(function(el) {
+    el.classList.toggle('active', el.id === 'an-panel-' + key);
+  });
+  var mapPanel = document.getElementById('an-map-panel');
+  var mapVisible = mapPanel && mapPanel.style.display !== 'none';
+  document.querySelectorAll('.an-map-btn').forEach(function(btn) {
+    btn.classList.toggle('active', mapVisible);
+  });
+  if (!flightData.length) return;
+  ({
+    energy: function() { if(typeof rebuildEnergyPanel==='function') rebuildEnergyPanel(); },
+    pid:    function() {
+              if(typeof rebuildPIDCharts==='function') rebuildPIDCharts();
+              if(typeof runPIDAdvisor==='function') runPIDAdvisor();
+              buildPIDSelector();
+            },
+    fft:    function() { if(typeof rebuildVibPanel==='function') rebuildVibPanel(); },
+    ekf:    function() { if(typeof buildEKFChart==='function') buildEKFChart(); },
+    traj:   function() { if(typeof rebuildGPS3D==='function') rebuildGPS3D(); },
+    motor:  function() { if(typeof rebuildMotorPerfPanel==='function') rebuildMotorPerfPanel(); }
+  }[key] || function(){})();
+}
+
+window.showAnalysis = showAnalysis;
+
+// ── PID range selector ──────────────────────────────
+var pidRangeStart = null;
+var pidRangeEnd   = null;
+
+function pidResetRange() {
+  pidRangeStart = null; pidRangeEnd = null;
+  var info = document.getElementById('pid-range-info');
+  if (info) info.textContent = 'tout le vol';
+  if (typeof rebuildPIDCharts === 'function') rebuildPIDCharts();
+}
+window.pidResetRange = pidResetRange;
+
+function buildPIDSelector() {
+  var canvas = document.getElementById('pid-selector-canvas');
+  var wrap   = document.getElementById('pid-selector-wrap');
+  if (!canvas || !wrap || !flightData.length) return;
+
+  var W = wrap.offsetWidth || 700;
+  var H = 44;
+  canvas.width = W; canvas.height = H;
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  var pts  = flightData.slice(viewStart, viewEnd + 1);
+  var step = Math.max(1, Math.floor(pts.length / W));
+
+  pts.forEach(function(r, i) {
+    if (i % step !== 0) return;
+    var x = Math.floor(i / pts.length * W);
+    var armed = r.armed === 1 || r.armed === '1';
+    var fm = +(r.flight_mode || 0);
+    ctx.fillStyle = !armed ? 'rgba(255,255,255,0.02)'
+      : fm === 2 ? 'rgba(255,107,53,0.18)'
+      : fm === 1 ? 'rgba(255,204,0,0.14)'
+      : 'rgba(57,255,20,0.12)';
+    ctx.fillRect(x, 0, Math.max(1, step) + 1, H);
+  });
+
+  var col = (typeof PID_AXES !== 'undefined' && PID_AXES[pidActiveAxis])
+               ? PID_AXES[pidActiveAxis].imu : 'roll_IMU';
+  var vals = pts.filter(function(_, i) { return i % step === 0; })
+                .map(function(r) { return +(r[col] || 0); });
+  if (vals.length > 1) {
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals), rng = (mx - mn) || 1;
+    [['rgba(0,0,0,0.6)', 3], ['#00d4ff', 1.5]].forEach(function(pair) {
+      ctx.beginPath();
+      vals.forEach(function(v, i) {
+        var x = i / (vals.length - 1) * W;
+        var y = H - 4 - (v - mn) / rng * (H - 8);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = pair[0]; ctx.lineWidth = pair[1]; ctx.stroke();
+    });
+  }
+
+  updatePIDSelectionBox();
+  if (!wrap._pidSetup) { wrap._pidSetup = true; attachPIDSelector(canvas, wrap); }
+}
+
+function attachPIDSelector(canvas, wrap) {
+  var dragging = false, dragX0 = 0;
+  function fracToIdx(frac) {
+    return Math.round(viewStart + Math.max(0, Math.min(1, frac)) * (viewEnd - viewStart));
+  }
+  function getCanvasFrac(e) {
+    var rect = canvas.getBoundingClientRect();
+    return (e.clientX - rect.left) / rect.width;
+  }
+  canvas.addEventListener('mousedown', function(e) {
+    dragging = true; dragX0 = e.clientX;
+    pidRangeStart = fracToIdx(getCanvasFrac(e)); pidRangeEnd = pidRangeStart;
+    updatePIDSelectionBox();
+  });
+  canvas.addEventListener('mousemove', function(e) {
+    var curLine = document.getElementById('pid-cursor-line-sel');
+    var x = e.clientX - canvas.getBoundingClientRect().left;
+    if (curLine) { curLine.style.display = 'block'; curLine.style.left = x + 'px'; }
+    if (!dragging) return;
+    var frac2 = getCanvasFrac(e);
+    var idx2  = fracToIdx(frac2);
+    var frac1 = (dragX0 - canvas.getBoundingClientRect().left) / canvas.getBoundingClientRect().width;
+    var idx1  = fracToIdx(Math.max(0, Math.min(1, frac1)));
+    pidRangeStart = Math.min(idx1, idx2); pidRangeEnd = Math.max(idx1, idx2);
+    updatePIDSelectionBox();
+  });
+  canvas.addEventListener('mouseup', function() {
+    if (!dragging) return; dragging = false;
+    if (pidRangeEnd - pidRangeStart < 10) {
+      pidRangeStart = null; pidRangeEnd = null;
+      var info = document.getElementById('pid-range-info');
+      if (info) info.textContent = 'tout le vol';
+      updatePIDSelectionBox();
+    } else {
+      var t0 = flightData[pidRangeStart].timestamp_us / 1e6;
+      var t1 = flightData[pidRangeEnd].timestamp_us / 1e6;
+      var info = document.getElementById('pid-range-info');
+      if (info) info.textContent = t0.toFixed(1) + 's → ' + t1.toFixed(1) + 's  (' + (t1-t0).toFixed(1) + 's)';
+    }
+    if (typeof rebuildPIDCharts === 'function') rebuildPIDCharts();
+  });
+  canvas.addEventListener('mouseleave', function() {
+    var curLine = document.getElementById('pid-cursor-line-sel');
+    if (curLine) curLine.style.display = 'none';
+    if (dragging) { dragging = false; if (typeof rebuildPIDCharts === 'function') rebuildPIDCharts(); }
+  });
+  canvas.addEventListener('dblclick', function() { pidResetRange(); });
+}
+
+function updatePIDSelectionBox() {
+  var box    = document.getElementById('pid-selection-box');
+  var canvas = document.getElementById('pid-selector-canvas');
+  if (!box || !canvas) return;
+  if (pidRangeStart === null || pidRangeEnd === null) { box.style.display = 'none'; return; }
+  var W = canvas.width || canvas.offsetWidth || 1;
+  var total = viewEnd - viewStart || 1;
+  var x1 = (pidRangeStart - viewStart) / total * W;
+  var x2 = (pidRangeEnd   - viewStart) / total * W;
+  box.style.display = 'block';
+  box.style.left    = x1 + 'px';
+  box.style.width   = Math.max(2, x2 - x1) + 'px';
+}
 
 // ── Expose graph explorer + analyse functions to global scope (used by onclick= attributes) ──
 window.sigSidebarToggle     = sigSidebarToggle;
