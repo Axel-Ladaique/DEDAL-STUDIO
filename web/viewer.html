@@ -1326,10 +1326,7 @@ canvas.chart { width: 100%; height: 100%; }
     <div class="stat-pill">VIT. MAX<span id="hdr-speed">-- m/s</span></div>
     <div class="stat-pill" title="Distance GPS totale">DIST<span id="hdr-dist">-- km</span></div>
     <div class="stat-pill" title="Tension batterie minimale">VBAT MIN<span id="hdr-vbat">-- V</span></div>
-    <div style="display:flex;gap:6px;margin-left:8px;">
-      <button class="btn" onclick="openCSVExportModal()" title="Exporter les données filtrées" style="padding:4px 10px;font-size:10px;opacity:0.7;" id="btn-export-csv">⬇ CSV</button>
-      <button class="btn" onclick="exportPIDReport()" title="Rapport PID" style="padding:4px 10px;font-size:10px;opacity:0.7;" id="btn-export-pid">⬇ PID</button>
-    </div>
+      <button class="btn" onclick="openCSVExportModal()" title="Exporter les données filtrées" style="padding:4px 10px;font-size:10px;opacity:0.7;margin-left:8px;" id="btn-export-csv">⬇ CSV</button>
   </div>
 </header>
 
@@ -2085,6 +2082,9 @@ canvas.chart { width: 100%; height: 100%; }
                       <span style="color:var(--dim);">— analyser un vol —</span>
                     </div>
                   </div>
+
+                  <!-- Export rapport PID -->
+                  <button id="btn-export-pid" onclick="exportPIDReport()" class="ds-pid-export-btn">⬇ Rapport PID</button>
 
                 </div><!-- /colonne droite -->
               </div><!-- /grid -->
@@ -5438,52 +5438,38 @@ var _csvModal = null;
 function _buildCSVModal() {
   var overlay = document.createElement('div');
   overlay.id = 'ds-csv-modal-overlay';
-  overlay.style.cssText = [
-    'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);',
-    'z-index:9000;align-items:center;justify-content:center;',
-  ].join('');
   overlay.innerHTML = [
-    '<div id="ds-csv-modal" style="',
-      'background:#0e1218;border:1px solid #2a2a35;border-radius:6px;',
-      'padding:20px 24px;min-width:360px;max-width:520px;width:90vw;',
-      'max-height:80vh;overflow-y:auto;font-family:var(--font-hud);',
-    '">',
-    '  <div style="font-size:13px;letter-spacing:2px;color:var(--accent);margin-bottom:14px;">EXPORT CSV</div>',
+    '<div id="ds-csv-modal">',
+    '  <h3>Export CSV</h3>',
 
-    '  <div class="ds-hud-field">',
-    '    <label style="font-size:10px;letter-spacing:1px;color:var(--dim);">PLAGE TEMPORELLE</label>',
-    '    <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">',
-    '      <label style="font-size:11px;cursor:pointer;"><input type="radio" name="ds-csv-range" value="view" checked> Vue actuelle</label>',
-    '      <label style="font-size:11px;cursor:pointer;"><input type="radio" name="ds-csv-range" value="all"> Tout le vol</label>',
-    '      <label style="font-size:11px;cursor:pointer;"><input type="radio" name="ds-csv-range" value="custom"> Personnalisée',
-    '        <span id="ds-csv-custom-inputs" style="display:none;margin-left:8px;">',
-    '          <input type="number" id="ds-csv-tstart" placeholder="0.0" min="0" step="0.1"',
-    '            style="width:64px;background:#0a0c10;border:1px solid #333;color:var(--text);padding:2px 4px;font-family:var(--font-mono);font-size:11px;">',
-    '          <span style="color:var(--dim);margin:0 4px;">→</span>',
-    '          <input type="number" id="ds-csv-tend" placeholder="fin" min="0" step="0.1"',
-    '            style="width:64px;background:#0a0c10;border:1px solid #333;color:var(--text);padding:2px 4px;font-family:var(--font-mono);font-size:11px;">',
-    '          <span style="color:var(--dim);margin-left:4px;font-size:10px;">s</span>',
+    '  <div class="ds-csv-section">',
+    '    <span class="ds-csv-lbl">Plage temporelle</span>',
+    '    <div class="ds-csv-radios">',
+    '      <label><input type="radio" name="ds-csv-range" value="view" checked> Vue actuelle</label>',
+    '      <label><input type="radio" name="ds-csv-range" value="all"> Tout le vol</label>',
+    '      <label><input type="radio" name="ds-csv-range" value="custom"> Personnalisée',
+    '        <span id="ds-csv-custom-inputs" class="ds-csv-range-row">',
+    '          <input type="number" id="ds-csv-tstart" placeholder="0.0" min="0" step="0.1">',
+    '          <span>→</span>',
+    '          <input type="number" id="ds-csv-tend" placeholder="fin" min="0" step="0.1">',
+    '          <span>s</span>',
     '        </span>',
     '      </label>',
     '    </div>',
     '  </div>',
 
-    '  <div class="ds-hud-field" style="margin-top:12px;">',
-    '    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">',
-    '      <label style="font-size:10px;letter-spacing:1px;color:var(--dim);flex:1;">COLONNES</label>',
-    '      <button id="ds-csv-sel-all" class="btn" style="padding:2px 8px;font-size:10px;">Tout</button>',
-    '      <button id="ds-csv-sel-none" class="btn" style="padding:2px 8px;font-size:10px;">Rien</button>',
+    '  <div class="ds-csv-section">',
+    '    <div class="ds-csv-cols-bar">',
+    '      <span>Colonnes</span>',
+    '      <button id="ds-csv-sel-all">Tout</button>',
+    '      <button id="ds-csv-sel-none">Rien</button>',
     '    </div>',
-    '    <div id="ds-csv-cols" style="',
-    '      max-height:180px;overflow-y:auto;',
-    '      display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:3px;',
-    '      background:#080a0e;border:1px solid #1a1a24;border-radius:3px;padding:8px;',
-    '    "></div>',
+    '    <div id="ds-csv-cols"></div>',
     '  </div>',
 
-    '  <div class="ds-hud-modal-actions" style="margin-top:14px;">',
-    '    <button id="ds-csv-cancel" class="btn">Annuler</button>',
-    '    <button id="ds-csv-export" class="btn primary">⬇ Exporter</button>',
+    '  <div class="ds-hud-modal-actions">',
+    '    <button id="ds-csv-cancel">Annuler</button>',
+    '    <button id="ds-csv-export" class="primary">⬇ Exporter</button>',
     '  </div>',
     '</div>',
   ].join('');
@@ -5492,30 +5478,36 @@ function _buildCSVModal() {
   // Radio: show/hide custom inputs
   overlay.querySelectorAll('input[name="ds-csv-range"]').forEach(function(radio) {
     radio.addEventListener('change', function() {
-      document.getElementById('ds-csv-custom-inputs').style.display =
-        radio.value === 'custom' ? 'inline' : 'none';
+      var ci = document.getElementById('ds-csv-custom-inputs');
+      ci.style.display = radio.value === 'custom' ? 'inline-flex' : 'none';
     });
   });
 
   document.getElementById('ds-csv-sel-all').addEventListener('click', function() {
-    overlay.querySelectorAll('#ds-csv-cols input[type=checkbox]').forEach(function(cb) { cb.checked = true; });
+    overlay.querySelectorAll('.ds-csv-chip').forEach(function(chip) {
+      chip.querySelector('input').checked = true;
+      chip.className = 'ds-csv-chip on';
+    });
   });
   document.getElementById('ds-csv-sel-none').addEventListener('click', function() {
-    overlay.querySelectorAll('#ds-csv-cols input[type=checkbox]').forEach(function(cb) { cb.checked = false; });
+    overlay.querySelectorAll('.ds-csv-chip').forEach(function(chip) {
+      chip.querySelector('input').checked = false;
+      chip.className = 'ds-csv-chip';
+    });
   });
   document.getElementById('ds-csv-cancel').addEventListener('click', function() {
-    overlay.style.display = 'none';
+    overlay.classList.remove('open');
   });
   overlay.addEventListener('click', function(e) {
-    if (e.target === overlay) overlay.style.display = 'none';
+    if (e.target === overlay) overlay.classList.remove('open');
   });
   document.getElementById('ds-csv-export').addEventListener('click', function() {
-    var selected = overlay.querySelectorAll('#ds-csv-cols input[type=checkbox]:checked');
+    var selected = overlay.querySelectorAll('.ds-csv-chip input[type=checkbox]:checked');
     if (!selected.length) {
       if (typeof showToast === 'function') showToast('Sélectionnez au moins une colonne', 'warn');
       return;
     }
-    overlay.style.display = 'none';
+    overlay.classList.remove('open');
     _doCSVExport(overlay);
   });
 
@@ -5530,28 +5522,32 @@ function openCSVExportModal() {
   if (!_csvModal) _csvModal = _buildCSVModal();
 
   // Populate columns
-  var baseKeys   = Object.keys(flightData[0]);
-  var extraKeys  = ['time_s', 'vbat_soc_pct'].concat(activeMotors.map(function(m) { return 'm' + m + '_pct'; }));
-  var allKeys    = baseKeys.concat(extraKeys);
-  var colsDiv    = document.getElementById('ds-csv-cols');
+  var baseKeys  = Object.keys(flightData[0]);
+  var extraKeys = ['time_s', 'vbat_soc_pct'].concat(activeMotors.map(function(m) { return 'm' + m + '_pct'; }));
+  var allKeys   = baseKeys.concat(extraKeys);
+  var colsDiv   = document.getElementById('ds-csv-cols');
   colsDiv.innerHTML = '';
   allKeys.forEach(function(k) {
-    var lbl = document.createElement('label');
-    lbl.style.cssText = 'font-size:10px;cursor:pointer;display:flex;align-items:center;gap:4px;color:var(--text);';
+    var chip = document.createElement('label');
+    chip.className = 'ds-csv-chip on';
+    chip.title = k;
     var cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.value = k;
     cb.checked = true;
-    lbl.appendChild(cb);
-    lbl.appendChild(document.createTextNode(k));
-    colsDiv.appendChild(lbl);
+    cb.addEventListener('change', function() {
+      chip.className = 'ds-csv-chip' + (cb.checked ? ' on' : '');
+    });
+    chip.appendChild(cb);
+    chip.appendChild(document.createTextNode(k));
+    colsDiv.appendChild(chip);
   });
 
   // Reset range to "view"
   var viewRadio = _csvModal.querySelector('input[value="view"]');
   if (viewRadio) { viewRadio.checked = true; document.getElementById('ds-csv-custom-inputs').style.display = 'none'; }
 
-  _csvModal.style.display = 'flex';
+  _csvModal.classList.add('open');
 }
 
 function _doCSVExport(overlay) {
@@ -5582,7 +5578,7 @@ function _doCSVExport(overlay) {
 
   // Selected columns
   var selectedKeys = [];
-  overlay.querySelectorAll('#ds-csv-cols input[type=checkbox]:checked').forEach(function(cb) {
+  overlay.querySelectorAll('.ds-csv-chip input[type=checkbox]:checked').forEach(function(cb) {
     selectedKeys.push(cb.value);
   });
   if (!selectedKeys.length) { if (typeof showToast === 'function') showToast('Sélectionnez au moins une colonne', 'warn'); return; }
@@ -11698,6 +11694,73 @@ window.applyPanelTemplate = applyPanelTemplate;
 .ds-hud-modal-actions button:hover { border-color: #00d4ff; color: #00d4ff; }
 .ds-hud-modal-actions button.primary { border-color: #ffcc00; color: #ffcc00; }
 .ds-hud-modal-actions button.primary:hover { background: rgba(255,204,0,0.1); }
+
+/* ── CSV Export Modal ──────────────────────────────────────────────────── */
+#ds-csv-modal-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(2px);
+  display: none; align-items: center; justify-content: center;
+}
+#ds-csv-modal-overlay.open { display: flex; }
+#ds-csv-modal {
+  background: #0d1520; border: 1px solid #1a2d45; border-radius: 8px;
+  padding: 24px 28px; min-width: 380px; max-width: 560px; width: 95vw;
+  max-height: 80vh; overflow-y: auto;
+  font-family: 'Share Tech Mono', monospace; color: #c8dde8;
+}
+#ds-csv-modal h3 {
+  font-size: 13px; letter-spacing: 3px; text-transform: uppercase;
+  color: #ffcc00; margin-bottom: 20px;
+}
+.ds-csv-section { margin-bottom: 18px; }
+.ds-csv-section > .ds-csv-lbl {
+  display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: #4a6070; margin-bottom: 10px;
+}
+.ds-csv-radios { display: flex; flex-direction: column; gap: 8px; }
+.ds-csv-radios label { font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #c8dde8; }
+.ds-csv-range-row { display: none; align-items: center; gap: 6px; margin-left: 4px; }
+.ds-csv-range-row input[type=number] {
+  width: 60px; background: #080c10; border: 1px solid #1a2d45;
+  color: #c8dde8; font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; padding: 4px 6px; border-radius: 4px; outline: none;
+}
+.ds-csv-range-row input[type=number]:focus { border-color: #00d4ff; }
+.ds-csv-range-row span { color: #4a6070; font-size: 10px; }
+.ds-csv-cols-bar { display: flex; align-items: center; margin-bottom: 8px; }
+.ds-csv-cols-bar > span { flex: 1; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #4a6070; }
+.ds-csv-cols-bar button {
+  background: transparent; border: 1px solid #1a2d45; color: #4a6070;
+  font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1px;
+  text-transform: uppercase; padding: 3px 10px; border-radius: 4px; cursor: pointer;
+  transition: all .15s; margin-left: 6px;
+}
+.ds-csv-cols-bar button:hover { border-color: #00d4ff; color: #00d4ff; }
+#ds-csv-cols {
+  max-height: 200px; overflow-y: auto;
+  background: #070b10; border: 1px solid #1a2d45; border-radius: 4px;
+  padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 4px;
+}
+.ds-csv-chip {
+  display: inline-flex; align-items: center;
+  background: #0a1520; border: 1px solid #1a2d45; border-radius: 3px;
+  padding: 4px 9px; cursor: pointer;
+  font-family: 'Share Tech Mono', monospace; font-size: 10px; color: #3a5a6a;
+  transition: all .1s; user-select: none;
+}
+.ds-csv-chip input { display: none; }
+.ds-csv-chip:hover { border-color: #2a4a60; color: #8aaabb; }
+.ds-csv-chip.on { background: #071828; border-color: #005a78; color: #c8dde8; }
+
+/* ── PID export button (inside PID panel right column) ───────────────── */
+.ds-pid-export-btn {
+  width: 100%; background: transparent; border: 1px solid #1a2d45;
+  color: #4a6070; font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 8px; border-radius: 4px; cursor: pointer; transition: all .15s;
+  margin-top: 4px;
+}
+.ds-pid-export-btn:hover { border-color: #00d4ff; color: #00d4ff; }
 
 #ds-vid-toggle {
   position: fixed; bottom: 0; right: 24px; z-index: 1500;
