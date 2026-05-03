@@ -2614,18 +2614,18 @@ function buildConfigPanel() {
   // Badge panel
   const badge = document.getElementById('config-panel-badge');
   if(badge) {
-    badge.textContent = c['CONFIG_NAME'] || 'CONFIG OK';
+    badge.textContent = 'CONFIG OK';
     badge.style.background = 'rgba(57,255,20,0.1)';
     badge.style.color = '#39ff14';
     badge.style.borderColor = 'rgba(57,255,20,0.3)';
   }
 
   // Helper : ligne clé/valeur
-  const row = (label, val, unit='', color='var(--text)') =>
+  const row = (label, val, unit='', color='var(--text)', wrap=false) =>
     val != null ? `<div style="display:flex;justify-content:space-between;gap:8px;
       border-bottom:1px solid rgba(255,255,255,0.04);padding:2px 0;">
-      <span style="font-family:var(--font-mono);font-size:10px;color:var(--dim);">${label}</span>
-      <span style="font-family:var(--font-mono);font-size:11px;color:${color};white-space:nowrap;">${val}${unit}</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--dim);flex-shrink:0;">${label}</span>
+      <span style="font-family:var(--font-mono);font-size:11px;color:${color};${wrap ? 'word-break:break-all;white-space:normal;text-align:right;' : 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'}">${val}${unit}</span>
     </div>` : '';
 
   const section = (icon, title, html) => `
@@ -2644,7 +2644,7 @@ function buildConfigPanel() {
 
   el.innerHTML =
     section('🔧','IDENTIFICATION',
-      row('CONFIG_NAME',  c['CONFIG_NAME'],  '', 'var(--accent)') +
+      row('CONFIG_NAME',  c['CONFIG_NAME'],  '', 'var(--accent)', true) +
       row('FW_VERSION',   c['FW_VERSION']) +
       row('RX_TYPE',      c['RX_TYPE'],      '', 'var(--accent3)') +
       row('IMU',          c['IMU']) +
