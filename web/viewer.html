@@ -11055,10 +11055,15 @@ function buildPIDSelector() {
   var wrap   = document.getElementById('pid-selector-wrap');
   if (!canvas || !wrap || !flightData.length) return;
 
+  var dpr = window.devicePixelRatio || 1;
   var W = wrap.offsetWidth || 700;
   var H = 44;
-  canvas.width = W; canvas.height = H;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
   var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, W, H);
 
   var pts  = flightData.slice(viewStart, viewEnd + 1);
