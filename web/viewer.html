@@ -11208,7 +11208,9 @@ function computeAnalysisBadges() {
     if (pidWarnAxis) return;
     var cfg = (typeof PID_AXES !== 'undefined') ? PID_AXES[axis] : null;
     if (!cfg) return;
-    var armed = flightData.filter(function(r) { return r.armed===1||r.armed==='1'; });
+    var armed = flightData.filter(function(r) {
+      return (r.armed===1||r.armed==='1') && +(r.thro_des||0) > 0.05;
+    });
     if (!armed.length) return;
     var sum2 = armed.reduce(function(s, r) {
       var e = +(r[cfg.des]||0) - +(r[cfg.imu]||0); return s + e*e;
