@@ -565,7 +565,7 @@ def create_app(cfg: Config) -> FastAPI:
             return JSONResponse({"error": "pywebview not available"}, status_code=503)
         if not webview.windows:
             return JSONResponse({"error": "no pywebview window"}, status_code=503)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(
             None,
             lambda: webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG),

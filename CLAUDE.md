@@ -168,6 +168,8 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 | GET | `/api/panel-templates` | Lire les templates de panels sauvegardés |
 | PUT | `/api/panel-templates` | Écrire les templates de panels |
 | POST | `/api/sessions/{lid}/reload-meta` | Recharger les métadonnées depuis `log.meta` sur disque |
+| GET | `/api/pick-folder/available` | Vérifie si pywebview a une fenêtre ouverte |
+| GET | `/api/pick-folder` | Ouvre le sélecteur de dossier natif (pywebview) |
 
 ---
 
