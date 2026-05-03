@@ -11025,9 +11025,11 @@ function showAnalysis(key) {
   ({
     energy: function() { if(typeof rebuildEnergyPanel==='function') rebuildEnergyPanel(); },
     pid:    function() {
-              if(typeof rebuildPIDCharts==='function') rebuildPIDCharts();
-              if(typeof runPIDAdvisor==='function') runPIDAdvisor();
-              buildPIDSelector();
+              setTimeout(function() {
+                if(typeof rebuildPIDCharts==='function') rebuildPIDCharts();
+                if(typeof runPIDAdvisor==='function') runPIDAdvisor();
+                buildPIDSelector();
+              }, 50);
             },
     fft:    function() { if(typeof rebuildVibPanel==='function') rebuildVibPanel(); },
     ekf:    function() { if(typeof buildEKFChart==='function') buildEKFChart(); },
