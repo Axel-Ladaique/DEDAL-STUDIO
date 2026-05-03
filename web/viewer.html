@@ -4783,8 +4783,11 @@ function rebuildPIDCharts() {
   const canvas = document.getElementById('pid-canvas-main');
   if(!canvas || !flightData.length) return;
   const container = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
   const W = container.offsetWidth  || 700;
   const H = container.offsetHeight > 40 ? container.offsetHeight : 320;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
   canvas.style.width  = W + 'px';
   canvas.style.height = H + 'px';
 
@@ -4848,7 +4851,7 @@ function rebuildPIDCharts() {
     type:'line', data:{ datasets },
     options:{
       animation:false, responsive:false, maintainAspectRatio:false,
-      devicePixelRatio: window.devicePixelRatio || 1,
+      devicePixelRatio: dpr,
       interaction:{ mode:'index', intersect:false },
       plugins:{
         legend:{ display:false },
