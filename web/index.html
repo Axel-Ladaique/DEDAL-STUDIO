@@ -45,8 +45,11 @@
     display: flex; height: calc(100vh - 53px); overflow: hidden;
   }
   .list-panel {
-    flex: 1; min-width: 0; overflow-y: auto; padding: 24px 32px;
+    flex: 1; min-width: 0; overflow: hidden;
+    padding: 24px 32px;
+    display: flex; flex-direction: column;
   }
+  #active-filters { flex-shrink: 0; }
   .map-panel {
     width: 420px; flex-shrink: 0;
     border-left: 1px solid var(--border);
@@ -100,10 +103,16 @@
   .btn.danger:hover { background: rgba(255,77,77,0.1); }
   .btn.sm { padding: 5px 10px; font-size: 10px; }
 
+  .toolbar { flex-shrink: 0; }
   .sessions-wrap {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 8px; overflow: hidden;
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column;
   }
+  .sessions-header { flex-shrink: 0; }
+  #session-list { overflow-y: auto; flex: 1; min-height: 0; }
+  .bottom-row { flex-shrink: 0; }
   .sessions-header {
     display: grid;
     grid-template-columns: 170px 1fr 110px 110px 155px 110px 110px;
@@ -590,7 +599,7 @@ async function loadSessions() {
 }
 
 let _sortKey = 'flight';
-let _sortDir = -1; // -1 = desc, 1 = asc
+let _sortDir = 1; // 1 = desc (newest first), -1 = asc
 
 function _applySortHeader() {
   document.querySelectorAll('.sessions-header [data-sort]').forEach(el => {
@@ -598,13 +607,13 @@ function _applySortHeader() {
     el.classList.toggle('active', isActive);
     const labels = {name:'Nom', flight:'Vol', import:'Import', duration:'Log'};
     el.textContent = (labels[el.dataset.sort] || el.dataset.sort)
-      + (isActive ? (_sortDir === -1 ? ' ↓' : ' ↑') : '');
+      + (isActive ? (_sortDir === 1 ? ' ↓' : ' ↑') : '');
   });
 }
 
 function setSort(key) {
   if (_sortKey === key) { _sortDir *= -1; }
-  else { _sortKey = key; _sortDir = -1; }
+  else { _sortKey = key; _sortDir = 1; }
   _applySortHeader();
   renderSessions();
 }
