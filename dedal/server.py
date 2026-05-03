@@ -547,6 +547,32 @@ def create_app(cfg: Config) -> FastAPI:
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
 
+    # ── Native folder picker (pywebview) ──────────────────────────────────
+    @app.get("/api/pick-folder/available")
+    def pick_folder_available() -> JSONResponse:
+        try:
+            import webview  # pywebview
+            available = bool(webview.windows)
+        except ImportError:
+            available = False
+        return JSONResponse({"available": available})
+
+    @app.get("/api/pick-folder")
+    async def pick_folder() -> JSONResponse:
+        try:
+            import webview  # pywebview
+        except ImportError:
+            return JSONResponse({"error": "pywebview not available"}, status_code=503)
+        if not webview.windows:
+            return JSONResponse({"error": "no pywebview window"}, status_code=503)
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG),
+        )
+        path = result[0] if result else None
+        return JSONResponse({"path": path})
+
     if WEB_DIR.exists():
         app.mount(
             "/static",
