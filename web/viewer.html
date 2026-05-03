@@ -4785,8 +4785,8 @@ function rebuildPIDCharts() {
   const container = canvas.parentElement;
   const W = container.offsetWidth  || 700;
   const H = container.offsetHeight > 40 ? container.offsetHeight : 320;
-  canvas.width  = W;
-  canvas.height = H;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
 
   if(pidChart) { pidChart.destroy(); pidChart = null; }
 
@@ -4804,25 +4804,25 @@ function rebuildPIDCharts() {
     label:'Consigne', data: rows.map(r=>({x:r.x, y:r.des})),
     borderColor: cfg.color, backgroundColor:'transparent',
     borderWidth:1.8, borderDash:[5,3],
-    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:true,
+    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:false,
   });
   if(pidLayerVis.imu) datasets.push({
     label:'Mesure IMU', data: rows.map(r=>({x:r.x, y:r.imu})),
     borderColor:'#ffffff', backgroundColor:'rgba(255,255,255,0.04)',
     borderWidth:1.5,
-    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:true,
+    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:false,
   });
   if(pidLayerVis.err) datasets.push({
     label:'Erreur', data: rows.map(r=>({x:r.x, y:r.err})),
     borderColor:'#ff6b35', backgroundColor:'rgba(255,107,53,0.06)',
     borderWidth:1, borderDash:[2,2],
-    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:true,
+    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:false,
   });
   if(pidLayerVis.pid) datasets.push({
     label:'PID out', data: rows.map(r=>({x:r.x, y:r.pid})),
     borderColor:'#39ff14', backgroundColor:'rgba(57,255,20,0.04)',
     borderWidth:1.5,
-    pointRadius:0, tension:0.1, yAxisID:'yR', spanGaps:true,
+    pointRadius:0, tension:0.1, yAxisID:'yR', spanGaps:false,
   });
 
   // ── Lock Y axes from full-range data so pan never rescales Y ──────
@@ -4848,6 +4848,7 @@ function rebuildPIDCharts() {
     type:'line', data:{ datasets },
     options:{
       animation:false, responsive:false, maintainAspectRatio:false,
+      devicePixelRatio: window.devicePixelRatio || 1,
       interaction:{ mode:'index', intersect:false },
       plugins:{
         legend:{ display:false },
