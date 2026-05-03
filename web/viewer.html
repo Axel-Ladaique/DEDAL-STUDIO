@@ -11639,16 +11639,6 @@ window.applyPanelTemplate = applyPanelTemplate;
   if (hdrStats) hdrStats.appendChild(backBtn);
   else document.body.appendChild(backBtn);
 
-  // ── Export pack button (only useful when a session is open) ───────────
-  if (LID) {
-    const exportBtn = document.createElement('button');
-    exportBtn.id = 'ds-export-btn';
-    exportBtn.textContent = '⬆ Export Studio';
-    exportBtn.onclick = dsExportPack;
-    if (hdrStats) hdrStats.appendChild(exportBtn);
-    else document.body.appendChild(exportBtn);
-  }
-
   // ── HUD modal ─────────────────────────────────────────────────────────
   var hudModalEl = document.createElement('div');
   hudModalEl.id = 'ds-hud-modal-overlay';
@@ -11692,6 +11682,40 @@ window.applyPanelTemplate = applyPanelTemplate;
     '</div>',
   ].join('');
   document.body.appendChild(hudModalEl);
+
+  // ── File picker for HUD output path (pywebview only) ──────────────────
+  fetch('/api/pick-folder/available')
+    .then(function(r) { return r.json(); })
+    .then(function(info) {
+      if (!info.available) return;
+      var outpathInput = document.getElementById('ds-hud-outpath');
+      if (!outpathInput) return;
+      outpathInput.style.display = 'none';
+      var pathDisplay = document.createElement('span');
+      pathDisplay.id = 'ds-hud-outpath-display';
+      pathDisplay.style.cssText = 'color:var(--dim);font-size:11px;font-family:var(--font-mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
+      pathDisplay.textContent = 'défaut : hud_output/ dans la session';
+      var browseBtn = document.createElement('button');
+      browseBtn.textContent = '📁 Parcourir';
+      browseBtn.className = 'btn';
+      browseBtn.style.cssText = 'padding:4px 10px;font-size:11px;flex-shrink:0;';
+      browseBtn.onclick = function() {
+        fetch('/api/pick-folder')
+          .then(function(r) { return r.json(); })
+          .then(function(res) {
+            if (res.path) {
+              outpathInput.value = res.path;
+              pathDisplay.textContent = res.path;
+            }
+          });
+      };
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:4px;';
+      row.appendChild(pathDisplay);
+      row.appendChild(browseBtn);
+      outpathInput.parentNode.appendChild(row);
+    });
+
   hudModalEl.addEventListener('click', function(e) {
     if (e.target === hudModalEl) hudModalEl.classList.remove('open');
   });
@@ -11703,13 +11727,30 @@ window.applyPanelTemplate = applyPanelTemplate;
     var res = (document.getElementById('ds-hud-res').value || '1920x1080').split('x');
     var tStartVal = parseFloat(document.getElementById('ds-hud-tstart').value);
     var tEndVal   = parseFloat(document.getElementById('ds-hud-tend').value);
-    dsGenerateHUD({
+    var opts = {
       fps:         parseInt(document.getElementById('ds-hud-fps').value, 10) || 25,
       width:       parseInt(res[0], 10) || 1920,
       height:      parseInt(res[1], 10) || 1080,
       t_start_s:   isNaN(tStartVal) ? 0 : tStartVal,
       t_end_s:     isNaN(tEndVal)   ? null : tEndVal,
       output_path: document.getElementById('ds-hud-outpath').value.trim() || null,
+    };
+    var hudBtn = document.getElementById('ds-hud-btn');
+    if (hudBtn && hudBtn.classList.contains('busy')) return;
+    if (hudBtn) { hudBtn.classList.add('busy'); hudBtn.textContent = '⬆ Export pack…'; }
+    dsExportPackAsync().then(function() {
+      dsGenerateHUD(opts);
+    }).catch(function(err) {
+      if (hudBtn) {
+        hudBtn.classList.remove('busy');
+        hudBtn.classList.add('err');
+        hudBtn.textContent = '✕ Erreur pack';
+        setTimeout(function() {
+          hudBtn.classList.remove('err');
+          hudBtn.textContent = '🎬 Générer HUD';
+        }, 3000);
+      }
+      if (typeof showToast === 'function') showToast('Erreur export pack : ' + err.message, 'warn');
     });
   });
 
@@ -11917,111 +11958,107 @@ window.applyPanelTemplate = applyPanelTemplate;
   }
 
   // ── Flight pack export ─────────────────────────────────────────────────
-  function dsExportPack() {
-    if (typeof flightData === 'undefined' || !flightData.length) {
-      if (typeof showToast === 'function') showToast('Aucune donnée — chargez un log d\'abord', 'warn');
-      return;
-    }
-    var btn = document.getElementById('ds-export-btn');
-    if (btn) { btn.classList.add('busy'); btn.textContent = '⏳ Export…'; }
-
-    // ── summary stats ──────────────────────────────────────────────────
-    var dur = (flightData[flightData.length-1].timestamp_us - flightData[0].timestamp_us) / 1e6;
-    var maxAlt = 0, maxSpd = 0, armedUs = 0, totalDist = 0;
-    var vbatMin = Infinity, vbatMax = -Infinity;
-    var prevLat = null, prevLon = null, prevArmed = false, prevTs = null;
-    for (var i = 0; i < flightData.length; i++) {
-      var r = flightData[i];
-      var alt = +r.gps_alt_m || 0;
-      var spd = +r.gps_speed_ms || 0;
-      var vb  = +r.vbat_V || 0;
-      if (alt > maxAlt) maxAlt = alt;
-      if (spd > maxSpd) maxSpd = spd;
-      if (vb > 0 && vb < vbatMin) vbatMin = vb;
-      if (vb > vbatMax) vbatMax = vb;
-      var armed = r.armed === 1 || r.armed === '1';
-      if (armed && prevTs !== null) armedUs += r.timestamp_us - prevTs;
-      if (r.gps_valid && r.gps_lat && prevLat !== null) {
-        var dLat = (r.gps_lat - prevLat) * Math.PI / 180;
-        var dLon = (r.gps_lon - prevLon) * Math.PI / 180;
-        var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
-                Math.cos(prevLat*Math.PI/180)*Math.cos(r.gps_lat*Math.PI/180)*
-                Math.sin(dLon/2)*Math.sin(dLon/2);
-        totalDist += 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  function dsExportPackAsync() {
+    return new Promise(function(resolve, reject) {
+      if (typeof flightData === 'undefined' || !flightData.length) {
+        reject(new Error('Aucune donnée — chargez un log d\'abord'));
+        return;
       }
-      if (r.gps_valid && r.gps_lat) { prevLat = +r.gps_lat; prevLon = +r.gps_lon; }
-      prevArmed = armed;
-      prevTs = r.timestamp_us;
-    }
 
-    // ── per-frame data ─────────────────────────────────────────────────
-    var ekf = (typeof ekfData !== 'undefined' && ekfData.length === flightData.length)
-              ? ekfData : null;
-    var frames = [];
-    for (var j = 0; j < flightData.length; j++) {
-      var fd = flightData[j];
-      var ef = ekf ? ekf[j] : null;
-      var fr = {
-        t_us:   fd.timestamp_us,
-        armed:  fd.armed === 1 || fd.armed === '1' ? 1 : 0,
-        fm:     +(fd.flight_mode || 0),
-        roll:   +(fd.roll_IMU  || 0),
-        pitch:  +(fd.pitch_IMU || 0),
-        yaw:    +(fd.yaw_IMU   || 0),
-        lat:    +(fd.gps_lat   || 0),
-        lon:    +(fd.gps_lon   || 0),
-        alt_m:  +(fd.gps_alt_m || 0),
-        spd_ms: +(fd.gps_speed_ms || 0),
-        sats:   +(fd.gps_sats  || 0),
-        gps_ok: fd.gps_valid === 1 || fd.gps_valid === '1' ? 1 : 0,
-        m1:     +(fd.m1_PWM    || 0),
-        m3:     +(fd.m3_PWM    || 0),
-        vbat:   +(fd.vbat_V    || 0),
-        Vfwd:   ef ? +ef.Vfwd.toFixed(3) : 0,
-        Vlat:   ef ? +ef.Vlat.toFixed(3) : 0,
-        Vz:     ef ? +ef.Vz.toFixed(3)   : 0,
-        Vh:     ef ? +ef.Vh.toFixed(3)   : 0,
+      var dur = (flightData[flightData.length-1].timestamp_us - flightData[0].timestamp_us) / 1e6;
+      var maxAlt = 0, maxSpd = 0, armedUs = 0, totalDist = 0;
+      var vbatMin = Infinity, vbatMax = -Infinity;
+      var prevLat = null, prevLon = null, prevArmed = false, prevTs = null;
+      for (var i = 0; i < flightData.length; i++) {
+        var r = flightData[i];
+        var alt = +r.gps_alt_m || 0;
+        var spd = +r.gps_speed_ms || 0;
+        var vb  = +r.vbat_V || 0;
+        if (alt > maxAlt) maxAlt = alt;
+        if (spd > maxSpd) maxSpd = spd;
+        if (vb > 0 && vb < vbatMin) vbatMin = vb;
+        if (vb > vbatMax) vbatMax = vb;
+        var armed = r.armed === 1 || r.armed === '1';
+        if (armed && prevTs !== null) armedUs += r.timestamp_us - prevTs;
+        if (r.gps_valid && r.gps_lat && prevLat !== null) {
+          var dLat = (r.gps_lat - prevLat) * Math.PI / 180;
+          var dLon = (r.gps_lon - prevLon) * Math.PI / 180;
+          var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                  Math.cos(prevLat*Math.PI/180)*Math.cos(r.gps_lat*Math.PI/180)*
+                  Math.sin(dLon/2)*Math.sin(dLon/2);
+          totalDist += 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+        if (r.gps_valid && r.gps_lat) { prevLat = +r.gps_lat; prevLon = +r.gps_lon; }
+        prevArmed = armed;
+        prevTs = r.timestamp_us;
+      }
+
+      var ekf = (typeof ekfData !== 'undefined' && ekfData.length === flightData.length)
+                ? ekfData : null;
+      var frames = [];
+      for (var j = 0; j < flightData.length; j++) {
+        var fd = flightData[j];
+        var ef = ekf ? ekf[j] : null;
+        frames.push({
+          t_us:   fd.timestamp_us,
+          armed:  fd.armed === 1 || fd.armed === '1' ? 1 : 0,
+          fm:     +(fd.flight_mode || 0),
+          roll:   +(fd.roll_IMU  || 0),
+          pitch:  +(fd.pitch_IMU || 0),
+          yaw:    +(fd.yaw_IMU   || 0),
+          lat:    +(fd.gps_lat   || 0),
+          lon:    +(fd.gps_lon   || 0),
+          alt_m:  +(fd.gps_alt_m || 0),
+          spd_ms: +(fd.gps_speed_ms || 0),
+          sats:   +(fd.gps_sats  || 0),
+          gps_ok: fd.gps_valid === 1 || fd.gps_valid === '1' ? 1 : 0,
+          m1:     +(fd.m1_PWM    || 0),
+          m3:     +(fd.m3_PWM    || 0),
+          vbat:   +(fd.vbat_V    || 0),
+          Vfwd:   ef ? +ef.Vfwd.toFixed(3) : 0,
+          Vlat:   ef ? +ef.Vlat.toFixed(3) : 0,
+          Vz:     ef ? +ef.Vz.toFixed(3)   : 0,
+          Vh:     ef ? +ef.Vh.toFixed(3)   : 0,
+        });
+      }
+
+      var pack = {
+        version:     1,
+        exported_at: new Date().toISOString(),
+        lid:         LID,
+        meta: {
+          duration_s:   Math.round(dur * 10) / 10,
+          max_alt_m:    Math.round(maxAlt * 10) / 10,
+          max_speed_ms: Math.round(maxSpd * 10) / 10,
+          armed_s:      Math.round(armedUs / 1e4) / 100,
+          total_dist_m: Math.round(totalDist),
+          vbat_min_v:   vbatMin === Infinity ? null : Math.round(vbatMin * 100) / 100,
+          vbat_max_v:   vbatMax < 0 ? null : Math.round(vbatMax * 100) / 100,
+        },
+        frames: frames,
       };
-      frames.push(fr);
-    }
 
-    var pack = {
-      version:     1,
-      exported_at: new Date().toISOString(),
-      lid:         LID,
-      meta: {
-        duration_s:   Math.round(dur * 10) / 10,
-        max_alt_m:    Math.round(maxAlt * 10) / 10,
-        max_speed_ms: Math.round(maxSpd * 10) / 10,
-        armed_s:      Math.round(armedUs / 1e4) / 100,
-        total_dist_m: Math.round(totalDist),
-        vbat_min_v:   vbatMin === Infinity ? null : Math.round(vbatMin * 100) / 100,
-        vbat_max_v:   vbatMax < 0 ? null : Math.round(vbatMax * 100) / 100,
-      },
-      frames: frames,
-    };
+      fetch('/api/sessions/' + LID + '/pack', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pack),
+      })
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(d) {
+        if (typeof showToast === 'function') showToast('Flight pack exporté — ' + d.frames + ' frames', 'ok');
+        resolve(d);
+      })
+      .catch(function(err) {
+        reject(err);
+      });
+    });
+  }
 
-    fetch('/api/sessions/' + LID + '/pack', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pack),
-    })
-    .then(function(r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d) {
-      if (btn) {
-        btn.classList.remove('busy'); btn.classList.add('ok');
-        btn.textContent = '✓ Exporté (' + d.frames + ' frames)';
-        setTimeout(function() {
-          btn.classList.remove('ok'); btn.textContent = '⬆ Export Studio';
-        }, 3000);
-      }
-      if (typeof showToast === 'function') showToast('Flight pack exporté — ' + d.frames + ' frames', 'ok');
-    })
-    .catch(function(err) {
-      if (btn) { btn.classList.remove('busy'); btn.textContent = '⬆ Export Studio'; }
+  function dsExportPack() {
+    dsExportPackAsync().catch(function(err) {
       if (typeof showToast === 'function') showToast('Erreur export : ' + err.message, 'warn');
     });
   }
