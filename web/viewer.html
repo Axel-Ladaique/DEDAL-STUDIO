@@ -1311,7 +1311,7 @@ canvas.chart { width: 100%; height: 100%; }
 
 <!-- HEADER -->
 <header>
-  <div class="logo">
+  <div class="logo" onclick="location.href='/'" style="cursor:pointer;" title="Retour aux sessions">
     <div class="logo-icon" style="border-color:var(--accent);box-shadow:var(--glow-g);">✈</div>
     <div>
       <h1 style="font-family:var(--font-hud);color:var(--accent);letter-spacing:4px;">DEDAL</h1>
@@ -1319,7 +1319,7 @@ canvas.chart { width: 100%; height: 100%; }
     </div>
   </div>
   <div class="header-stats">
-    <div class="stat-pill" style="background:rgba(0,212,255,0.08);border-color:rgba(0,212,255,0.3);">CONFIG<span id="hdr-config-name" style="color:var(--accent);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span></div>
+    <div class="stat-pill" onclick="location.href='/'" style="background:rgba(0,212,255,0.08);border-color:rgba(0,212,255,0.3);cursor:pointer;" title="Retour aux sessions">CONFIG<span id="hdr-config-name" style="color:var(--accent);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span></div>
     <div class="stat-pill">DURÉE<span id="hdr-duration">--:--</span></div>
     <div class="stat-pill" title="Temps armé total">ARMÉ<span id="hdr-armed">-- s</span></div>
     <div class="stat-pill">ALT MAX<span id="hdr-alt">-- m</span></div>
@@ -11640,16 +11640,17 @@ window.applyPanelTemplate = applyPanelTemplate;
 #ds-export-btn.ok   { border-color: #39ff14; color: #39ff14; }
 
 #ds-hud-btn {
-  background: transparent; border: 1px solid #1a2d45;
-  color: #4a6070; font-family: 'Share Tech Mono', monospace;
-  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-  padding: 5px 12px; border-radius: 4px; cursor: pointer;
-  transition: all .15s; margin-left: 6px; white-space: nowrap;
+  background: var(--trans); border: 1px solid var(--border);
+  color: var(--accent); font-family: var(--font-ui); font-weight: 600;
+  font-size: 10px; letter-spacing: 1px;
+  padding: 4px 10px; border-radius: 4px; cursor: pointer;
+  transition: all .2s; margin-left: 8px; white-space: nowrap;
+  opacity: 0.7;
 }
-#ds-hud-btn:hover { border-color: #ffcc00; color: #ffcc00; }
-#ds-hud-btn.busy { opacity: 0.4; cursor: wait; }
-#ds-hud-btn.ok   { border-color: #39ff14; color: #39ff14; }
-#ds-hud-btn.err  { border-color: #ff4d4d; color: #ff4d4d; }
+#ds-hud-btn:hover { background: rgba(0,212,255,0.15); border-color: var(--accent); opacity: 1; }
+#ds-hud-btn.busy { opacity: 0.35; cursor: wait; }
+#ds-hud-btn.ok   { border-color: #39ff14; color: #39ff14; opacity: 1; }
+#ds-hud-btn.err  { border-color: #ff4d4d; color: #ff4d4d; opacity: 1; }
 
 #ds-hud-progress {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 1600;
@@ -11859,8 +11860,6 @@ window.applyPanelTemplate = applyPanelTemplate;
   backBtn.textContent = '← Sessions';
   backBtn.onclick = function() { location.href = '/'; };
   var hdrStats = document.querySelector('.header-stats');
-  if (hdrStats) hdrStats.appendChild(backBtn);
-  else document.body.appendChild(backBtn);
 
   // ── HUD modal ─────────────────────────────────────────────────────────
   var hudModalEl = document.createElement('div');
@@ -11986,6 +11985,10 @@ window.applyPanelTemplate = applyPanelTemplate;
     if (hdrStats) hdrStats.appendChild(hudBtn);
     else document.body.appendChild(hudBtn);
 
+    // Sessions button appended after HUD button (rightmost)
+    if (hdrStats) hdrStats.appendChild(backBtn);
+    else document.body.appendChild(backBtn);
+
     var progEl = document.createElement('div');
     progEl.id = 'ds-hud-progress';
     progEl.innerHTML =
@@ -11993,6 +11996,10 @@ window.applyPanelTemplate = applyPanelTemplate;
       '<div id="ds-hud-bar-wrap"><div id="ds-hud-bar"></div></div>' +
       '<span id="ds-hud-prog-pct">0%</span>';
     document.body.appendChild(progEl);
+  } else {
+    // No LID: still inject back button
+    if (hdrStats) hdrStats.appendChild(backBtn);
+    else document.body.appendChild(backBtn);
   }
 
   // ── Auto-load CSV from session ─────────────────────────────────────────
