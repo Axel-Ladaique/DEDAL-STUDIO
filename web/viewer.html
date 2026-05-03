@@ -5530,7 +5530,6 @@ function openCSVExportModal() {
   if (!_csvModal) _csvModal = _buildCSVModal();
 
   // Populate columns
-  var cells      = +(flightConfig['CELLS'] || 6);
   var baseKeys   = Object.keys(flightData[0]);
   var extraKeys  = ['time_s', 'vbat_soc_pct'].concat(activeMotors.map(function(m) { return 'm' + m + '_pct'; }));
   var allKeys    = baseKeys.concat(extraKeys);
