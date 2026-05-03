@@ -287,3 +287,20 @@ def test_reload_meta_with_meta_file(client, flights_root: Path) -> None:
 def test_reload_meta_not_found(client) -> None:
     r = client.post(f"/api/sessions/DEDAL-20990101-999/reload-meta")
     assert r.status_code == 404
+
+
+# ── pick-folder (pywebview not available in test env) ──────────────────────
+
+def test_pick_folder_available_no_pywebview(client: TestClient) -> None:
+    """When pywebview has no open windows, available is False."""
+    r = client.get("/api/pick-folder/available")
+    assert r.status_code == 200
+    data = r.json()
+    assert "available" in data
+    assert data["available"] is False
+
+
+def test_pick_folder_no_window(client: TestClient) -> None:
+    """When no pywebview window is open, returns 503."""
+    r = client.get("/api/pick-folder")
+    assert r.status_code == 503

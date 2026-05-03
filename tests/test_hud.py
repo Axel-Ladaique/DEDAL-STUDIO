@@ -72,6 +72,31 @@ def test_load_pack_empty(tmp_path: Path) -> None:
     assert load_pack(p) == []
 
 
+def test_load_pack_null_fields(tmp_path: Path) -> None:
+    """Null values (JSON null = None) must not raise TypeError in load_pack."""
+    pack = {
+        "version": 1,
+        "frames": [{
+            "t_us": 1000,
+            "armed": None, "fm": None,
+            "roll": None, "pitch": None, "yaw": None,
+            "lat": None, "lon": None, "alt_m": None,
+            "spd_ms": None, "sats": None, "gps_ok": None,
+            "m1": None, "m3": None, "vbat": None,
+            "Vfwd": None, "Vlat": None, "Vz": None, "Vh": None,
+        }],
+    }
+    p = tmp_path / "pack_nulls.json"
+    p.write_text(json.dumps(pack), encoding="utf-8")
+    frames = load_pack(p)
+    assert len(frames) == 1
+    assert frames[0].timestamp_us == 1000
+    assert frames[0].roll_deg == 0.0
+    assert frames[0].pitch_deg == 0.0
+    assert frames[0].flight_mode == 0
+    assert frames[0].accel_z == 1.0  # default non-nul
+
+
 # ── generate_hud ──────────────────────────────────────────────────────────
 
 

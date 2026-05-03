@@ -15,32 +15,40 @@ import cv2
 from .renderer import FlightFrame, ProfessionalHUD, build_gps_map
 
 
+def _f(v, d: float = 0.0) -> float:
+    return float(v) if v is not None else d
+
+
+def _i(v, d: int = 0) -> int:
+    return int(v) if v is not None else d
+
+
 def load_pack(pack_path: Path) -> list[FlightFrame]:
     """Deserialise flight_pack.json → list[FlightFrame]."""
     data = json.loads(pack_path.read_text(encoding="utf-8"))
     frames: list[FlightFrame] = []
     for fr in data.get("frames", []):
         frames.append(FlightFrame(
-            timestamp_us = int(fr.get("t_us", 0)),
-            armed        = int(fr.get("armed", 0)),
-            flight_mode  = int(fr.get("fm", 0)),
-            pitch_deg    = float(fr.get("pitch", 0.0)),
-            roll_deg     = float(fr.get("roll",  0.0)),
-            yaw_deg      = float(fr.get("yaw",   0.0)),
-            gps_alt_m    = float(fr.get("alt_m",  0.0)),
-            gps_speed_ms = float(fr.get("spd_ms", 0.0)),
-            gps_lat      = float(fr.get("lat",    0.0)),
-            gps_lon      = float(fr.get("lon",    0.0)),
-            gps_sats     = int(fr.get("sats",   0)),
-            gps_valid    = int(fr.get("gps_ok", 0)),
-            m1_pwm       = int(fr.get("m1",     0)),
-            m3_pwm       = int(fr.get("m3",     0)),
-            vbat_v       = float(fr.get("vbat",  0.0)),
-            accel_z      = float(fr.get("accel_z", 1.0)),
-            Vfwd         = float(fr.get("Vfwd",  0.0)),
-            Vlat         = float(fr.get("Vlat",  0.0)),
-            Vz           = float(fr.get("Vz",    0.0)),
-            Vh           = float(fr.get("Vh",    0.0)),
+            timestamp_us = _i(fr.get("t_us")),
+            armed        = _i(fr.get("armed")),
+            flight_mode  = _i(fr.get("fm")),
+            pitch_deg    = _f(fr.get("pitch")),
+            roll_deg     = _f(fr.get("roll")),
+            yaw_deg      = _f(fr.get("yaw")),
+            gps_alt_m    = _f(fr.get("alt_m")),
+            gps_speed_ms = _f(fr.get("spd_ms")),
+            gps_lat      = _f(fr.get("lat")),
+            gps_lon      = _f(fr.get("lon")),
+            gps_sats     = _i(fr.get("sats")),
+            gps_valid    = _i(fr.get("gps_ok")),
+            m1_pwm       = _i(fr.get("m1")),
+            m3_pwm       = _i(fr.get("m3")),
+            vbat_v       = _f(fr.get("vbat")),
+            accel_z      = _f(fr.get("accel_z"), 1.0),
+            Vfwd         = _f(fr.get("Vfwd")),
+            Vlat         = _f(fr.get("Vlat")),
+            Vz           = _f(fr.get("Vz")),
+            Vh           = _f(fr.get("Vh")),
         ))
     return frames
 

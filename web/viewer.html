@@ -446,44 +446,59 @@ body::before {
 }
 .g-help-desc { color:var(--dim2); font-size:9px; }
 
-/* ── ANALYSE TAB ── */
-#analyse-selector {
-  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
-  padding:6px 12px; background:var(--surface); border-bottom:1px solid var(--border);
-  flex-shrink:0;
+/* ─── ANALYSE TAB REDESIGN ─── */
+#an-layout {
+  display: flex; flex: 1; min-height: 0; overflow: hidden;
 }
-.an-slot-lbl { font-family:var(--font-hud); font-size:7px; letter-spacing:2px; }
-.an-slot-a { color:var(--accent); }
-.an-slot-b { color:var(--accent3); }
-.an-chip {
-  padding:3px 10px; border-radius:12px;
-  font-family:var(--font-hud); font-size:7px; letter-spacing:1px;
-  cursor:pointer; border:1px solid var(--border);
-  background:var(--surface2); color:var(--dim2);
-  transition:all .15s; white-space:nowrap;
+#an-sidebar {
+  width: 175px; flex-shrink: 0;
+  background: var(--surface2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; padding: 4px 0; overflow-y: auto;
 }
-.an-chip:hover { border-color:var(--border2); color:var(--text); }
-.an-chip.an-sel-a { background:rgba(0,255,157,0.1); border-color:rgba(0,255,157,0.3); color:var(--accent); }
-.an-chip.an-sel-b { background:rgba(0,212,255,0.1); border-color:rgba(0,212,255,0.3); color:var(--accent3); }
-.an-slot-sep { width:1px; height:18px; background:var(--border); margin:0 4px; }
-#analyse-panels { flex:1; display:flex; gap:6px; padding:8px; overflow:hidden; }
-.an-panel-wrap {
-  flex:1; background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
-  display:flex; flex-direction:column; overflow:hidden; min-width:0;
+.an-sidebar-item {
+  padding: 7px 10px; display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer; font-family: var(--font-mono); font-size: 11px; color: var(--dim2);
+  transition: background .12s, color .12s; border-left: 2px solid transparent;
+  user-select: none;
 }
-.an-panel-header {
-  padding:5px 10px; border-bottom:1px solid var(--border);
-  display:flex; align-items:center; gap:8px; flex-shrink:0;
+.an-sidebar-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+.an-sidebar-item.active {
+  background: rgba(0,212,255,0.08); border-left-color: var(--accent); color: var(--accent);
 }
-.an-panel-title { font-family:var(--font-hud); font-size:9px; letter-spacing:2px; }
-.an-panel-title.a { color:var(--accent); }
-.an-panel-title.b { color:var(--accent3); }
-.an-panel-body { flex:1; overflow:auto; }
-.an-empty {
-  flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;
-  gap:8px; color:var(--dim); border:1px dashed var(--border); border-radius:var(--r);
-  font-family:var(--font-mono); font-size:11px;
+.an-badge {
+  font-family: var(--font-mono); font-size: 9px; border-radius: 3px; padding: 1px 5px; display: none;
 }
+.an-badge.ok   { display: inline; background: rgba(57,255,20,0.12);  color: #39ff14; }
+.an-badge.warn { display: inline; background: rgba(255,204,0,0.15);  color: #ffcc00; }
+.an-badge.crit { display: inline; background: rgba(255,107,53,0.12); color: #ff6b35; }
+#an-content {
+  flex: 1; min-width: 0; overflow: hidden; display: flex; flex-direction: column;
+}
+.an-panel { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+.an-panel.active { display: flex; }
+.an-panel-hdr {
+  padding: 6px 12px; border-bottom: 1px solid var(--border); background: var(--surface2);
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.an-panel-ttl { font-family: var(--font-hud); font-size: 10px; letter-spacing: 2px; color: var(--accent); }
+.an-panel-body { flex: 1; overflow: auto; }
+.an-map-btn {
+  margin-left: auto; background: rgba(0,212,255,0.08); color: var(--accent);
+  border: 1px solid var(--border); border-radius: 3px; padding: 2px 8px;
+  font-size: 9px; cursor: pointer; font-family: var(--font-mono);
+}
+.an-map-btn:hover  { background: rgba(0,212,255,0.15); }
+.an-map-btn.active { background: rgba(0,212,255,0.2); border-color: var(--accent); }
+#an-map-panel {
+  width: 220px; flex-shrink: 0; border-left: 1px solid var(--border);
+  background: var(--surface2); display: flex; flex-direction: column;
+}
+.an-map-hdr {
+  padding: 6px 10px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 9px; color: var(--dim); font-family: var(--font-mono); flex-shrink: 0;
+}
+#an-map-div { flex: 1; min-height: 0; }
 
 /* ---- HEADER ---- */
 header {
@@ -1296,7 +1311,7 @@ canvas.chart { width: 100%; height: 100%; }
 
 <!-- HEADER -->
 <header>
-  <div class="logo">
+  <div class="logo" onclick="location.href='/'" style="cursor:pointer;" title="Retour aux sessions">
     <div class="logo-icon" style="border-color:var(--accent);box-shadow:var(--glow-g);">✈</div>
     <div>
       <h1 style="font-family:var(--font-hud);color:var(--accent);letter-spacing:4px;">DEDAL</h1>
@@ -1304,17 +1319,14 @@ canvas.chart { width: 100%; height: 100%; }
     </div>
   </div>
   <div class="header-stats">
-    <div class="stat-pill" style="background:rgba(0,212,255,0.08);border-color:rgba(0,212,255,0.3);">CONFIG<span id="hdr-config-name" style="color:var(--accent);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span></div>
+    <div class="stat-pill" onclick="location.href='/'" style="background:rgba(0,212,255,0.08);border-color:rgba(0,212,255,0.3);cursor:pointer;" title="Retour aux sessions">CONFIG<span id="hdr-config-name" style="color:var(--accent);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span></div>
     <div class="stat-pill">DURÉE<span id="hdr-duration">--:--</span></div>
     <div class="stat-pill" title="Temps armé total">ARMÉ<span id="hdr-armed">-- s</span></div>
     <div class="stat-pill">ALT MAX<span id="hdr-alt">-- m</span></div>
     <div class="stat-pill">VIT. MAX<span id="hdr-speed">-- m/s</span></div>
     <div class="stat-pill" title="Distance GPS totale">DIST<span id="hdr-dist">-- km</span></div>
     <div class="stat-pill" title="Tension batterie minimale">VBAT MIN<span id="hdr-vbat">-- V</span></div>
-    <div style="display:flex;gap:6px;margin-left:8px;">
-      <button class="btn" onclick="exportCSV()" title="Télécharger les données filtrées" style="padding:4px 10px;font-size:10px;opacity:0.7;" id="btn-export-csv">⬇ CSV</button>
-      <button class="btn" onclick="exportPIDReport()" title="Rapport PID" style="padding:4px 10px;font-size:10px;opacity:0.7;" id="btn-export-pid">⬇ PID</button>
-    </div>
+      <button class="btn" onclick="openCSVExportModal()" title="Exporter les données filtrées" style="padding:4px 10px;font-size:10px;opacity:0.7;margin-left:8px;" id="btn-export-csv">⬇ Export CSV</button>
   </div>
 </header>
 
@@ -1349,7 +1361,6 @@ canvas.chart { width: 100%; height: 100%; }
     <button class="vf-btn active" id="vf-all" onclick="setViewFilter('all')">📼 TOUT L'ENREGISTREMENT</button>
     <button class="vf-btn" id="vf-flight" onclick="setViewFilter('flight')">✈ VOL ARMÉ (±10s)</button>
     <div id="session-buttons" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
-    <button class="telem-config-toggle" onclick="toggleTelemConfig()">⚙ CONFIG</button>
   </div>
 
   <!-- STICKY TIMELINE -->
@@ -1789,29 +1800,12 @@ canvas.chart { width: 100%; height: 100%; }
 
   </div><!-- /telem-grid -->
 
-  <!-- Config overlay -->
-  <div id="telem-config-overlay">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;position:sticky;top:0;background:rgba(5,8,16,0.97);z-index:1;padding-bottom:8px;border-bottom:1px solid var(--border);">
-      <span style="font-family:var(--font-hud);font-size:10px;letter-spacing:2px;color:var(--accent);">⚙ CONFIGURATION</span>
-      <button class="telem-config-toggle" onclick="toggleTelemConfig()">✕ FERMER</button>
-    </div>
-    <!-- Hidden legacy motor/servo elements for JS compat -->
-    <div style="display:none;">
-      <div id="motors-grid"></div>
-      <canvas id="motor-radar" width="1" height="1"></canvas>
-      <div id="motor-balance-score"></div>
-      <div id="servos-grid"></div>
-    </div>
-    <!-- CONFIGURATION EMBARQUÉE -->
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">⚙️ CONFIGURATION EMBARQUÉE</span>
-        <span class="panel-badge" id="config-panel-badge" style="background:rgba(0,212,255,0.08);color:var(--accent);border-color:rgba(0,212,255,0.25);">— pas de config —</span>
-      </div>
-      <div class="panel-body" id="config-panel-body">
-        <span style="color:var(--dim);font-family:var(--font-mono);font-size:12px;">— charger un fichier LOG avec en-tête de configuration —</span>
-      </div>
-    </div>
+  <!-- Hidden legacy motor/servo elements for JS compat -->
+  <div style="display:none;">
+    <div id="motors-grid"></div>
+    <canvas id="motor-radar" width="1" height="1"></canvas>
+    <div id="motor-balance-score"></div>
+    <div id="servos-grid"></div>
   </div>
 
 </div><!-- /pane-telem -->
@@ -1888,465 +1882,484 @@ canvas.chart { width: 100%; height: 100%; }
 
 <!-- ══ TAB ANALYSE ══ -->
 <div class="tab-pane" id="pane-analyse">
+  <div id="an-layout">
 
-  <!-- Sélecteur chips -->
-  <div id="analyse-selector">
-    <span class="an-slot-lbl an-slot-a">A</span>
-    <div id="an-chips-a" style="display:flex;gap:4px;">
-      <span class="an-chip an-sel-a" data-slot="a" data-val="pid"    onclick="selectAnalysis('a','pid')">📐 PID</span>
-      <span class="an-chip"          data-slot="a" data-val="fft"    onclick="selectAnalysis('a','fft')">〰 VIBRATIONS</span>
-      <span class="an-chip"          data-slot="a" data-val="ekf"    onclick="selectAnalysis('a','ekf')">🧭 EKF</span>
-      <span class="an-chip"          data-slot="a" data-val="traj"   onclick="selectAnalysis('a','traj')">🌐 TRAJECTOIRE</span>
-      <span class="an-chip"          data-slot="a" data-val="energy" onclick="selectAnalysis('a','energy')">⚡ ÉNERGIE</span>
-      <span class="an-chip"          data-slot="a" data-val="motor"  onclick="selectAnalysis('a','motor')">🔧 MOTEUR</span>
-    </div>
-    <div class="an-slot-sep"></div>
-    <span class="an-slot-lbl an-slot-b">B</span>
-    <div id="an-chips-b" style="display:flex;gap:4px;">
-      <span class="an-chip"          data-slot="b" data-val="pid"    onclick="selectAnalysis('b','pid')">📐 PID</span>
-      <span class="an-chip an-sel-b" data-slot="b" data-val="fft"    onclick="selectAnalysis('b','fft')">〰 VIBRATIONS</span>
-      <span class="an-chip"          data-slot="b" data-val="ekf"    onclick="selectAnalysis('b','ekf')">🧭 EKF</span>
-      <span class="an-chip"          data-slot="b" data-val="traj"   onclick="selectAnalysis('b','traj')">🌐 TRAJECTOIRE</span>
-      <span class="an-chip"          data-slot="b" data-val="energy" onclick="selectAnalysis('b','energy')">⚡ ÉNERGIE</span>
-      <span class="an-chip"          data-slot="b" data-val="motor"  onclick="selectAnalysis('b','motor')">🔧 MOTEUR</span>
-    </div>
-  </div>
-
-  <!-- Source panels (hidden, used as cloning source) -->
-  <div id="an-sources" style="display:none;">
-
-    <!-- PID ANALYSE -->
-    <div id="an-src-pid">
-  <div style="padding: 0 20px 20px;">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">🎯 ANALYSE PID — CONSIGNE vs RÉPONSE</span>
-        <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">Cliquer sur le graphique pour naviguer</span>
+    <!-- ── Sidebar ── -->
+    <div id="an-sidebar">
+      <div class="an-sidebar-item" data-key="energy" onclick="showAnalysis('energy')">
+        <span>⚡ ÉNERGIE</span><span class="an-badge" id="an-badge-energy"></span>
       </div>
-      <div class="panel-body" style="padding:10px 12px;">
-        <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:stretch;">
-
-          <!-- COLONNE GAUCHE : graphique unique -->
-          <div style="display:flex;flex-direction:column;">
-            <!-- Légende -->
-            <div style="display:flex;gap:14px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
-              <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
-                <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#00d4ff" stroke-width="2" stroke-dasharray="4 3"/></svg>Consigne</span>
-              <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
-                <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#fff" stroke-width="2"/></svg>Mesure IMU</span>
-              <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
-                <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="2 2"/></svg>Erreur</span>
-              <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
-                <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#39ff14" stroke-width="2"/></svg>Sortie PID →</span>
-              <span style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.2);margin-left:auto;">Clic=seek · Drag=pan · Shift+Drag=zoom · Ctrl+Scroll=zoom · DblClic=reset</span>
-            </div>
-
-            <!-- Canvas unique — flex-grow fills remaining height -->
-            <div style="position:relative;flex:1;min-height:200px;background:#030810;border:1px solid var(--border);border-radius:4px;">
-              <canvas id="pid-canvas-main" style="width:100%;height:100%;display:block;cursor:crosshair;"></canvas>
-              <div id="pid-cursor-main" style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,0,0.75);pointer-events:none;display:none;"></div>
-            </div>
-            <!-- Valeurs courantes -->
-            <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:9px;margin-top:3px;padding:0 3px;">
-              <span id="pid-main-cur" style="color:var(--dim);">des:--  imu:--  err:--  pid:--</span>
-              <span style="color:rgba(57,255,20,0.45);">axe PID → droite</span>
-            </div>
-          </div>
-
-          <!-- COLONNE DROITE : contrôles + conseiller -->
-          <div style="display:flex;flex-direction:column;gap:12px;">
-
-            <!-- Sélecteur d'axe -->
-            <div>
-              <div class="data-label" style="margin-bottom:6px;">AXLE</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">
-                <button class="map-opt-btn active" id="pid-tab-roll"  onclick="setPIDTab('roll')"  style="font-size:11px;padding:5px 0;text-align:center;">🔵 ROLL</button>
-                <button class="map-opt-btn"        id="pid-tab-pitch" onclick="setPIDTab('pitch')" style="font-size:11px;padding:5px 0;text-align:center;">🟢 PITCH</button>
-                <button class="map-opt-btn"        id="pid-tab-yaw"   onclick="setPIDTab('yaw')"   style="font-size:11px;padding:5px 0;text-align:center;">🟡 YAW</button>
-              </div>
-            </div>
-
-            <!-- Fenêtre temporelle -->
-            <div>
-              <div class="data-label" style="margin-bottom:6px;">FENÊTRE</div>
-              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
-                <button class="map-opt-btn" id="pidw-all" onclick="setPIDWindow('all')"  style="font-size:10px;padding:4px 0;">TOUT</button>
-                <button class="map-opt-btn" id="pidw-5"   onclick="setPIDWindow('5')"    style="font-size:10px;padding:4px 0;">±5s</button>
-                <button class="map-opt-btn active" id="pidw-10"  onclick="setPIDWindow('10')"   style="font-size:10px;padding:4px 0;">±10s</button>
-                <button class="map-opt-btn" id="pidw-30"  onclick="setPIDWindow('30')"   style="font-size:10px;padding:4px 0;">±30s</button>
-              </div>
-            </div>
-
-            <!-- Couches visibles -->
-            <div>
-              <div class="data-label" style="margin-bottom:6px;">COUCHES</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-                <button class="map-opt-btn active" id="pidl-des"  onclick="togglePIDLayer('des')"  style="font-size:10px;padding:4px 6px;">Consigne</button>
-                <button class="map-opt-btn active" id="pidl-imu"  onclick="togglePIDLayer('imu')"  style="font-size:10px;padding:4px 6px;">Mesure</button>
-                <button class="map-opt-btn active" id="pidl-err"  onclick="togglePIDLayer('err')"  style="font-size:10px;padding:4px 6px;">Erreur</button>
-                <button class="map-opt-btn active" id="pidl-pid"  onclick="togglePIDLayer('pid')"  style="font-size:10px;padding:4px 6px;">PID out</button>
-              </div>
-            </div>
-
-            <!-- Echelle Y -->
-            <div>
-              <div class="data-label" style="margin-bottom:6px;">ÉCHELLE Y</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-                <button class="map-opt-btn active" id="pidy-fixed" onclick="setPIDYScale('fixed')" style="font-size:10px;padding:4px 6px;" title="Axe Y fixé sur l'amplitude max du vol entier (symétrique)">FIXE</button>
-                <button class="map-opt-btn"        id="pidy-auto"  onclick="setPIDYScale('auto')"  style="font-size:10px;padding:4px 6px;" title="Axe Y s'adapte à la zone visible après pan/zoom">AUTO</button>
-              </div>
-            </div>
-
-            <!-- Métriques calculées -->
-            <div>
-              <div class="data-label" style="margin-bottom:6px;">MÉTRIQUES</div>
-              <div id="pid-metrics" style="font-family:var(--font-mono);font-size:10px;display:flex;flex-direction:column;gap:3px;">
-                <span style="color:var(--dim);">— charger un vol —</span>
-              </div>
-            </div>
-
-            <!-- FFT spectre -->
-            <div>
-              <div class="data-label" style="margin-bottom:4px;">📊 SPECTRE FFT — ERREUR</div>
-              <div style="position:relative;height:80px;background:#030810;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
-                <canvas id="pid-fft-canvas" style="width:100%;height:100%;display:block;"></canvas>
-              </div>
-              <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-top:2px;" id="pid-fft-info">-- Hz dom.</div>
-            </div>
-
-            <!-- Réponse en échelon -->
-            <div>
-              <div class="data-label" style="margin-bottom:4px;">📈 RÉPONSE EN ÉCHELON</div>
-              <div id="pid-step-info" style="font-family:var(--font-mono);font-size:10px;display:flex;flex-direction:column;gap:3px;">
-                <span style="color:var(--dim);">— en attente d'un échelon —</span>
-              </div>
-            </div>
-
-            <!-- Séparateur -->
-            <div style="border-top:1px solid var(--border);"></div>
-
-            <!-- Conseiller PID -->
-            <div>
-              <div class="data-label" style="margin-bottom:6px;">💡 CONSEILLER PID</div>
-              <div id="pid-advisor" style="font-family:var(--font-mono);font-size:10px;display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;">
-                <span style="color:var(--dim);">— analyser un vol —</span>
-              </div>
-            </div>
-
-          </div><!-- /colonne droite -->
-        </div><!-- /grid -->
+      <div class="an-sidebar-item" data-key="pid" onclick="showAnalysis('pid')">
+        <span>📐 PID</span><span class="an-badge" id="an-badge-pid"></span>
+      </div>
+      <div class="an-sidebar-item" data-key="fft" onclick="showAnalysis('fft')">
+        <span>〰 VIBRATIONS</span><span class="an-badge" id="an-badge-fft"></span>
+      </div>
+      <div class="an-sidebar-item" data-key="ekf" onclick="showAnalysis('ekf')">
+        <span>🧭 EKF</span><span class="an-badge" id="an-badge-ekf"></span>
+      </div>
+      <div class="an-sidebar-item" data-key="traj" onclick="showAnalysis('traj')">
+        <span>🌐 TRAJECTOIRE</span><span class="an-badge" id="an-badge-traj"></span>
+      </div>
+      <div class="an-sidebar-item" data-key="motor" onclick="showAnalysis('motor')">
+        <span>🔧 MOTEUR</span><span class="an-badge" id="an-badge-motor"></span>
       </div>
     </div>
-  </div>
-    </div><!-- /an-src-pid -->
 
-    <div id="an-src-traj">
-    <!-- 3D GPS TRAJECTORY -->
-  <div style="padding: 0 20px 20px;">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">🌐 TRAJECTOIRE 3D GPS</span>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <span class="panel-badge" id="gps3d-badge">--</span>
-        </div>
-      </div>
-      <!-- Controls -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);">
-        <button class="map-opt-btn active" id="gps3d-autorot" onclick="toggleGPS3DAutoRot()">🔄 AUTO</button>
-        <span style="width:1px;background:var(--border);margin:0 2px;"></span>
-        <button class="map-opt-btn active" id="gps3d-mode" onclick="toggleGPS3DMode()" title="Colorier par mode vol">🎨 MODE VOL</button>
-        <button class="map-opt-btn active" id="gps3d-grid" onclick="toggleGPS3DGrid()" title="Afficher la grille">⊞ GRILLE</button>
-        <button class="map-opt-btn active" id="gps3d-home" onclick="toggleGPS3DHome()" title="Afficher le home">🏠 HOME</button>
-        <span style="width:1px;background:var(--border);margin:0 2px;"></span>
-        <button class="map-opt-btn" id="gps3d-top" onclick="setGPS3DView('top')">⬛ TOP</button>
-        <button class="map-opt-btn" id="gps3d-side" onclick="setGPS3DView('side')">⬛ CÔTÉ</button>
-        <button class="map-opt-btn active" id="gps3d-iso" onclick="setGPS3DView('iso')">◈ ISO</button>
-        <span style="margin-left:auto;display:flex;align-items:center;gap:8px;"><span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">SAT MIN</span><select id="gps3d-minsats" onchange="rebuildGPS3D()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 6px;border-radius:3px;font-family:var(--font-mono);font-size:10px;"><option value="0">0</option><option value="4" selected>4</option><option value="6">6</option><option value="8">8</option></select><span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">🖱 Drag · Ctrl+Scroll zoom</span></span>
-      </div>
-      <!-- Range selector -->
-      <div style="padding:6px 10px 4px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-          <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">PLAGE ·</span>
-          <span id="gps3d-range-info" style="font-family:var(--font-mono);font-size:9px;color:var(--accent);">tout le vol</span>
-          <button onclick="gps3dResetRange()" style="margin-left:auto;font-family:var(--font-mono);font-size:9px;padding:2px 8px;background:transparent;border:1px solid var(--border);color:var(--dim);border-radius:3px;cursor:pointer;">↺ RESET</button>
-        </div>
-        <div style="position:relative;background:#010306;border:1px solid var(--border);border-radius:3px;overflow:hidden;cursor:crosshair;" id="gps3d-selector-wrap">
-          <canvas id="gps3d-selector-canvas" style="display:block;width:100%;height:52px;"></canvas>
-          <div id="gps3d-selection-box" style="position:absolute;top:0;bottom:0;background:rgba(0,212,255,0.12);border-left:1px solid rgba(0,212,255,0.6);border-right:1px solid rgba(0,212,255,0.6);pointer-events:none;display:none;"></div>
-          <div id="gps3d-cursor-line" style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.35);pointer-events:none;display:none;"></div>
-        </div>
-      </div>
-      <div style="background:#020508;position:relative;">
-        <canvas id="gps3d-canvas"></canvas>
-        <div id="gps3d-scroll-hint" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(8,12,16,0.6);pointer-events:none;">
-          <span style="font-family:var(--font-mono);font-size:12px;color:var(--accent);background:rgba(0,0,0,0.8);border:1px solid var(--accent);padding:8px 16px;border-radius:4px;letter-spacing:1px;">🖱 CTRL + scroll pour zoomer</span>
-        </div>
-      </div>
-      <div style="padding:6px 12px;border-top:1px solid var(--border);display:flex;gap:20px;flex-wrap:wrap;">
-        <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-stats-dist">Dist: --</span>
-        <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-stats-alt">Alt max: --</span>
-        <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-stats-pts">Points: --</span>
-        <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-cursor-pos" style="color:var(--accent);">--</span>
-      </div>
-    </div>
-  </div>
-    </div><!-- /an-src-traj -->
+    <!-- ── Content area (6 panels, one active at a time) ── -->
+    <div id="an-content">
 
-    <div id="an-src-ekf">
-  <!-- EKF VELOCITY ESTIMATION -->
-  <div style="padding: 0 20px 20px;">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">🧭 VITESSES EKF  (IMU + GPS)</span>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <span class="panel-badge" id="ekf-badge">--</span>
-          <span id="ekf-sigma-badge">σ: --</span>
+      <!-- ⚡ ÉNERGIE -->
+      <div class="an-panel" id="an-panel-energy">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">⚡ ÉNERGIE & BATTERIE</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
         </div>
-      </div>
-      <!-- Curve selector -->
-      <div style="display:flex;gap:5px;flex-wrap:wrap;padding:7px 10px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);">
-        <span style="font-family:var(--font-mono);font-size:10px;color:var(--dim);align-self:center;margin-right:4px;">COURBE :</span>
-        <button class="ekf-curve-btn" id="ekf-btn-Vn"   onclick="setEKFCurve('Vn')"  >Vn (Nord)</button>
-        <button class="ekf-curve-btn" id="ekf-btn-Ve"   onclick="setEKFCurve('Ve')"  >Ve (Est)</button>
-        <button class="ekf-curve-btn" id="ekf-btn-Vz"   onclick="setEKFCurve('Vz')"  >Vz (↑)</button>
-        <button class="ekf-curve-btn active" id="ekf-btn-Vh" onclick="setEKFCurve('Vh')">|Vh|</button>
-        <button class="ekf-curve-btn" id="ekf-btn-Vfwd" onclick="setEKFCurve('Vfwd')">Vfwd</button>
-        <button class="ekf-curve-btn" id="ekf-btn-Vlat" onclick="setEKFCurve('Vlat')">Vlat</button>
-        <button class="ekf-curve-btn" id="ekf-btn-ALL"  onclick="setEKFCurve('ALL')" >TOUT</button>
-      </div>
-      <!-- Main chart -->
-      <div style="padding:10px;height:220px;position:relative;">
-        <canvas id="ekf-chart-canvas" style="width:100%;height:100%;"></canvas>
-      </div>
-      <!-- Bottom row: top-down + alt bar -->
-      <div style="display:flex;gap:10px;padding:0 10px 10px;border-top:1px solid var(--border);padding-top:10px;">
-        <!-- Top-down velocity view -->
-        <div style="flex:1;min-width:0;">
-          <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Plan horizontal  N/E</div>
-          <canvas id="ekf-topdown" width="260" height="200" style="width:100%;max-width:300px;display:block;"></canvas>
-        </div>
-        <!-- Altitude + Vz bar -->
-        <div style="width:110px;flex-shrink:0;">
-          <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Altitude & Vz</div>
-          <canvas id="ekf-altbar" width="110" height="200" style="width:110px;height:200px;display:block;"></canvas>
-        </div>
-        <!-- Live readouts -->
-        <div style="width:130px;flex-shrink:0;font-family:var(--font-mono);font-size:11px;display:flex;flex-direction:column;gap:6px;justify-content:center;">
-          <div style="color:var(--dim);font-size:9px;letter-spacing:1px;">VITESSES ACTUELLES</div>
-          <div>Vn <span id="ekf-live-Vn" style="color:#39ff14;float:right;">--</span></div>
-          <div>Ve <span id="ekf-live-Ve" style="color:#ff6b35;float:right;">--</span></div>
-          <div>Vz <span id="ekf-live-Vz" style="color:#ffcc00;float:right;">--</span></div>
-          <div style="border-top:1px solid var(--border);padding-top:6px;">
-          Vfwd <span id="ekf-live-Vfwd" style="color:#39ff14;float:right;">--</span></div>
-          <div>Vlat <span id="ekf-live-Vlat" style="color:#ff6b35;float:right;">--</span></div>
-          <div style="border-top:1px solid var(--border);padding-top:6px;">
-          |Vh| <span id="ekf-live-Vh" style="color:var(--accent);float:right;">--</span></div>
-          <div style="font-size:9px;color:var(--dim);margin-top:4px;">σVn <span id="ekf-live-sig" style="float:right;">--</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-    </div><!-- /an-src-ekf -->
-
-    <div id="an-src-energy">
-  <!-- ENERGY & BATTERY -->
-  <div style="padding: 0 20px 20px;">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">⚡ ÉNERGIE & BATTERIE</span>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <span class="panel-badge" id="bat-type-badge">LiPo/Li-Ion</span>
-          <select id="bat-type-select" onchange="rebuildEnergyPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
-            <option value="lipo">LiPo</option>
-            <option value="liion">Li-Ion</option>
-          </select>
-        </div>
-      </div>
-      <div class="panel-body" id="energy-panel-body">
-        <span style="color:var(--dim);font-family:var(--font-mono);font-size:12px;">— charger un vol —</span>
-      </div>
-    </div>
-  </div>
-    </div><!-- /an-src-energy -->
-
-    <div id="an-src-fft">
-  <!-- VIBRATION ANALYSIS -->
-  <div style="padding: 0 20px 20px;">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">📳 ANALYSE VIBRATIONS & BRUIT IMU</span>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <span class="panel-badge" id="vib-quality-badge">--</span>
-          <select id="vib-source" onchange="rebuildVibPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
-            <option value="acc">Accéléromètre</option>
-            <option value="gyro">Gyroscope</option>
-          </select>
-          <button class="btn" onclick="vibResetRange()" style="font-size:10px;padding:3px 10px;" title="Utiliser toute la plage armée">⟲ TOUT</button>
-          <button class="btn" onclick="openVibModal()" style="font-size:10px;padding:3px 10px;" title="Ouvrir en plein écran">⛶ EXPAND</button>
-        </div>
-      </div>
-      <!-- Range selector graph -->
-      <div style="padding:8px 14px 0;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
-          <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">
-            PLAGE — <span id="vib-range-info" style="color:var(--accent)">toute la période armée</span>
-            <span style="margin-left:8px;color:rgba(255,255,255,0.2);">Drag pour sélectionner · Dbl-clic reset</span>
-          </div>
-          <!-- Frequency filter -->
-          <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;">
-            <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">FILTRE FREQ.</span>
-            <select id="vib-filter-type" onchange="rebuildVibPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 6px;border-radius:3px;font-family:var(--font-mono);font-size:9px;">
-              <option value="none">Aucun</option>
-              <option value="lp">Passe-bas</option>
-              <option value="hp">Passe-haut</option>
-              <option value="bp">Passe-bande</option>
-              <option value="bs">Coupe-bande (notch)</option>
-            </select>
-            <input id="vib-filter-f1" type="number" min="1" max="499" value="50" step="1"
-              style="width:52px;background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 5px;border-radius:3px;font-family:var(--font-mono);font-size:9px;"
-              oninput="rebuildVibPanel()" title="Fréquence de coupure (Hz)">
-            <span id="vib-filter-f2-wrap" style="display:none;align-items:center;gap:4px;">
-              <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">–</span>
-              <input id="vib-filter-f2" type="number" min="1" max="499" value="100" step="1"
-                style="width:52px;background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 5px;border-radius:3px;font-family:var(--font-mono);font-size:9px;"
-                oninput="rebuildVibPanel()" title="Fréquence haute (Hz)">
-            </span>
-            <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">Hz</span>
-          </div>
-        </div>
-        <div style="position:relative;background:#020508;border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:crosshair;" id="vib-selector-wrap">
-          <canvas id="vib-selector-canvas" style="display:block;width:100%;height:60px;"></canvas>
-          <div id="vib-selection-box" style="position:absolute;top:0;bottom:0;background:rgba(0,212,255,0.15);border-left:1px solid rgba(0,212,255,0.7);border-right:1px solid rgba(0,212,255,0.7);pointer-events:none;display:none;"></div>
-          <div id="vib-cursor-line" style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.4);pointer-events:none;display:none;"></div>
-        </div>
-      </div>
-      <div class="panel-body" id="vib-panel-body">
-        <span style="color:var(--dim);font-family:var(--font-mono);font-size:12px;">— charger un vol —</span>
-      </div>
-    </div>
-  </div>
-    </div><!-- /an-src-fft -->
-
-    <div id="an-src-motor">
-  <!-- MOTOR PERFORMANCE -->
-  <div style="padding: 0 20px 20px;">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">🔧 PERFORMANCE MOTEUR — POINT DE FONCTIONNEMENT</span>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <select id="motor-config-select" onchange="rebuildMotorPerfPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
-            <option value="mn5008_340">2× T-Motor MN5008 KV340 + T-Props 18"×6,1"</option>
-          </select>
-          <span class="panel-badge" id="motor-perf-badge">--</span>
-        </div>
-      </div>
-      <div class="panel-body" style="padding:12px;">
-
-        <!-- Config info strip -->
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:rgba(0,0,0,0.2);border-radius:4px;border-left:3px solid var(--accent);">
-          <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">TYPE <span style="color:var(--accent)">MN5008 KV340</span></span>
-          <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">HÉLICE <span style="color:var(--accent)">T-Props 18"×6,1" CF</span></span>
-          <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">CONFIG <span style="color:var(--accent)">×2 moteurs</span></span>
-          <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">PLAGE <span style="color:var(--accent)">40%–100% throttle</span></span>
-          <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">T° MOTEUR <span style="color:var(--warn)">88°C @ 100%</span></span>
-        </div>
-
-        <!-- Current operating point -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr) repeat(4,1fr);gap:6px 10px;margin-bottom:14px;" id="motor-perf-values">
-          <!-- filled by JS -->
-        </div>
-
-        <!-- Chart area + controls -->
-        <div style="display:grid;grid-template-columns:1fr 220px;gap:14px;">
-          <!-- Canvas -->
-          <div>
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
-              <label style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">AXE X</label>
-              <select id="mperf-xaxis" onchange="redrawMotorPerfChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 7px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
-                <option value="throttle_pct">Throttle (%)</option>
-                <option value="power_w_total">Puissance totale (W)</option>
-                <option value="current_a_total">Courant total (A)</option>
-                <option value="rpm">RPM</option>
-                <option value="rps">Tours/sec (RPS)</option>
-                <option value="thrust_g_total">Poussée totale (g)</option>
-              </select>
-              <label style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">AXE Y</label>
-              <select id="mperf-yaxis" onchange="redrawMotorPerfChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 7px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
-                <option value="thrust_g_total">Poussée totale (g)</option>
-                <option value="current_a_total">Courant total (A)</option>
-                <option value="power_w_total">Puissance totale (W)</option>
-                <option value="efficiency_g_w">Efficacité (g/W)</option>
-                <option value="rpm">RPM</option>
-                <option value="rps">Tours/sec (RPS)</option>
-                <option value="torque_nm_total">Couple total (N·m)</option>
-                <option value="voltage_v">Tension (V)</option>
-              </select>
-              <label style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">2e Y</label>
-              <select id="mperf-y2axis" onchange="redrawMotorPerfChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 7px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
-                <option value="none">— aucun —</option>
-                <option value="efficiency_g_w">Efficacité (g/W)</option>
-                <option value="current_a_total">Courant total (A)</option>
-                <option value="power_w_total">Puissance totale (W)</option>
-                <option value="thrust_g_total">Poussée totale (g)</option>
-                <option value="torque_nm_total">Couple total (N·m)</option>
-                <option value="rpm">RPM</option>
-              </select>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">⚡ ÉNERGIE & BATTERIE</span>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="panel-badge" id="bat-type-badge">LiPo/Li-Ion</span>
+                <select id="bat-type-select" onchange="rebuildEnergyPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                  <option value="lipo">LiPo</option>
+                  <option value="liion">Li-Ion</option>
+                </select>
+              </div>
             </div>
-            <div style="position:relative;background:#030810;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
-              <canvas id="motor-perf-canvas" style="display:block;width:100%;height:260px;cursor:crosshair;"></canvas>
-              <div id="motor-perf-tooltip" style="position:absolute;display:none;background:rgba(8,12,16,0.95);border:1px solid var(--border);padding:6px 10px;border-radius:4px;font-family:var(--font-mono);font-size:10px;pointer-events:none;"></div>
-            </div>
-            <div style="font-family:var(--font-mono);font-size:8px;color:rgba(255,255,255,0.2);margin-top:3px;">● Point de fonctionnement actuel (interpolé)</div>
-          </div>
-
-          <!-- Right: table + add to explorer -->
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:2px;">TABLEAU × 2 MOTEURS</div>
-            <div id="motor-perf-table" style="font-family:var(--font-mono);font-size:9px;overflow-x:auto;"></div>
-            <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
-              <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px;">AJOUTER À L'EXPLORATEUR</div>
-              <div style="display:flex;flex-direction:column;gap:3px;" id="motor-explorer-chips"></div>
+            <div class="panel-body" id="energy-panel-body">
+              <span style="color:var(--dim);font-family:var(--font-mono);font-size:12px;">— charger un vol —</span>
             </div>
           </div>
         </div>
-
       </div>
-    </div>
-  </div>
-    </div><!-- /an-src-motor -->
 
-  </div><!-- /an-sources -->
+      <!-- 📐 PID -->
+      <div class="an-panel" id="an-panel-pid">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">📐 ANALYSE PID</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
+        </div>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">🎯 ANALYSE PID — CONSIGNE vs RÉPONSE</span>
+              <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">Cliquer sur le graphique pour naviguer</span>
+            </div>
+            <div class="panel-body" style="padding:10px 12px;">
+              <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:stretch;">
 
-  <!-- Panels display area -->
-  <div id="analyse-panels">
-    <div id="an-empty" class="an-empty" style="display:flex;">
-      <div style="font-size:24px;opacity:0.3">🔬</div>
-      Sélectionne une analyse ci-dessus
-    </div>
-    <!-- Panel A -->
-    <div class="an-panel-wrap" id="an-panel-a" style="display:none;">
-      <div class="an-panel-header">
-        <span class="an-panel-title a" id="an-title-a">—</span>
-        <span style="font-size:9px;color:var(--dim2);margin-left:auto;" id="an-meta-a"></span>
+                <!-- COLONNE GAUCHE : graphique + range selector -->
+                <div style="display:flex;flex-direction:column;">
+                  <!-- Légende -->
+                  <div style="display:flex;gap:14px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
+                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#00d4ff" stroke-width="2" stroke-dasharray="4 3"/></svg>Consigne</span>
+                    <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
+                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#fff" stroke-width="2"/></svg>Mesure IMU</span>
+                    <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
+                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="2 2"/></svg>Erreur</span>
+                    <span style="font-family:var(--font-mono);font-size:10px;display:flex;align-items:center;gap:4px;">
+                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#39ff14" stroke-width="2"/></svg>Sortie PID →</span>
+                    <span style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.2);margin-left:auto;">Clic=seek · Drag=pan · Shift+Drag=zoom · Ctrl+Scroll=zoom · DblClic=reset</span>
+                  </div>
+                  <!-- Canvas principal -->
+                  <div style="position:relative;flex:1;min-height:200px;background:#030810;border:1px solid var(--border);border-radius:4px;">
+                    <canvas id="pid-canvas-main" style="width:100%;height:100%;display:block;cursor:crosshair;"></canvas>
+                    <div id="pid-cursor-main" style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,0,0.75);pointer-events:none;display:none;"></div>
+                  </div>
+                  <!-- Valeurs courantes -->
+                  <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:9px;margin-top:3px;padding:0 3px;">
+                    <span id="pid-main-cur" style="color:var(--dim);">des:--  imu:--  err:--  pid:--</span>
+                    <span style="color:rgba(57,255,20,0.45);">axe PID → droite</span>
+                  </div>
+                  <!-- PID range selector -->
+                  <div style="position:relative;background:#020508;border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:crosshair;margin-top:6px;" id="pid-selector-wrap">
+                    <canvas id="pid-selector-canvas" style="display:block;width:100%;height:44px;"></canvas>
+                    <div id="pid-selection-box" style="position:absolute;top:0;bottom:0;background:rgba(0,212,255,0.12);border-left:1px solid rgba(0,212,255,0.6);border-right:1px solid rgba(0,212,255,0.6);pointer-events:none;display:none;"></div>
+                    <div id="pid-cursor-line-sel" style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.35);pointer-events:none;display:none;"></div>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px;">
+                    <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);" id="pid-range-info">tout le vol</span>
+                    <button onclick="pidResetRange()" style="background:transparent;border:1px solid var(--border);color:var(--dim);border-radius:3px;padding:1px 6px;cursor:pointer;font-family:var(--font-mono);font-size:9px;">↺ RESET</button>
+                  </div>
+                </div>
+
+                <!-- COLONNE DROITE : contrôles + conseiller -->
+                <div style="display:flex;flex-direction:column;gap:12px;">
+
+                  <!-- Sélecteur d'axe -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">AXLE</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">
+                      <button class="map-opt-btn active" id="pid-tab-roll"  onclick="setPIDTab('roll')"  style="font-size:11px;padding:5px 0;text-align:center;">🔵 ROLL</button>
+                      <button class="map-opt-btn"        id="pid-tab-pitch" onclick="setPIDTab('pitch')" style="font-size:11px;padding:5px 0;text-align:center;">🟢 PITCH</button>
+                      <button class="map-opt-btn"        id="pid-tab-yaw"   onclick="setPIDTab('yaw')"   style="font-size:11px;padding:5px 0;text-align:center;">🟡 YAW</button>
+                    </div>
+                  </div>
+
+                  <!-- Fenêtre temporelle -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">FENÊTRE</div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+                      <button class="map-opt-btn" id="pidw-all" onclick="setPIDWindow('all')"  style="font-size:10px;padding:4px 0;">TOUT</button>
+                      <button class="map-opt-btn" id="pidw-5"   onclick="setPIDWindow('5')"    style="font-size:10px;padding:4px 0;">±5s</button>
+                      <button class="map-opt-btn active" id="pidw-10"  onclick="setPIDWindow('10')"   style="font-size:10px;padding:4px 0;">±10s</button>
+                      <button class="map-opt-btn" id="pidw-30"  onclick="setPIDWindow('30')"   style="font-size:10px;padding:4px 0;">±30s</button>
+                    </div>
+                  </div>
+
+                  <!-- Couches visibles -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">COUCHES</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                      <button class="map-opt-btn active" id="pidl-des"  onclick="togglePIDLayer('des')"  style="font-size:10px;padding:4px 6px;">Consigne</button>
+                      <button class="map-opt-btn active" id="pidl-imu"  onclick="togglePIDLayer('imu')"  style="font-size:10px;padding:4px 6px;">Mesure</button>
+                      <button class="map-opt-btn active" id="pidl-err"  onclick="togglePIDLayer('err')"  style="font-size:10px;padding:4px 6px;">Erreur</button>
+                      <button class="map-opt-btn active" id="pidl-pid"  onclick="togglePIDLayer('pid')"  style="font-size:10px;padding:4px 6px;">PID out</button>
+                    </div>
+                  </div>
+
+                  <!-- Echelle Y -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">ÉCHELLE Y</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                      <button class="map-opt-btn active" id="pidy-fixed" onclick="setPIDYScale('fixed')" style="font-size:10px;padding:4px 6px;" title="Axe Y fixé sur l'amplitude max du vol entier (symétrique)">FIXE</button>
+                      <button class="map-opt-btn"        id="pidy-auto"  onclick="setPIDYScale('auto')"  style="font-size:10px;padding:4px 6px;" title="Axe Y s'adapte à la zone visible après pan/zoom">AUTO</button>
+                    </div>
+                  </div>
+
+                  <!-- Métriques calculées -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">MÉTRIQUES</div>
+                    <div id="pid-metrics" style="font-family:var(--font-mono);font-size:10px;display:flex;flex-direction:column;gap:3px;">
+                      <span style="color:var(--dim);">— charger un vol —</span>
+                    </div>
+                  </div>
+
+                  <!-- FFT spectre -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:4px;">📊 SPECTRE FFT — ERREUR</div>
+                    <div style="position:relative;height:80px;background:#030810;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
+                      <canvas id="pid-fft-canvas" style="width:100%;height:100%;display:block;"></canvas>
+                    </div>
+                    <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-top:2px;" id="pid-fft-info">-- Hz dom.</div>
+                  </div>
+
+                  <!-- Réponse en échelon -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:4px;">📈 RÉPONSE EN ÉCHELON</div>
+                    <div id="pid-step-info" style="font-family:var(--font-mono);font-size:10px;display:flex;flex-direction:column;gap:3px;">
+                      <span style="color:var(--dim);">— en attente d'un échelon —</span>
+                    </div>
+                  </div>
+
+                  <!-- Séparateur -->
+                  <div style="border-top:1px solid var(--border);"></div>
+
+                  <!-- Conseiller PID -->
+                  <div>
+                    <div class="data-label" style="margin-bottom:6px;">💡 CONSEILLER PID</div>
+                    <div id="pid-advisor" style="font-family:var(--font-mono);font-size:10px;display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;">
+                      <span style="color:var(--dim);">— analyser un vol —</span>
+                    </div>
+                  </div>
+
+                  <!-- Export rapport PID -->
+                  <button id="btn-export-pid" onclick="exportPIDReport()" class="ds-pid-export-btn">⬇ Rapport PID</button>
+
+                </div><!-- /colonne droite -->
+              </div><!-- /grid -->
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="an-panel-body" id="an-body-a"></div>
-    </div>
-    <!-- Panel B -->
-    <div class="an-panel-wrap" id="an-panel-b" style="display:none;">
-      <div class="an-panel-header">
-        <span class="an-panel-title b" id="an-title-b">—</span>
-        <span style="font-size:9px;color:var(--dim2);margin-left:auto;" id="an-meta-b"></span>
-      </div>
-      <div class="an-panel-body" id="an-body-b"></div>
-    </div>
-  </div>
 
+      <!-- 〰 VIBRATIONS -->
+      <div class="an-panel" id="an-panel-fft">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">〰 VIBRATIONS</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
+        </div>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">📳 ANALYSE VIBRATIONS & BRUIT IMU</span>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span class="panel-badge" id="vib-quality-badge">--</span>
+                <select id="vib-source" onchange="rebuildVibPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                  <option value="acc">Accéléromètre</option>
+                  <option value="gyro">Gyroscope</option>
+                </select>
+                <button class="btn" onclick="vibResetRange()" style="font-size:10px;padding:3px 10px;" title="Utiliser toute la plage armée">⟲ TOUT</button>
+                <button class="btn" onclick="openVibModal()" style="font-size:10px;padding:3px 10px;" title="Ouvrir en plein écran">⛶ EXPAND</button>
+              </div>
+            </div>
+            <!-- Range selector graph -->
+            <div style="padding:8px 14px 0;border-bottom:1px solid var(--border);">
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+                <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">
+                  PLAGE — <span id="vib-range-info" style="color:var(--accent)">toute la période armée</span>
+                  <span style="margin-left:8px;color:rgba(255,255,255,0.2);">Drag pour sélectionner · Dbl-clic reset</span>
+                </div>
+                <!-- Frequency filter -->
+                <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;">
+                  <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">FILTRE FREQ.</span>
+                  <select id="vib-filter-type" onchange="rebuildVibPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 6px;border-radius:3px;font-family:var(--font-mono);font-size:9px;">
+                    <option value="none">Aucun</option>
+                    <option value="lp">Passe-bas</option>
+                    <option value="hp">Passe-haut</option>
+                    <option value="bp">Passe-bande</option>
+                    <option value="bs">Coupe-bande (notch)</option>
+                  </select>
+                  <input id="vib-filter-f1" type="number" min="1" max="499" value="50" step="1"
+                    style="width:52px;background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 5px;border-radius:3px;font-family:var(--font-mono);font-size:9px;"
+                    oninput="rebuildVibPanel()" title="Fréquence de coupure (Hz)">
+                  <span id="vib-filter-f2-wrap" style="display:none;align-items:center;gap:4px;">
+                    <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">–</span>
+                    <input id="vib-filter-f2" type="number" min="1" max="499" value="100" step="1"
+                      style="width:52px;background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 5px;border-radius:3px;font-family:var(--font-mono);font-size:9px;"
+                      oninput="rebuildVibPanel()" title="Fréquence haute (Hz)">
+                  </span>
+                  <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">Hz</span>
+                </div>
+              </div>
+              <div style="position:relative;background:#020508;border:1px solid var(--border);border-radius:4px;overflow:hidden;cursor:crosshair;" id="vib-selector-wrap">
+                <canvas id="vib-selector-canvas" style="display:block;width:100%;height:60px;"></canvas>
+                <div id="vib-selection-box" style="position:absolute;top:0;bottom:0;background:rgba(0,212,255,0.15);border-left:1px solid rgba(0,212,255,0.7);border-right:1px solid rgba(0,212,255,0.7);pointer-events:none;display:none;"></div>
+                <div id="vib-cursor-line" style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.4);pointer-events:none;display:none;"></div>
+              </div>
+            </div>
+            <div class="panel-body" id="vib-panel-body">
+              <span style="color:var(--dim);font-family:var(--font-mono);font-size:12px;">— charger un vol —</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🧭 EKF -->
+      <div class="an-panel" id="an-panel-ekf">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">🧭 EKF</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
+        </div>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">🧭 VITESSES EKF  (IMU + GPS)</span>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span class="panel-badge" id="ekf-badge">--</span>
+                <span id="ekf-sigma-badge">σ: --</span>
+              </div>
+            </div>
+            <!-- Curve selector -->
+            <div style="display:flex;gap:5px;flex-wrap:wrap;padding:7px 10px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);">
+              <span style="font-family:var(--font-mono);font-size:10px;color:var(--dim);align-self:center;margin-right:4px;">COURBE :</span>
+              <button class="ekf-curve-btn" id="ekf-btn-Vn"   onclick="setEKFCurve('Vn')"  >Vn (Nord)</button>
+              <button class="ekf-curve-btn" id="ekf-btn-Ve"   onclick="setEKFCurve('Ve')"  >Ve (Est)</button>
+              <button class="ekf-curve-btn" id="ekf-btn-Vz"   onclick="setEKFCurve('Vz')"  >Vz (↑)</button>
+              <button class="ekf-curve-btn active" id="ekf-btn-Vh" onclick="setEKFCurve('Vh')">|Vh|</button>
+              <button class="ekf-curve-btn" id="ekf-btn-Vfwd" onclick="setEKFCurve('Vfwd')">Vfwd</button>
+              <button class="ekf-curve-btn" id="ekf-btn-Vlat" onclick="setEKFCurve('Vlat')">Vlat</button>
+              <button class="ekf-curve-btn" id="ekf-btn-ALL"  onclick="setEKFCurve('ALL')" >TOUT</button>
+            </div>
+            <!-- Main chart -->
+            <div style="padding:10px;height:220px;position:relative;">
+              <canvas id="ekf-chart-canvas" style="width:100%;height:100%;"></canvas>
+            </div>
+            <!-- Bottom row: top-down + alt bar -->
+            <div style="display:flex;gap:10px;padding:0 10px 10px;border-top:1px solid var(--border);padding-top:10px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Plan horizontal  N/E</div>
+                <canvas id="ekf-topdown" width="260" height="200" style="width:100%;max-width:300px;display:block;"></canvas>
+              </div>
+              <div style="width:110px;flex-shrink:0;">
+                <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Altitude & Vz</div>
+                <canvas id="ekf-altbar" width="110" height="200" style="width:110px;height:200px;display:block;"></canvas>
+              </div>
+              <div style="width:130px;flex-shrink:0;font-family:var(--font-mono);font-size:11px;display:flex;flex-direction:column;gap:6px;justify-content:center;">
+                <div style="color:var(--dim);font-size:9px;letter-spacing:1px;">VITESSES ACTUELLES</div>
+                <div>Vn <span id="ekf-live-Vn" style="color:#39ff14;float:right;">--</span></div>
+                <div>Ve <span id="ekf-live-Ve" style="color:#ff6b35;float:right;">--</span></div>
+                <div>Vz <span id="ekf-live-Vz" style="color:#ffcc00;float:right;">--</span></div>
+                <div style="border-top:1px solid var(--border);padding-top:6px;">
+                Vfwd <span id="ekf-live-Vfwd" style="color:#39ff14;float:right;">--</span></div>
+                <div>Vlat <span id="ekf-live-Vlat" style="color:#ff6b35;float:right;">--</span></div>
+                <div style="border-top:1px solid var(--border);padding-top:6px;">
+                |Vh| <span id="ekf-live-Vh" style="color:var(--accent);float:right;">--</span></div>
+                <div style="font-size:9px;color:var(--dim);margin-top:4px;">σVn <span id="ekf-live-sig" style="float:right;">--</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🌐 TRAJECTOIRE -->
+      <div class="an-panel" id="an-panel-traj">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">🌐 TRAJECTOIRE</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
+        </div>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">🌐 TRAJECTOIRE 3D GPS</span>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span class="panel-badge" id="gps3d-badge">--</span>
+              </div>
+            </div>
+            <!-- Controls -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);">
+              <button class="map-opt-btn active" id="gps3d-autorot" onclick="toggleGPS3DAutoRot()">🔄 AUTO</button>
+              <span style="width:1px;background:var(--border);margin:0 2px;"></span>
+              <button class="map-opt-btn active" id="gps3d-mode" onclick="toggleGPS3DMode()" title="Colorier par mode vol">🎨 MODE VOL</button>
+              <button class="map-opt-btn active" id="gps3d-grid" onclick="toggleGPS3DGrid()" title="Afficher la grille">⊞ GRILLE</button>
+              <button class="map-opt-btn active" id="gps3d-home" onclick="toggleGPS3DHome()" title="Afficher le home">🏠 HOME</button>
+              <span style="width:1px;background:var(--border);margin:0 2px;"></span>
+              <button class="map-opt-btn" id="gps3d-top" onclick="setGPS3DView('top')">⬛ TOP</button>
+              <button class="map-opt-btn" id="gps3d-side" onclick="setGPS3DView('side')">⬛ CÔTÉ</button>
+              <button class="map-opt-btn active" id="gps3d-iso" onclick="setGPS3DView('iso')">◈ ISO</button>
+              <span style="margin-left:auto;display:flex;align-items:center;gap:8px;"><span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">SAT MIN</span><select id="gps3d-minsats" onchange="rebuildGPS3D()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:2px 6px;border-radius:3px;font-family:var(--font-mono);font-size:10px;"><option value="0">0</option><option value="4" selected>4</option><option value="6">6</option><option value="8">8</option></select><span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">🖱 Drag · Ctrl+Scroll zoom</span></span>
+            </div>
+            <!-- Range selector -->
+            <div style="padding:6px 10px 4px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">PLAGE ·</span>
+                <span id="gps3d-range-info" style="font-family:var(--font-mono);font-size:9px;color:var(--accent);">tout le vol</span>
+                <button onclick="gps3dResetRange()" style="margin-left:auto;font-family:var(--font-mono);font-size:9px;padding:2px 8px;background:transparent;border:1px solid var(--border);color:var(--dim);border-radius:3px;cursor:pointer;">↺ RESET</button>
+              </div>
+              <div style="position:relative;background:#010306;border:1px solid var(--border);border-radius:3px;overflow:hidden;cursor:crosshair;" id="gps3d-selector-wrap">
+                <canvas id="gps3d-selector-canvas" style="display:block;width:100%;height:52px;"></canvas>
+                <div id="gps3d-selection-box" style="position:absolute;top:0;bottom:0;background:rgba(0,212,255,0.12);border-left:1px solid rgba(0,212,255,0.6);border-right:1px solid rgba(0,212,255,0.6);pointer-events:none;display:none;"></div>
+                <div id="gps3d-cursor-line" style="position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.35);pointer-events:none;display:none;"></div>
+              </div>
+            </div>
+            <div style="background:#020508;position:relative;">
+              <canvas id="gps3d-canvas"></canvas>
+              <div id="gps3d-scroll-hint" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(8,12,16,0.6);pointer-events:none;">
+                <span style="font-family:var(--font-mono);font-size:12px;color:var(--accent);background:rgba(0,0,0,0.8);border:1px solid var(--accent);padding:8px 16px;border-radius:4px;letter-spacing:1px;">🖱 CTRL + scroll pour zoomer</span>
+              </div>
+            </div>
+            <div style="padding:6px 12px;border-top:1px solid var(--border);display:flex;gap:20px;flex-wrap:wrap;">
+              <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-stats-dist">Dist: --</span>
+              <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-stats-alt">Alt max: --</span>
+              <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-stats-pts">Points: --</span>
+              <span style="font-family:var(--font-mono);font-size:10px;" id="gps3d-cursor-pos" style="color:var(--accent);">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🔧 MOTEUR -->
+      <div class="an-panel" id="an-panel-motor">
+        <div class="an-panel-hdr">
+          <span class="an-panel-ttl">🔧 MOTEUR</span>
+          <button class="an-map-btn" onclick="toggleAnMap()">🗺 CARTE</button>
+        </div>
+        <div class="an-panel-body">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">🔧 PERFORMANCE MOTEUR — POINT DE FONCTIONNEMENT</span>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <select id="motor-config-select" onchange="rebuildMotorPerfPanel()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                  <option value="mn5008_340">2× T-Motor MN5008 KV340 + T-Props 18"×6,1"</option>
+                </select>
+                <span class="panel-badge" id="motor-perf-badge">--</span>
+              </div>
+            </div>
+            <div class="panel-body" style="padding:12px;">
+              <!-- Config info strip -->
+              <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:rgba(0,0,0,0.2);border-radius:4px;border-left:3px solid var(--accent);">
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">TYPE <span style="color:var(--accent)">MN5008 KV340</span></span>
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">HÉLICE <span style="color:var(--accent)">T-Props 18"×6,1" CF</span></span>
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">CONFIG <span style="color:var(--accent)">×2 moteurs</span></span>
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">PLAGE <span style="color:var(--accent)">40%–100% throttle</span></span>
+                <span style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">T° MOTEUR <span style="color:var(--warn)">88°C @ 100%</span></span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr) repeat(4,1fr);gap:6px 10px;margin-bottom:14px;" id="motor-perf-values"></div>
+              <div style="display:grid;grid-template-columns:1fr 220px;gap:14px;">
+                <div>
+                  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+                    <label style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">AXE X</label>
+                    <select id="mperf-xaxis" onchange="redrawMotorPerfChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 7px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                      <option value="throttle_pct">Throttle (%)</option>
+                      <option value="power_w_total">Puissance totale (W)</option>
+                      <option value="current_a_total">Courant total (A)</option>
+                      <option value="rpm">RPM</option>
+                      <option value="rps">Tours/sec (RPS)</option>
+                      <option value="thrust_g_total">Poussée totale (g)</option>
+                    </select>
+                    <label style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;">AXE Y</label>
+                    <select id="mperf-yaxis" onchange="redrawMotorPerfChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 7px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                      <option value="thrust_g_total">Poussée totale (g)</option>
+                      <option value="current_a_total">Courant total (A)</option>
+                      <option value="power_w_total">Puissance totale (W)</option>
+                      <option value="efficiency_g_w">Efficacité (g/W)</option>
+                      <option value="rpm">RPM</option>
+                      <option value="rps">Tours/sec (RPS)</option>
+                      <option value="torque_nm_total">Couple total (N·m)</option>
+                      <option value="voltage_v">Tension (V)</option>
+                    </select>
+                    <label style="font-family:var(--font-mono);font-size:9px;color:var(--dim);">2e Y</label>
+                    <select id="mperf-y2axis" onchange="redrawMotorPerfChart()" style="background:var(--surface);color:var(--accent);border:1px solid var(--border);padding:3px 7px;border-radius:4px;font-family:var(--font-mono);font-size:10px;">
+                      <option value="none">— aucun —</option>
+                      <option value="efficiency_g_w">Efficacité (g/W)</option>
+                      <option value="current_a_total">Courant total (A)</option>
+                      <option value="power_w_total">Puissance totale (W)</option>
+                      <option value="thrust_g_total">Poussée totale (g)</option>
+                      <option value="torque_nm_total">Couple total (N·m)</option>
+                      <option value="rpm">RPM</option>
+                    </select>
+                  </div>
+                  <div style="position:relative;background:#030810;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
+                    <canvas id="motor-perf-canvas" style="display:block;width:100%;height:260px;cursor:crosshair;"></canvas>
+                    <div id="motor-perf-tooltip" style="position:absolute;display:none;background:rgba(8,12,16,0.95);border:1px solid var(--border);padding:6px 10px;border-radius:4px;font-family:var(--font-mono);font-size:10px;pointer-events:none;"></div>
+                  </div>
+                  <div style="font-family:var(--font-mono);font-size:8px;color:rgba(255,255,255,0.2);margin-top:3px;">● Point de fonctionnement actuel (interpolé)</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:2px;">TABLEAU × 2 MOTEURS</div>
+                  <div id="motor-perf-table" style="font-family:var(--font-mono);font-size:9px;overflow-x:auto;"></div>
+                  <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+                    <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:6px;">AJOUTER À L'EXPLORATEUR</div>
+                    <div style="display:flex;flex-direction:column;gap:3px;" id="motor-explorer-chips"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /an-content -->
+
+    <!-- ── Optional map panel (hidden by default) ── -->
+    <div id="an-map-panel" style="display:none;">
+      <div class="an-map-hdr">
+        <span>🗺 CARTE</span>
+        <span onclick="toggleAnMap()" style="cursor:pointer;">✕</span>
+      </div>
+      <div id="an-map-div"></div>
+    </div>
+
+  </div><!-- /an-layout -->
 </div><!-- /pane-analyse -->
 
 <!-- ══ TAB INFOS ══ -->
 <div class="tab-pane" id="pane-info">
-  <div id="info-content" style="padding:24px 32px;max-width:820px;margin:0 auto;">
+  <div id="info-content" style="padding:24px 32px 0;max-width:820px;margin:0 auto;">
     <div id="info-loading" style="font-family:var(--font-mono);font-size:11px;color:var(--dim);letter-spacing:1px;">CHARGEMENT…</div>
+  </div>
+  <div style="padding:16px 32px 24px;max-width:820px;margin:0 auto;">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">⚙️ CONFIGURATION EMBARQUÉE</span>
+        <span class="panel-badge" id="config-panel-badge" style="background:rgba(0,212,255,0.08);color:var(--accent);border-color:rgba(0,212,255,0.25);">— pas de config —</span>
+      </div>
+      <div class="panel-body" id="config-panel-body">
+        <span style="color:var(--dim);font-family:var(--font-mono);font-size:12px;">— charger un fichier LOG avec en-tête de configuration —</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2601,18 +2614,18 @@ function buildConfigPanel() {
   // Badge panel
   const badge = document.getElementById('config-panel-badge');
   if(badge) {
-    badge.textContent = c['CONFIG_NAME'] || 'CONFIG OK';
+    badge.textContent = 'CONFIG OK';
     badge.style.background = 'rgba(57,255,20,0.1)';
     badge.style.color = '#39ff14';
     badge.style.borderColor = 'rgba(57,255,20,0.3)';
   }
 
   // Helper : ligne clé/valeur
-  const row = (label, val, unit='', color='var(--text)') =>
+  const row = (label, val, unit='', color='var(--text)', wrap=false) =>
     val != null ? `<div style="display:flex;justify-content:space-between;gap:8px;
       border-bottom:1px solid rgba(255,255,255,0.04);padding:2px 0;">
-      <span style="font-family:var(--font-mono);font-size:10px;color:var(--dim);">${label}</span>
-      <span style="font-family:var(--font-mono);font-size:11px;color:${color};white-space:nowrap;">${val}${unit}</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--dim);flex-shrink:0;">${label}</span>
+      <span style="font-family:var(--font-mono);font-size:11px;color:${color};${wrap ? 'word-break:break-all;white-space:normal;text-align:right;' : 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'}">${val}${unit}</span>
     </div>` : '';
 
   const section = (icon, title, html) => `
@@ -2631,7 +2644,7 @@ function buildConfigPanel() {
 
   el.innerHTML =
     section('🔧','IDENTIFICATION',
-      row('CONFIG_NAME',  c['CONFIG_NAME'],  '', 'var(--accent)') +
+      row('CONFIG_NAME',  c['CONFIG_NAME'],  '', 'var(--accent)', true) +
       row('FW_VERSION',   c['FW_VERSION']) +
       row('RX_TYPE',      c['RX_TYPE'],      '', 'var(--accent3)') +
       row('IMU',          c['IMU']) +
@@ -2686,6 +2699,8 @@ function buildConfigPanel() {
 //  INIT
 // ================================================================
 function initFlight(data) {
+  // Reset PID range selector whenever a new flight is loaded
+  if (typeof pidRangeStart !== 'undefined') { pidRangeStart = null; pidRangeEnd = null; }
   // Filtre strict : timestamp_us doit être un nombre > 0
   flightData = data.filter(r =>
     r.timestamp_us !== undefined &&
@@ -2730,6 +2745,8 @@ function initFlight(data) {
   document.getElementById('hdr-speed').textContent    = maxSpd.toFixed(1)+' m/s';
   document.getElementById('hdr-dist').textContent     = totalDist > 0 ? (totalDist/1000).toFixed(2)+' km' : '--';
   document.getElementById('hdr-vbat').textContent     = minVbat > 0 ? minVbat.toFixed(2)+' V' : '--';
+
+  if (typeof computeAnalysisBadges === 'function') computeAnalysisBadges();
 
   // Timeline
   const slider = document.getElementById('timeline');
@@ -4316,6 +4333,21 @@ function render() {
     updateMapTrail(row);
   }
 
+  // Sync analyse map marker
+  if (typeof anMap !== 'undefined' && anMap && flightData[currentIdx]) {
+    var _anR = flightData[currentIdx];
+    if (_anR.gps_valid===1||_anR.gps_valid==='1') {
+      var _anLL = [+(_anR.gps_lat||0), +(_anR.gps_lon||0)];
+      if (!anMapMarker) {
+        anMapMarker = L.circleMarker(_anLL, {
+          radius:5, color:'#ffcc00', fillColor:'#ffcc00', fillOpacity:1
+        }).addTo(anMap);
+      } else {
+        anMapMarker.setLatLng(_anLL);
+      }
+    }
+  }
+
   // EKF live display
   if(ekfData.length) updateEKFLive(currentIdx);
 
@@ -4725,6 +4757,7 @@ function getPIDRows(axis) {
 
 // ── Update windowed PID X range without full rebuild ─────────────
 function updatePIDWindow() {
+  if (typeof pidRangeStart !== 'undefined' && pidRangeStart !== null) { updatePIDCursors(); return; }
   if(!pidChart || !flightData.length) { rebuildPIDCharts(); return; }
   const w = +pidWindow;
   const curT = flightData[currentIdx].timestamp_us / 1e6;
@@ -4743,10 +4776,13 @@ function rebuildPIDCharts() {
   const canvas = document.getElementById('pid-canvas-main');
   if(!canvas || !flightData.length) return;
   const container = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
   const W = container.offsetWidth  || 700;
   const H = container.offsetHeight > 40 ? container.offsetHeight : 320;
-  canvas.width  = W;
-  canvas.height = H;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
 
   if(pidChart) { pidChart.destroy(); pidChart = null; }
 
@@ -4764,25 +4800,25 @@ function rebuildPIDCharts() {
     label:'Consigne', data: rows.map(r=>({x:r.x, y:r.des})),
     borderColor: cfg.color, backgroundColor:'transparent',
     borderWidth:1.8, borderDash:[5,3],
-    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:true,
+    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:false,
   });
   if(pidLayerVis.imu) datasets.push({
     label:'Mesure IMU', data: rows.map(r=>({x:r.x, y:r.imu})),
     borderColor:'#ffffff', backgroundColor:'rgba(255,255,255,0.04)',
     borderWidth:1.5,
-    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:true,
+    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:false,
   });
   if(pidLayerVis.err) datasets.push({
     label:'Erreur', data: rows.map(r=>({x:r.x, y:r.err})),
     borderColor:'#ff6b35', backgroundColor:'rgba(255,107,53,0.06)',
     borderWidth:1, borderDash:[2,2],
-    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:true,
+    pointRadius:0, tension:0.1, yAxisID:'yL', spanGaps:false,
   });
   if(pidLayerVis.pid) datasets.push({
     label:'PID out', data: rows.map(r=>({x:r.x, y:r.pid})),
     borderColor:'#39ff14', backgroundColor:'rgba(57,255,20,0.04)',
     borderWidth:1.5,
-    pointRadius:0, tension:0.1, yAxisID:'yR', spanGaps:true,
+    pointRadius:0, tension:0.1, yAxisID:'yR', spanGaps:false,
   });
 
   // ── Lock Y axes from full-range data so pan never rescales Y ──────
@@ -4808,6 +4844,7 @@ function rebuildPIDCharts() {
     type:'line', data:{ datasets },
     options:{
       animation:false, responsive:false, maintainAspectRatio:false,
+      devicePixelRatio: dpr,
       interaction:{ mode:'index', intersect:false },
       plugins:{
         legend:{ display:false },
@@ -4829,8 +4866,10 @@ function rebuildPIDCharts() {
       scales:{
         x:{
           type:'linear',
-          min: pidWindow !== 'all' ? flightData[currentIdx].timestamp_us/1e6 - (+pidWindow) : undefined,
-          max: pidWindow !== 'all' ? flightData[currentIdx].timestamp_us/1e6 + (+pidWindow) : undefined,
+          min: (typeof pidRangeStart !== 'undefined' && pidRangeStart !== null && pidRangeStart < flightData.length) ? flightData[pidRangeStart].timestamp_us/1e6
+               : (pidWindow !== 'all' ? flightData[currentIdx].timestamp_us/1e6 - (+pidWindow) : undefined),
+          max: (typeof pidRangeEnd !== 'undefined' && pidRangeEnd !== null && pidRangeEnd < flightData.length) ? flightData[pidRangeEnd].timestamp_us/1e6
+               : (pidWindow !== 'all' ? flightData[currentIdx].timestamp_us/1e6 + (+pidWindow) : undefined),
           ticks:{ color:'#4a6070', font:fmono, maxTicksLimit:10,
                   callback:v=>v.toFixed(1)+'s' },
           grid:{ color:'rgba(26,45,69,0.5)' }, border:{ color:'#1a2d45' }
@@ -5386,33 +5425,189 @@ function updateMotorRadar() {
 // ================================================================
 //  EXPORT CSV
 // ================================================================
-function exportCSV() {
-  if(!flightData.length) return;
-  const cells      = +(flightConfig['CELLS']||6);
-  const batType    = document.getElementById('bat-type-select')?.value || 'lipo';
-  const span       = motorPWM_max - motorPWM_min || 1;
-  const baseKeys   = Object.keys(flightData[0]);
-  const extraKeys  = ['time_s', 'vbat_soc_pct', ...activeMotors.map(m=>`m${m}_pct`)];
-  const allKeys    = [...baseKeys, ...extraKeys];
+// ── Modale export CSV ─────────────────────────────────────────────────────
+var _csvModal = null;
 
-  const rows = flightData.slice(viewStart, viewEnd+1).map(r => {
-    const t    = (r.timestamp_us/1e6).toFixed(3);
-    const soc  = r.vbat_V > 0 ? voltToPercent(r.vbat_V/cells, batType).toFixed(1) : '';
-    const mPcts= activeMotors.map(m => {
-      const v = +(r[`m${m}_PWM`]||0);
-      return v >= motorPWM_min ? Math.max(0,Math.min(100,(v-motorPWM_min)/span*100)).toFixed(1) : '0';
+function _buildCSVModal() {
+  var overlay = document.createElement('div');
+  overlay.id = 'ds-csv-modal-overlay';
+  overlay.innerHTML = [
+    '<div id="ds-csv-modal">',
+    '  <h3>Export CSV</h3>',
+
+    '  <div class="ds-csv-section">',
+    '    <span class="ds-csv-lbl">Plage temporelle</span>',
+    '    <div class="ds-csv-radios">',
+    '      <label><input type="radio" name="ds-csv-range" value="view" checked> Vue actuelle</label>',
+    '      <label><input type="radio" name="ds-csv-range" value="all"> Tout le vol</label>',
+    '      <label><input type="radio" name="ds-csv-range" value="custom"> Personnalisée',
+    '        <span id="ds-csv-custom-inputs" class="ds-csv-range-row">',
+    '          <input type="number" id="ds-csv-tstart" placeholder="0.0" min="0" step="0.1">',
+    '          <span>→</span>',
+    '          <input type="number" id="ds-csv-tend" placeholder="fin" min="0" step="0.1">',
+    '          <span>s</span>',
+    '        </span>',
+    '      </label>',
+    '    </div>',
+    '  </div>',
+
+    '  <div class="ds-csv-section">',
+    '    <div class="ds-csv-cols-bar">',
+    '      <span>Colonnes</span>',
+    '      <button id="ds-csv-sel-all">Tout</button>',
+    '      <button id="ds-csv-sel-none">Rien</button>',
+    '    </div>',
+    '    <div id="ds-csv-cols"></div>',
+    '  </div>',
+
+    '  <div class="ds-hud-modal-actions">',
+    '    <button id="ds-csv-cancel">Annuler</button>',
+    '    <button id="ds-csv-export" class="primary">⬇ Exporter</button>',
+    '  </div>',
+    '</div>',
+  ].join('');
+  document.body.appendChild(overlay);
+
+  // Radio: show/hide custom inputs
+  overlay.querySelectorAll('input[name="ds-csv-range"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      var ci = document.getElementById('ds-csv-custom-inputs');
+      ci.style.display = radio.value === 'custom' ? 'inline-flex' : 'none';
     });
-    return [...Object.values(r), t, soc, ...mPcts].join(',');
   });
 
-  const csv  = allKeys.join(',') + '\n' + rows.join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const name = (flightConfig['CONFIG_NAME']||'VTOL').replace(/[^a-zA-Z0-9_]/g,'_');
-  a.href = url; a.download = `${name}_filtered.csv`;
+  document.getElementById('ds-csv-sel-all').addEventListener('click', function() {
+    overlay.querySelectorAll('.ds-csv-chip').forEach(function(chip) {
+      chip.querySelector('input').checked = true;
+      chip.className = 'ds-csv-chip on';
+    });
+  });
+  document.getElementById('ds-csv-sel-none').addEventListener('click', function() {
+    overlay.querySelectorAll('.ds-csv-chip').forEach(function(chip) {
+      chip.querySelector('input').checked = false;
+      chip.className = 'ds-csv-chip';
+    });
+  });
+  document.getElementById('ds-csv-cancel').addEventListener('click', function() {
+    overlay.classList.remove('open');
+  });
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+  document.getElementById('ds-csv-export').addEventListener('click', function() {
+    var selected = overlay.querySelectorAll('.ds-csv-chip input[type=checkbox]:checked');
+    if (!selected.length) {
+      if (typeof showToast === 'function') showToast('Sélectionnez au moins une colonne', 'warn');
+      return;
+    }
+    overlay.classList.remove('open');
+    _doCSVExport(overlay);
+  });
+
+  return overlay;
+}
+
+function openCSVExportModal() {
+  if (!flightData || !flightData.length) {
+    if (typeof showToast === 'function') showToast('Aucune donnée chargée', 'warn');
+    return;
+  }
+  if (!_csvModal) _csvModal = _buildCSVModal();
+
+  // Populate columns
+  var baseKeys  = Object.keys(flightData[0]);
+  var extraKeys = ['time_s', 'vbat_soc_pct'].concat(activeMotors.map(function(m) { return 'm' + m + '_pct'; }));
+  var allKeys   = baseKeys.concat(extraKeys);
+  var colsDiv   = document.getElementById('ds-csv-cols');
+  colsDiv.innerHTML = '';
+  allKeys.forEach(function(k) {
+    var chip = document.createElement('label');
+    chip.className = 'ds-csv-chip on';
+    chip.title = k;
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = k;
+    cb.checked = true;
+    cb.addEventListener('change', function() {
+      chip.className = 'ds-csv-chip' + (cb.checked ? ' on' : '');
+    });
+    chip.appendChild(cb);
+    chip.appendChild(document.createTextNode(k));
+    colsDiv.appendChild(chip);
+  });
+
+  // Reset range to "view"
+  var viewRadio = _csvModal.querySelector('input[value="view"]');
+  if (viewRadio) { viewRadio.checked = true; document.getElementById('ds-csv-custom-inputs').style.display = 'none'; }
+
+  _csvModal.classList.add('open');
+}
+
+function _doCSVExport(overlay) {
+  if (!flightData || !flightData.length) return;
+
+  var cells     = +(flightConfig['CELLS'] || 6);
+  var batType   = document.getElementById('bat-type-select') ? document.getElementById('bat-type-select').value : 'lipo';
+  var span      = motorPWM_max - motorPWM_min || 1;
+
+  // Determine row range
+  var rangeVal = overlay.querySelector('input[name="ds-csv-range"]:checked').value;
+  var iStart, iEnd;
+  if (rangeVal === 'view') {
+    iStart = viewStart; iEnd = viewEnd + 1;
+  } else if (rangeVal === 'all') {
+    iStart = 0; iEnd = flightData.length;
+  } else {
+    var t0us = flightData[0].timestamp_us;
+    var tsVal = parseFloat(document.getElementById('ds-csv-tstart').value);
+    var teVal = parseFloat(document.getElementById('ds-csv-tend').value);
+    var startUs = t0us + (isNaN(tsVal) ? 0 : tsVal) * 1e6;
+    var endUs   = isNaN(teVal) ? Infinity : t0us + teVal * 1e6;
+    iStart = 0;
+    while (iStart < flightData.length && flightData[iStart].timestamp_us < startUs) iStart++;
+    iEnd = iStart;
+    while (iEnd < flightData.length && flightData[iEnd].timestamp_us <= endUs) iEnd++;
+  }
+
+  // Selected columns
+  var selectedKeys = [];
+  overlay.querySelectorAll('.ds-csv-chip input[type=checkbox]:checked').forEach(function(cb) {
+    selectedKeys.push(cb.value);
+  });
+  if (!selectedKeys.length) { if (typeof showToast === 'function') showToast('Sélectionnez au moins une colonne', 'warn'); return; }
+
+  var baseKeys  = Object.keys(flightData[0]);
+  var extraKeys = ['time_s', 'vbat_soc_pct'].concat(activeMotors.map(function(m) { return 'm' + m + '_pct'; }));
+
+  var rows = [];
+  for (var i = iStart; i < iEnd; i++) {
+    var r   = flightData[i];
+    var t   = (r.timestamp_us / 1e6).toFixed(3);
+    var soc = r.vbat_V > 0 ? voltToPercent(r.vbat_V / cells, batType).toFixed(1) : '';
+    var mPcts = activeMotors.map(function(m) {
+      var v = +(r['m' + m + '_PWM'] || 0);
+      return v >= motorPWM_min ? Math.max(0, Math.min(100, (v - motorPWM_min) / span * 100)).toFixed(1) : '0';
+    });
+    var rowObj = {};
+    baseKeys.forEach(function(k) { rowObj[k] = r[k]; });
+    rowObj['time_s']       = t;
+    rowObj['vbat_soc_pct'] = soc;
+    activeMotors.forEach(function(m, idx) { rowObj['m' + m + '_pct'] = mPcts[idx]; });
+
+    rows.push(selectedKeys.map(function(k) {
+      var v = rowObj[k];
+      return v === undefined ? '' : v;
+    }).join(','));
+  }
+
+  var csv  = selectedKeys.join(',') + '\n' + rows.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  var name = (flightConfig['CONFIG_NAME'] || 'VTOL').replace(/[^a-zA-Z0-9_]/g, '_');
+  a.href = url; a.download = name + '_export.csv';
   a.click(); URL.revokeObjectURL(url);
-  showToast(`⬇ CSV exporté — ${rows.length} lignes`);
+  if (typeof showToast === 'function') showToast('⬇ CSV exporté — ' + rows.length + ' lignes, ' + selectedKeys.length + ' colonnes', 'ok');
 }
 
 // ================================================================
@@ -5559,6 +5754,7 @@ function applyViewFilterCore() {
   buildFlightStats();
   buildMapLayers();
   initMap();
+  if (typeof computeAnalysisBadges === 'function') computeAnalysisBadges();
 }
 
 // ================================================================
@@ -10140,7 +10336,7 @@ if (typeof _origInit === 'function') {
         }, 80);
       }
       if (t.dataset.tab === 'analyse') {
-        renderAnalysisPanels();
+        if (typeof showAnalysis === 'function') showAnalysis(typeof anCurrentKey !== 'undefined' ? anCurrentKey : 'energy');
       }
       if (t.dataset.tab === 'info') {
         loadInfoTab();
@@ -10726,18 +10922,21 @@ function setupMapResize() {
   if (!handle || !sidebar) return;
   var resizing = false, startX = 0, startW = 0;
   handle.addEventListener('mousedown', function(e) {
-    resizing = true; startX = e.clientX; startW = sidebar.offsetWidth;
+    e.stopPropagation();
+    e.preventDefault();
+    resizing = true;
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-    e.preventDefault();
   });
-  document.addEventListener('mousemove', function(e) {
+  window.addEventListener('mousemove', function(e) {
     if (!resizing) return;
     var newW = Math.max(160, Math.min(600, startW - (e.clientX - startX)));
     sidebar.style.width = newW + 'px';
-    if (gMapLeaflet) gMapLeaflet.invalidateSize();
+    if (typeof gMapLeaflet !== 'undefined' && gMapLeaflet) gMapLeaflet.invalidateSize();
   });
-  document.addEventListener('mouseup', function() {
+  window.addEventListener('mouseup', function() {
     if (!resizing) return;
     resizing = false;
     document.body.style.cursor = '';
@@ -10933,61 +11132,6 @@ function initGraphExplorer() {
   setupGraphCursorSync();
 }
 
-// ── ANALYSE TAB CHIP SELECTOR ──
-var AN_DEFS = {
-  pid:    { title: '📐 ANALYSE PID',      meta: 'roll · pitch · yaw',   srcId: 'an-src-pid' },
-  fft:    { title: '〰 VIBRATIONS FFT',   meta: 'AccX · AccY · AccZ',   srcId: 'an-src-fft' },
-  ekf:    { title: '🧭 ANALYSE EKF',      meta: 'vélocité estimée',      srcId: 'an-src-ekf' },
-  traj:   { title: '🌐 TRAJECTOIRE 3D',   meta: 'GPS lat/lon/alt',       srcId: 'an-src-traj' },
-  energy: { title: '⚡ ÉNERGIE',           meta: 'batterie · puissance',  srcId: 'an-src-energy' },
-  motor:  { title: '🔧 MOTEUR',            meta: 'point de fonctionnement', srcId: 'an-src-motor' },
-};
-
-var anSlotA = 'pid';
-var anSlotB = 'fft';
-
-function selectAnalysis(slot, val) {
-  if (slot === 'a') {
-    anSlotA = (anSlotA === val) ? null : val;
-  } else {
-    anSlotB = (anSlotB === val) ? null : val;
-  }
-  ['a','b'].forEach(function(s) {
-    var cur = s === 'a' ? anSlotA : anSlotB;
-    document.querySelectorAll('#an-chips-' + s + ' .an-chip').forEach(function(c) {
-      c.classList.remove('an-sel-a', 'an-sel-b');
-      if (c.dataset.val === cur) c.classList.add('an-sel-' + s);
-    });
-  });
-  renderAnalysisPanels();
-}
-
-function renderAnalysisPanels() {
-  var empty = document.getElementById('an-empty');
-  var panA  = document.getElementById('an-panel-a');
-  var panB  = document.getElementById('an-panel-b');
-  var hasA  = !!anSlotA;
-  var hasB  = !!anSlotB;
-  if (!empty || !panA || !panB) return;
-  empty.style.display = (!hasA && !hasB) ? 'flex' : 'none';
-  panA.style.display  = hasA ? 'flex' : 'none';
-  panB.style.display  = hasB ? 'flex' : 'none';
-  if (hasA) injectAnalysisPanel('a', anSlotA);
-  if (hasB) injectAnalysisPanel('b', anSlotB);
-}
-
-function injectAnalysisPanel(slot, val) {
-  var def = AN_DEFS[val];
-  if (!def) return;
-  document.getElementById('an-title-' + slot).textContent = def.title;
-  document.getElementById('an-meta-'  + slot).textContent = def.meta;
-  var body = document.getElementById('an-body-' + slot);
-  var src  = document.getElementById(def.srcId);
-  if (body && src) {
-    body.innerHTML = '';
-    body.appendChild(src.cloneNode(true));
-  }
-}
 
 // ════════════════════════════════════════════════════
 //  BOOT
@@ -10997,7 +11141,7 @@ function boot() {
   setupResizeObserver();
   initGraphExplorer();
   setupMapResize();
-  renderAnalysisPanels();
+  showAnalysis('energy');
 }
 
 if (document.readyState === 'loading') {
@@ -11007,6 +11151,298 @@ if (document.readyState === 'loading') {
 }
 setTimeout(setupAllPanels, 400);
 setTimeout(setupAllPanels, 1800);
+
+// ════════════════════════════════════════════════════
+//  ANALYSE TAB NAVIGATION
+// ════════════════════════════════════════════════════
+var anCurrentKey = 'energy';
+
+function showAnalysis(key) {
+  anCurrentKey = key;
+  document.querySelectorAll('.an-sidebar-item').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.key === key);
+  });
+  document.querySelectorAll('.an-panel').forEach(function(el) {
+    el.classList.toggle('active', el.id === 'an-panel-' + key);
+  });
+  var mapPanel = document.getElementById('an-map-panel');
+  var mapVisible = mapPanel && mapPanel.style.display !== 'none';
+  document.querySelectorAll('.an-map-btn').forEach(function(btn) {
+    btn.classList.toggle('active', mapVisible);
+  });
+  if (!flightData.length) return;
+  ({
+    energy: function() { if(typeof rebuildEnergyPanel==='function') rebuildEnergyPanel(); },
+    pid:    function() {
+              setTimeout(function() {
+                if(typeof rebuildPIDCharts==='function') rebuildPIDCharts();
+                if(typeof runPIDAdvisor==='function') runPIDAdvisor();
+                buildPIDSelector();
+              }, 50);
+            },
+    fft:    function() { if(typeof rebuildVibPanel==='function') rebuildVibPanel(); },
+    ekf:    function() { if(typeof buildEKFChart==='function') buildEKFChart(); },
+    traj:   function() { if(typeof rebuildGPS3D==='function') rebuildGPS3D(); },
+    motor:  function() { if(typeof rebuildMotorPerfPanel==='function') rebuildMotorPerfPanel(); }
+  }[key] || function(){})();
+}
+
+window.showAnalysis = showAnalysis;
+
+// ── PID range selector ──────────────────────────────
+var pidRangeStart = null;
+var pidRangeEnd   = null;
+
+function pidResetRange() {
+  pidRangeStart = null; pidRangeEnd = null;
+  var info = document.getElementById('pid-range-info');
+  if (info) info.textContent = 'tout le vol';
+  if (typeof rebuildPIDCharts === 'function') rebuildPIDCharts();
+}
+window.pidResetRange = pidResetRange;
+
+function buildPIDSelector() {
+  var canvas = document.getElementById('pid-selector-canvas');
+  var wrap   = document.getElementById('pid-selector-wrap');
+  if (!canvas || !wrap || !flightData.length) return;
+
+  var dpr = window.devicePixelRatio || 1;
+  var W = wrap.offsetWidth || 700;
+  var H = 44;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  var pts  = flightData.slice(viewStart, viewEnd + 1);
+  var step = Math.max(1, Math.floor(pts.length / W));
+
+  pts.forEach(function(r, i) {
+    if (i % step !== 0) return;
+    var x = Math.floor(i / pts.length * W);
+    var armed = r.armed === 1 || r.armed === '1';
+    var fm = +(r.flight_mode || 0);
+    ctx.fillStyle = !armed ? 'rgba(255,255,255,0.02)'
+      : fm === 2 ? 'rgba(255,107,53,0.18)'
+      : fm === 1 ? 'rgba(255,204,0,0.14)'
+      : 'rgba(57,255,20,0.12)';
+    ctx.fillRect(x, 0, Math.max(1, step) + 1, H);
+  });
+
+  var col = (typeof PID_AXES !== 'undefined' && PID_AXES[pidActiveAxis])
+               ? PID_AXES[pidActiveAxis].imu : 'roll_IMU';
+  var vals = pts.filter(function(_, i) { return i % step === 0; })
+                .map(function(r) { return +(r[col] || 0); });
+  if (vals.length > 1) {
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals), rng = (mx - mn) || 1;
+    [['rgba(0,0,0,0.6)', 3], ['#00d4ff', 1.5]].forEach(function(pair) {
+      ctx.beginPath();
+      vals.forEach(function(v, i) {
+        var x = i / (vals.length - 1) * W;
+        var y = H - 4 - (v - mn) / rng * (H - 8);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = pair[0]; ctx.lineWidth = pair[1]; ctx.stroke();
+    });
+  }
+
+  updatePIDSelectionBox();
+  if (!wrap._pidSetup) { wrap._pidSetup = true; attachPIDSelector(canvas, wrap); }
+}
+
+function attachPIDSelector(canvas, wrap) {
+  var dragging = false, dragX0 = 0;
+  function fracToIdx(frac) {
+    return Math.round(viewStart + Math.max(0, Math.min(1, frac)) * (viewEnd - viewStart));
+  }
+  function getCanvasFrac(e) {
+    var rect = canvas.getBoundingClientRect();
+    return (e.clientX - rect.left) / rect.width;
+  }
+  canvas.addEventListener('mousedown', function(e) {
+    dragging = true; dragX0 = e.clientX;
+    pidRangeStart = fracToIdx(getCanvasFrac(e)); pidRangeEnd = pidRangeStart;
+    updatePIDSelectionBox();
+  });
+  canvas.addEventListener('mousemove', function(e) {
+    var rect = canvas.getBoundingClientRect();
+    var curLine = document.getElementById('pid-cursor-line-sel');
+    var x = e.clientX - rect.left;
+    if (curLine) { curLine.style.display = 'block'; curLine.style.left = x + 'px'; }
+    if (!dragging) return;
+    var frac2 = (e.clientX - rect.left) / rect.width;
+    var frac1 = Math.max(0, Math.min(1, (dragX0 - rect.left) / rect.width));
+    var idx2  = fracToIdx(frac2);
+    var idx1  = fracToIdx(frac1);
+    pidRangeStart = Math.min(idx1, idx2); pidRangeEnd = Math.max(idx1, idx2);
+    updatePIDSelectionBox();
+  });
+  canvas.addEventListener('mouseup', function() {
+    if (!dragging) return; dragging = false;
+    if (pidRangeEnd - pidRangeStart < 10) {
+      pidRangeStart = null; pidRangeEnd = null;
+      var info = document.getElementById('pid-range-info');
+      if (info) info.textContent = 'tout le vol';
+      updatePIDSelectionBox();
+    } else {
+      // clamp to current data bounds
+      pidRangeStart = Math.max(0, Math.min(pidRangeStart, flightData.length - 1));
+      pidRangeEnd   = Math.max(0, Math.min(pidRangeEnd,   flightData.length - 1));
+      var t0 = flightData[pidRangeStart].timestamp_us / 1e6;
+      var t1 = flightData[pidRangeEnd].timestamp_us / 1e6;
+      var info = document.getElementById('pid-range-info');
+      if (info) info.textContent = t0.toFixed(1) + 's → ' + t1.toFixed(1) + 's  (' + (t1-t0).toFixed(1) + 's)';
+    }
+    if (typeof rebuildPIDCharts === 'function') rebuildPIDCharts();
+  });
+  canvas.addEventListener('mouseleave', function() {
+    var curLine = document.getElementById('pid-cursor-line-sel');
+    if (curLine) curLine.style.display = 'none';
+    if (dragging) { dragging = false; if (typeof rebuildPIDCharts === 'function') rebuildPIDCharts(); }
+  });
+  canvas.addEventListener('dblclick', function() { pidResetRange(); });
+}
+
+function updatePIDSelectionBox() {
+  var box    = document.getElementById('pid-selection-box');
+  var canvas = document.getElementById('pid-selector-canvas');
+  if (!box || !canvas) return;
+  if (pidRangeStart === null || pidRangeEnd === null) { box.style.display = 'none'; return; }
+  var W = canvas.width || canvas.offsetWidth || 1;
+  var total = viewEnd - viewStart || 1;
+  var x1 = (pidRangeStart - viewStart) / total * W;
+  var x2 = (pidRangeEnd   - viewStart) / total * W;
+  box.style.display = 'block';
+  box.style.left    = x1 + 'px';
+  box.style.width   = Math.max(2, x2 - x1) + 'px';
+}
+
+// ── Analysis status badges ──────────────────────────
+var AN_VBAT_OK   = 3.7;  // V/cell — below = warn
+var AN_VBAT_CRIT = 3.5;  // V/cell — below = crit
+var AN_PID_RMSE  = 5.0;  // degrees — above = warn
+var AN_VIB_AMP   = 0.3;  // G (|AccZ|) — above = HIGH
+var AN_MOTOR_IMB = 0.15; // |M1-M3|/avg — above = IMBAL
+
+function setBadge(key, cls, text) {
+  var el = document.getElementById('an-badge-' + key);
+  if (!el) return;
+  el.className = 'an-badge ' + cls;
+  el.textContent = text;
+}
+
+function computeAnalysisBadges() {
+  if (!flightData.length) return;
+  var cells = +(flightConfig['CELLS'] || 6);
+
+  // ÉNERGIE
+  var vbatArmed = flightData.filter(function(r) {
+    return (r.armed===1||r.armed==='1') && r.vbat_V > 0;
+  }).map(function(r) { return r.vbat_V / cells; });
+  if (vbatArmed.length) {
+    var minVcell = vbatArmed.reduce(function(m, v) { return v < m ? v : m; }, Infinity);
+    if (minVcell < AN_VBAT_CRIT)    setBadge('energy', 'crit', '✗ CRIT');
+    else if (minVcell < AN_VBAT_OK) setBadge('energy', 'warn', '⚠ LOW');
+    else                             setBadge('energy', 'ok',   'OK');
+  } else {
+    setBadge('energy', 'warn', '⚠ N/A');
+  }
+
+  // PID — RMSE of setpoint vs IMU for each axis
+  var pidWarnAxis = null;
+  ['roll','pitch','yaw'].forEach(function(axis) {
+    if (pidWarnAxis) return;
+    var cfg = (typeof PID_AXES !== 'undefined') ? PID_AXES[axis] : null;
+    if (!cfg) return;
+    var armed = flightData.filter(function(r) {
+      return (r.armed===1||r.armed==='1') && +(r.thro_des||0) > 0.05;
+    });
+    if (!armed.length) return;
+    var sum2 = armed.reduce(function(s, r) {
+      var e = +(r[cfg.des]||0) - +(r[cfg.imu]||0); return s + e*e;
+    }, 0);
+    if (Math.sqrt(sum2 / armed.length) > AN_PID_RMSE) pidWarnAxis = axis.toUpperCase();
+  });
+  if (pidWarnAxis) setBadge('pid', 'warn', '⚠ ' + pidWarnAxis);
+  else             setBadge('pid', 'ok',   'OK');
+
+  // VIBRATIONS — peak |AccZ| in armed segments
+  var accArmed = flightData.filter(function(r) {
+    return r.armed===1||r.armed==='1';
+  }).map(function(r) { return Math.abs(+(r.AccZ||0)); });
+  if (accArmed.length) {
+    var maxAcc = accArmed.reduce(function(m, v) { return v > m ? v : m; }, -Infinity);
+    if (maxAcc > AN_VIB_AMP) setBadge('fft', 'warn', '⚠ HIGH');
+    else                      setBadge('fft', 'ok',   'OK');
+  }
+
+  // EKF
+  var hasGPS = flightData.some(function(r) { return r.gps_valid===1||r.gps_valid==='1'; });
+  setBadge('ekf', hasGPS ? 'ok' : 'warn', hasGPS ? 'OK' : '⚠ NO GPS');
+
+  // TRAJECTOIRE
+  var gpsPts = flightData.filter(function(r) { return r.gps_valid===1||r.gps_valid==='1'; }).length;
+  if (gpsPts > 0) setBadge('traj', 'ok',   gpsPts + ' pts');
+  else            setBadge('traj', 'crit', 'NO GPS');
+
+  // MOTEUR — mean |M1-M3|/avg imbalance
+  var motorArmed = flightData.filter(function(r) {
+    return (r.armed===1||r.armed==='1') && +(r.m1_PWM||0) > 0 && +(r.m3_PWM||0) > 0;
+  });
+  if (motorArmed.length) {
+    var totalImb = motorArmed.reduce(function(s, r) {
+      var m1 = +(r.m1_PWM||0), m3 = +(r.m3_PWM||0), avg = (m1+m3)/2;
+      return s + (avg > 0 ? Math.abs(m1-m3)/avg : 0);
+    }, 0);
+    if (totalImb / motorArmed.length > AN_MOTOR_IMB) setBadge('motor', 'warn', '⚠ IMBAL');
+    else                                               setBadge('motor', 'ok',   'OK');
+  } else {
+    setBadge('motor', 'warn', '⚠ N/A');
+  }
+}
+
+window.computeAnalysisBadges = computeAnalysisBadges;
+
+// ── Analyse map (toggle, lazy Leaflet init) ──────────
+var anMap       = null;
+var anMapMarker = null;
+var anMapTrack  = null;
+
+function toggleAnMap() {
+  var panel = document.getElementById('an-map-panel');
+  if (!panel) return;
+  var show = panel.style.display === 'none';
+  panel.style.display = show ? 'flex' : 'none';
+  document.querySelectorAll('.an-map-btn').forEach(function(btn) {
+    btn.classList.toggle('active', show);
+  });
+  if (show) {
+    if (!anMap) {
+      setTimeout(function() {
+        anMap = L.map('an-map-div', { zoomControl: true, attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(anMap);
+        if (flightData.length) buildAnMapTrack();
+      }, 80);
+    } else {
+      setTimeout(function() { anMap.invalidateSize(); }, 80);
+    }
+  }
+}
+window.toggleAnMap = toggleAnMap;
+
+function buildAnMapTrack() {
+  if (!anMap || !flightData.length) return;
+  var pts = flightData
+    .filter(function(r) { return r.gps_valid===1||r.gps_valid==='1'; })
+    .map(function(r) { return [+(r.gps_lat||0), +(r.gps_lon||0)]; });
+  if (!pts.length) return;
+  if (anMapTrack) { anMap.removeLayer(anMapTrack); anMapTrack = null; }
+  anMapTrack = L.polyline(pts, { color:'#00d4ff', weight:2, opacity:0.7 }).addTo(anMap);
+  anMap.fitBounds(anMapTrack.getBounds(), { padding:[20,20] });
+}
 
 // ── Expose graph explorer + analyse functions to global scope (used by onclick= attributes) ──
 window.sigSidebarToggle     = sigSidebarToggle;
@@ -11019,8 +11455,6 @@ window.setGraphLayout       = setGraphLayout;
 window.toggleMapPanel       = toggleMapPanel;
 window.toggleZoomLock       = toggleZoomLock;
 window.resetGraphZoom       = resetGraphZoom;
-window.selectAnalysis       = selectAnalysis;
-window.renderAnalysisPanels = renderAnalysisPanels;
 window.buildSignalSidebar   = buildSignalSidebar;
 window.refreshAllPanelCharts = refreshAllPanelCharts;
 window.buildGraphMapTrack   = buildGraphMapTrack;
@@ -11199,16 +11633,17 @@ window.applyPanelTemplate = applyPanelTemplate;
 #ds-export-btn.ok   { border-color: #39ff14; color: #39ff14; }
 
 #ds-hud-btn {
-  background: transparent; border: 1px solid #1a2d45;
-  color: #4a6070; font-family: 'Share Tech Mono', monospace;
-  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-  padding: 5px 12px; border-radius: 4px; cursor: pointer;
-  transition: all .15s; margin-left: 6px; white-space: nowrap;
+  background: var(--trans); border: 1px solid var(--border);
+  color: var(--accent); font-family: var(--font-ui); font-weight: 600;
+  font-size: 10px; letter-spacing: 1px;
+  padding: 4px 10px; border-radius: 4px; cursor: pointer;
+  transition: all .2s; margin-left: 8px; white-space: nowrap;
+  opacity: 0.7;
 }
-#ds-hud-btn:hover { border-color: #ffcc00; color: #ffcc00; }
-#ds-hud-btn.busy { opacity: 0.4; cursor: wait; }
-#ds-hud-btn.ok   { border-color: #39ff14; color: #39ff14; }
-#ds-hud-btn.err  { border-color: #ff4d4d; color: #ff4d4d; }
+#ds-hud-btn:hover { background: rgba(0,212,255,0.15); border-color: var(--accent); opacity: 1; }
+#ds-hud-btn.busy { opacity: 0.35; cursor: wait; }
+#ds-hud-btn.ok   { border-color: #39ff14; color: #39ff14; opacity: 1; }
+#ds-hud-btn.err  { border-color: #ff4d4d; color: #ff4d4d; opacity: 1; }
 
 #ds-hud-progress {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 1600;
@@ -11253,6 +11688,73 @@ window.applyPanelTemplate = applyPanelTemplate;
 .ds-hud-modal-actions button:hover { border-color: #00d4ff; color: #00d4ff; }
 .ds-hud-modal-actions button.primary { border-color: #ffcc00; color: #ffcc00; }
 .ds-hud-modal-actions button.primary:hover { background: rgba(255,204,0,0.1); }
+
+/* ── CSV Export Modal ──────────────────────────────────────────────────── */
+#ds-csv-modal-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(2px);
+  display: none; align-items: center; justify-content: center;
+}
+#ds-csv-modal-overlay.open { display: flex; }
+#ds-csv-modal {
+  background: #0d1520; border: 1px solid #1a2d45; border-radius: 8px;
+  padding: 24px 28px; min-width: 380px; max-width: 560px; width: 95vw;
+  max-height: 80vh; overflow-y: auto;
+  font-family: 'Share Tech Mono', monospace; color: #c8dde8;
+}
+#ds-csv-modal h3 {
+  font-size: 13px; letter-spacing: 3px; text-transform: uppercase;
+  color: #ffcc00; margin-bottom: 20px;
+}
+.ds-csv-section { margin-bottom: 18px; }
+.ds-csv-section > .ds-csv-lbl {
+  display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: #4a6070; margin-bottom: 10px;
+}
+.ds-csv-radios { display: flex; flex-direction: column; gap: 8px; }
+.ds-csv-radios label { font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #c8dde8; }
+.ds-csv-range-row { display: none; align-items: center; gap: 6px; margin-left: 4px; }
+.ds-csv-range-row input[type=number] {
+  width: 60px; background: #080c10; border: 1px solid #1a2d45;
+  color: #c8dde8; font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; padding: 4px 6px; border-radius: 4px; outline: none;
+}
+.ds-csv-range-row input[type=number]:focus { border-color: #00d4ff; }
+.ds-csv-range-row span { color: #4a6070; font-size: 10px; }
+.ds-csv-cols-bar { display: flex; align-items: center; margin-bottom: 8px; }
+.ds-csv-cols-bar > span { flex: 1; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #4a6070; }
+.ds-csv-cols-bar button {
+  background: transparent; border: 1px solid #1a2d45; color: #4a6070;
+  font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1px;
+  text-transform: uppercase; padding: 3px 10px; border-radius: 4px; cursor: pointer;
+  transition: all .15s; margin-left: 6px;
+}
+.ds-csv-cols-bar button:hover { border-color: #00d4ff; color: #00d4ff; }
+#ds-csv-cols {
+  max-height: 200px; overflow-y: auto;
+  background: #070b10; border: 1px solid #1a2d45; border-radius: 4px;
+  padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 4px;
+}
+.ds-csv-chip {
+  display: inline-flex; align-items: center;
+  background: #0a1520; border: 1px solid #1a2d45; border-radius: 3px;
+  padding: 4px 9px; cursor: pointer;
+  font-family: 'Share Tech Mono', monospace; font-size: 10px; color: #3a5a6a;
+  transition: all .1s; user-select: none;
+}
+.ds-csv-chip input { display: none; }
+.ds-csv-chip:hover { border-color: #2a4a60; color: #8aaabb; }
+.ds-csv-chip.on { background: #071828; border-color: #005a78; color: #c8dde8; }
+
+/* ── PID export button (inside PID panel right column) ───────────────── */
+.ds-pid-export-btn {
+  width: 100%; background: transparent; border: 1px solid #1a2d45;
+  color: #4a6070; font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 8px; border-radius: 4px; cursor: pointer; transition: all .15s;
+  margin-top: 4px;
+}
+.ds-pid-export-btn:hover { border-color: #00d4ff; color: #00d4ff; }
 
 #ds-vid-toggle {
   position: fixed; bottom: 0; right: 24px; z-index: 1500;
@@ -11351,18 +11853,6 @@ window.applyPanelTemplate = applyPanelTemplate;
   backBtn.textContent = '← Sessions';
   backBtn.onclick = function() { location.href = '/'; };
   var hdrStats = document.querySelector('.header-stats');
-  if (hdrStats) hdrStats.appendChild(backBtn);
-  else document.body.appendChild(backBtn);
-
-  // ── Export pack button (only useful when a session is open) ───────────
-  if (LID) {
-    const exportBtn = document.createElement('button');
-    exportBtn.id = 'ds-export-btn';
-    exportBtn.textContent = '⬆ Export Studio';
-    exportBtn.onclick = dsExportPack;
-    if (hdrStats) hdrStats.appendChild(exportBtn);
-    else document.body.appendChild(exportBtn);
-  }
 
   // ── HUD modal ─────────────────────────────────────────────────────────
   var hudModalEl = document.createElement('div');
@@ -11407,6 +11897,40 @@ window.applyPanelTemplate = applyPanelTemplate;
     '</div>',
   ].join('');
   document.body.appendChild(hudModalEl);
+
+  // ── File picker for HUD output path (pywebview only) ──────────────────
+  fetch('/api/pick-folder/available')
+    .then(function(r) { return r.json(); })
+    .then(function(info) {
+      if (!info.available) return;
+      var outpathInput = document.getElementById('ds-hud-outpath');
+      if (!outpathInput) return;
+      outpathInput.style.display = 'none';
+      var pathDisplay = document.createElement('span');
+      pathDisplay.id = 'ds-hud-outpath-display';
+      pathDisplay.style.cssText = 'color:var(--dim);font-size:11px;font-family:var(--font-mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
+      pathDisplay.textContent = 'défaut : hud_output/ dans la session';
+      var browseBtn = document.createElement('button');
+      browseBtn.textContent = '📁 Parcourir';
+      browseBtn.className = 'btn';
+      browseBtn.style.cssText = 'padding:4px 10px;font-size:11px;flex-shrink:0;';
+      browseBtn.onclick = function() {
+        fetch('/api/pick-folder')
+          .then(function(r) { return r.json(); })
+          .then(function(res) {
+            if (res.path) {
+              outpathInput.value = res.path;
+              pathDisplay.textContent = res.path;
+            }
+          });
+      };
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:4px;';
+      row.appendChild(pathDisplay);
+      row.appendChild(browseBtn);
+      outpathInput.parentNode.appendChild(row);
+    });
+
   hudModalEl.addEventListener('click', function(e) {
     if (e.target === hudModalEl) hudModalEl.classList.remove('open');
   });
@@ -11418,13 +11942,30 @@ window.applyPanelTemplate = applyPanelTemplate;
     var res = (document.getElementById('ds-hud-res').value || '1920x1080').split('x');
     var tStartVal = parseFloat(document.getElementById('ds-hud-tstart').value);
     var tEndVal   = parseFloat(document.getElementById('ds-hud-tend').value);
-    dsGenerateHUD({
+    var opts = {
       fps:         parseInt(document.getElementById('ds-hud-fps').value, 10) || 25,
       width:       parseInt(res[0], 10) || 1920,
       height:      parseInt(res[1], 10) || 1080,
       t_start_s:   isNaN(tStartVal) ? 0 : tStartVal,
       t_end_s:     isNaN(tEndVal)   ? null : tEndVal,
       output_path: document.getElementById('ds-hud-outpath').value.trim() || null,
+    };
+    var hudBtn = document.getElementById('ds-hud-btn');
+    if (hudBtn && hudBtn.classList.contains('busy')) return;
+    if (hudBtn) { hudBtn.classList.add('busy'); hudBtn.textContent = '⬆ Export pack…'; }
+    dsExportPackAsync().then(function() {
+      dsGenerateHUD(opts);
+    }).catch(function(err) {
+      if (hudBtn) {
+        hudBtn.classList.remove('busy');
+        hudBtn.classList.add('err');
+        hudBtn.textContent = '✕ Erreur pack';
+        setTimeout(function() {
+          hudBtn.classList.remove('err');
+          hudBtn.textContent = '🎬 Générer HUD';
+        }, 3000);
+      }
+      if (typeof showToast === 'function') showToast('Erreur export pack : ' + err.message, 'warn');
     });
   });
 
@@ -11437,6 +11978,10 @@ window.applyPanelTemplate = applyPanelTemplate;
     if (hdrStats) hdrStats.appendChild(hudBtn);
     else document.body.appendChild(hudBtn);
 
+    // Sessions button appended after HUD button (rightmost)
+    if (hdrStats) hdrStats.appendChild(backBtn);
+    else document.body.appendChild(backBtn);
+
     var progEl = document.createElement('div');
     progEl.id = 'ds-hud-progress';
     progEl.innerHTML =
@@ -11444,6 +11989,10 @@ window.applyPanelTemplate = applyPanelTemplate;
       '<div id="ds-hud-bar-wrap"><div id="ds-hud-bar"></div></div>' +
       '<span id="ds-hud-prog-pct">0%</span>';
     document.body.appendChild(progEl);
+  } else {
+    // No LID: still inject back button
+    if (hdrStats) hdrStats.appendChild(backBtn);
+    else document.body.appendChild(backBtn);
   }
 
   // ── Auto-load CSV from session ─────────────────────────────────────────
@@ -11632,111 +12181,107 @@ window.applyPanelTemplate = applyPanelTemplate;
   }
 
   // ── Flight pack export ─────────────────────────────────────────────────
-  function dsExportPack() {
-    if (typeof flightData === 'undefined' || !flightData.length) {
-      if (typeof showToast === 'function') showToast('Aucune donnée — chargez un log d\'abord', 'warn');
-      return;
-    }
-    var btn = document.getElementById('ds-export-btn');
-    if (btn) { btn.classList.add('busy'); btn.textContent = '⏳ Export…'; }
-
-    // ── summary stats ──────────────────────────────────────────────────
-    var dur = (flightData[flightData.length-1].timestamp_us - flightData[0].timestamp_us) / 1e6;
-    var maxAlt = 0, maxSpd = 0, armedUs = 0, totalDist = 0;
-    var vbatMin = Infinity, vbatMax = -Infinity;
-    var prevLat = null, prevLon = null, prevArmed = false, prevTs = null;
-    for (var i = 0; i < flightData.length; i++) {
-      var r = flightData[i];
-      var alt = +r.gps_alt_m || 0;
-      var spd = +r.gps_speed_ms || 0;
-      var vb  = +r.vbat_V || 0;
-      if (alt > maxAlt) maxAlt = alt;
-      if (spd > maxSpd) maxSpd = spd;
-      if (vb > 0 && vb < vbatMin) vbatMin = vb;
-      if (vb > vbatMax) vbatMax = vb;
-      var armed = r.armed === 1 || r.armed === '1';
-      if (armed && prevTs !== null) armedUs += r.timestamp_us - prevTs;
-      if (r.gps_valid && r.gps_lat && prevLat !== null) {
-        var dLat = (r.gps_lat - prevLat) * Math.PI / 180;
-        var dLon = (r.gps_lon - prevLon) * Math.PI / 180;
-        var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
-                Math.cos(prevLat*Math.PI/180)*Math.cos(r.gps_lat*Math.PI/180)*
-                Math.sin(dLon/2)*Math.sin(dLon/2);
-        totalDist += 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  function dsExportPackAsync() {
+    return new Promise(function(resolve, reject) {
+      if (typeof flightData === 'undefined' || !flightData.length) {
+        reject(new Error('Aucune donnée — chargez un log d\'abord'));
+        return;
       }
-      if (r.gps_valid && r.gps_lat) { prevLat = +r.gps_lat; prevLon = +r.gps_lon; }
-      prevArmed = armed;
-      prevTs = r.timestamp_us;
-    }
 
-    // ── per-frame data ─────────────────────────────────────────────────
-    var ekf = (typeof ekfData !== 'undefined' && ekfData.length === flightData.length)
-              ? ekfData : null;
-    var frames = [];
-    for (var j = 0; j < flightData.length; j++) {
-      var fd = flightData[j];
-      var ef = ekf ? ekf[j] : null;
-      var fr = {
-        t_us:   fd.timestamp_us,
-        armed:  fd.armed === 1 || fd.armed === '1' ? 1 : 0,
-        fm:     +(fd.flight_mode || 0),
-        roll:   +(fd.roll_IMU  || 0),
-        pitch:  +(fd.pitch_IMU || 0),
-        yaw:    +(fd.yaw_IMU   || 0),
-        lat:    +(fd.gps_lat   || 0),
-        lon:    +(fd.gps_lon   || 0),
-        alt_m:  +(fd.gps_alt_m || 0),
-        spd_ms: +(fd.gps_speed_ms || 0),
-        sats:   +(fd.gps_sats  || 0),
-        gps_ok: fd.gps_valid === 1 || fd.gps_valid === '1' ? 1 : 0,
-        m1:     +(fd.m1_PWM    || 0),
-        m3:     +(fd.m3_PWM    || 0),
-        vbat:   +(fd.vbat_V    || 0),
-        Vfwd:   ef ? +ef.Vfwd.toFixed(3) : 0,
-        Vlat:   ef ? +ef.Vlat.toFixed(3) : 0,
-        Vz:     ef ? +ef.Vz.toFixed(3)   : 0,
-        Vh:     ef ? +ef.Vh.toFixed(3)   : 0,
+      var dur = (flightData[flightData.length-1].timestamp_us - flightData[0].timestamp_us) / 1e6;
+      var maxAlt = 0, maxSpd = 0, armedUs = 0, totalDist = 0;
+      var vbatMin = Infinity, vbatMax = -Infinity;
+      var prevLat = null, prevLon = null, prevArmed = false, prevTs = null;
+      for (var i = 0; i < flightData.length; i++) {
+        var r = flightData[i];
+        var alt = +r.gps_alt_m || 0;
+        var spd = +r.gps_speed_ms || 0;
+        var vb  = +r.vbat_V || 0;
+        if (alt > maxAlt) maxAlt = alt;
+        if (spd > maxSpd) maxSpd = spd;
+        if (vb > 0 && vb < vbatMin) vbatMin = vb;
+        if (vb > vbatMax) vbatMax = vb;
+        var armed = r.armed === 1 || r.armed === '1';
+        if (armed && prevTs !== null) armedUs += r.timestamp_us - prevTs;
+        if (r.gps_valid && r.gps_lat && prevLat !== null) {
+          var dLat = (r.gps_lat - prevLat) * Math.PI / 180;
+          var dLon = (r.gps_lon - prevLon) * Math.PI / 180;
+          var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+                  Math.cos(prevLat*Math.PI/180)*Math.cos(r.gps_lat*Math.PI/180)*
+                  Math.sin(dLon/2)*Math.sin(dLon/2);
+          totalDist += 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+        if (r.gps_valid && r.gps_lat) { prevLat = +r.gps_lat; prevLon = +r.gps_lon; }
+        prevArmed = armed;
+        prevTs = r.timestamp_us;
+      }
+
+      var ekf = (typeof ekfData !== 'undefined' && ekfData.length === flightData.length)
+                ? ekfData : null;
+      var frames = [];
+      for (var j = 0; j < flightData.length; j++) {
+        var fd = flightData[j];
+        var ef = ekf ? ekf[j] : null;
+        frames.push({
+          t_us:   fd.timestamp_us,
+          armed:  fd.armed === 1 || fd.armed === '1' ? 1 : 0,
+          fm:     +(fd.flight_mode || 0),
+          roll:   +(fd.roll_IMU  || 0),
+          pitch:  +(fd.pitch_IMU || 0),
+          yaw:    +(fd.yaw_IMU   || 0),
+          lat:    +(fd.gps_lat   || 0),
+          lon:    +(fd.gps_lon   || 0),
+          alt_m:  +(fd.gps_alt_m || 0),
+          spd_ms: +(fd.gps_speed_ms || 0),
+          sats:   +(fd.gps_sats  || 0),
+          gps_ok: fd.gps_valid === 1 || fd.gps_valid === '1' ? 1 : 0,
+          m1:     +(fd.m1_PWM    || 0),
+          m3:     +(fd.m3_PWM    || 0),
+          vbat:   +(fd.vbat_V    || 0),
+          Vfwd:   ef ? +ef.Vfwd.toFixed(3) : 0,
+          Vlat:   ef ? +ef.Vlat.toFixed(3) : 0,
+          Vz:     ef ? +ef.Vz.toFixed(3)   : 0,
+          Vh:     ef ? +ef.Vh.toFixed(3)   : 0,
+        });
+      }
+
+      var pack = {
+        version:     1,
+        exported_at: new Date().toISOString(),
+        lid:         LID,
+        meta: {
+          duration_s:   Math.round(dur * 10) / 10,
+          max_alt_m:    Math.round(maxAlt * 10) / 10,
+          max_speed_ms: Math.round(maxSpd * 10) / 10,
+          armed_s:      Math.round(armedUs / 1e4) / 100,
+          total_dist_m: Math.round(totalDist),
+          vbat_min_v:   vbatMin === Infinity ? null : Math.round(vbatMin * 100) / 100,
+          vbat_max_v:   vbatMax < 0 ? null : Math.round(vbatMax * 100) / 100,
+        },
+        frames: frames,
       };
-      frames.push(fr);
-    }
 
-    var pack = {
-      version:     1,
-      exported_at: new Date().toISOString(),
-      lid:         LID,
-      meta: {
-        duration_s:   Math.round(dur * 10) / 10,
-        max_alt_m:    Math.round(maxAlt * 10) / 10,
-        max_speed_ms: Math.round(maxSpd * 10) / 10,
-        armed_s:      Math.round(armedUs / 1e4) / 100,
-        total_dist_m: Math.round(totalDist),
-        vbat_min_v:   vbatMin === Infinity ? null : Math.round(vbatMin * 100) / 100,
-        vbat_max_v:   vbatMax < 0 ? null : Math.round(vbatMax * 100) / 100,
-      },
-      frames: frames,
-    };
+      fetch('/api/sessions/' + LID + '/pack', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pack),
+      })
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(d) {
+        if (typeof showToast === 'function') showToast('Flight pack exporté — ' + d.frames + ' frames', 'ok');
+        resolve(d);
+      })
+      .catch(function(err) {
+        reject(err);
+      });
+    });
+  }
 
-    fetch('/api/sessions/' + LID + '/pack', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pack),
-    })
-    .then(function(r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d) {
-      if (btn) {
-        btn.classList.remove('busy'); btn.classList.add('ok');
-        btn.textContent = '✓ Exporté (' + d.frames + ' frames)';
-        setTimeout(function() {
-          btn.classList.remove('ok'); btn.textContent = '⬆ Export Studio';
-        }, 3000);
-      }
-      if (typeof showToast === 'function') showToast('Flight pack exporté — ' + d.frames + ' frames', 'ok');
-    })
-    .catch(function(err) {
-      if (btn) { btn.classList.remove('busy'); btn.textContent = '⬆ Export Studio'; }
+  function dsExportPack() {
+    dsExportPackAsync().catch(function(err) {
       if (typeof showToast === 'function') showToast('Erreur export : ' + err.message, 'warn');
     });
   }
