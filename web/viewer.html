@@ -1327,7 +1327,7 @@ canvas.chart { width: 100%; height: 100%; }
     <div class="stat-pill" title="Distance GPS totale">DIST<span id="hdr-dist">-- km</span></div>
     <div class="stat-pill" title="Tension batterie minimale">VBAT MIN<span id="hdr-vbat">-- V</span></div>
     <div style="display:flex;gap:6px;margin-left:8px;">
-      <button class="btn" onclick="exportCSV()" title="Télécharger les données filtrées" style="padding:4px 10px;font-size:10px;opacity:0.7;" id="btn-export-csv">⬇ CSV</button>
+      <button class="btn" onclick="openCSVExportModal()" title="Exporter les données filtrées" style="padding:4px 10px;font-size:10px;opacity:0.7;" id="btn-export-csv">⬇ CSV</button>
       <button class="btn" onclick="exportPIDReport()" title="Rapport PID" style="padding:4px 10px;font-size:10px;opacity:0.7;" id="btn-export-pid">⬇ PID</button>
     </div>
   </div>
@@ -5432,33 +5432,194 @@ function updateMotorRadar() {
 // ================================================================
 //  EXPORT CSV
 // ================================================================
-function exportCSV() {
-  if(!flightData.length) return;
-  const cells      = +(flightConfig['CELLS']||6);
-  const batType    = document.getElementById('bat-type-select')?.value || 'lipo';
-  const span       = motorPWM_max - motorPWM_min || 1;
-  const baseKeys   = Object.keys(flightData[0]);
-  const extraKeys  = ['time_s', 'vbat_soc_pct', ...activeMotors.map(m=>`m${m}_pct`)];
-  const allKeys    = [...baseKeys, ...extraKeys];
+// ── Modale export CSV ─────────────────────────────────────────────────────
+var _csvModal = null;
 
-  const rows = flightData.slice(viewStart, viewEnd+1).map(r => {
-    const t    = (r.timestamp_us/1e6).toFixed(3);
-    const soc  = r.vbat_V > 0 ? voltToPercent(r.vbat_V/cells, batType).toFixed(1) : '';
-    const mPcts= activeMotors.map(m => {
-      const v = +(r[`m${m}_PWM`]||0);
-      return v >= motorPWM_min ? Math.max(0,Math.min(100,(v-motorPWM_min)/span*100)).toFixed(1) : '0';
+function _buildCSVModal() {
+  var overlay = document.createElement('div');
+  overlay.id = 'ds-csv-modal-overlay';
+  overlay.style.cssText = [
+    'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);',
+    'z-index:9000;align-items:center;justify-content:center;',
+  ].join('');
+  overlay.innerHTML = [
+    '<div id="ds-csv-modal" style="',
+      'background:#0e1218;border:1px solid #2a2a35;border-radius:6px;',
+      'padding:20px 24px;min-width:360px;max-width:520px;width:90vw;',
+      'max-height:80vh;overflow-y:auto;font-family:var(--font-hud);',
+    '">',
+    '  <div style="font-size:13px;letter-spacing:2px;color:var(--accent);margin-bottom:14px;">EXPORT CSV</div>',
+
+    '  <div class="ds-hud-field">',
+    '    <label style="font-size:10px;letter-spacing:1px;color:var(--dim);">PLAGE TEMPORELLE</label>',
+    '    <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">',
+    '      <label style="font-size:11px;cursor:pointer;"><input type="radio" name="ds-csv-range" value="view" checked> Vue actuelle</label>',
+    '      <label style="font-size:11px;cursor:pointer;"><input type="radio" name="ds-csv-range" value="all"> Tout le vol</label>',
+    '      <label style="font-size:11px;cursor:pointer;"><input type="radio" name="ds-csv-range" value="custom"> Personnalisée',
+    '        <span id="ds-csv-custom-inputs" style="display:none;margin-left:8px;">',
+    '          <input type="number" id="ds-csv-tstart" placeholder="0.0" min="0" step="0.1"',
+    '            style="width:64px;background:#0a0c10;border:1px solid #333;color:var(--text);padding:2px 4px;font-family:var(--font-mono);font-size:11px;">',
+    '          <span style="color:var(--dim);margin:0 4px;">→</span>',
+    '          <input type="number" id="ds-csv-tend" placeholder="fin" min="0" step="0.1"',
+    '            style="width:64px;background:#0a0c10;border:1px solid #333;color:var(--text);padding:2px 4px;font-family:var(--font-mono);font-size:11px;">',
+    '          <span style="color:var(--dim);margin-left:4px;font-size:10px;">s</span>',
+    '        </span>',
+    '      </label>',
+    '    </div>',
+    '  </div>',
+
+    '  <div class="ds-hud-field" style="margin-top:12px;">',
+    '    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">',
+    '      <label style="font-size:10px;letter-spacing:1px;color:var(--dim);flex:1;">COLONNES</label>',
+    '      <button id="ds-csv-sel-all" class="btn" style="padding:2px 8px;font-size:10px;">Tout</button>',
+    '      <button id="ds-csv-sel-none" class="btn" style="padding:2px 8px;font-size:10px;">Rien</button>',
+    '    </div>',
+    '    <div id="ds-csv-cols" style="',
+    '      max-height:180px;overflow-y:auto;',
+    '      display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:3px;',
+    '      background:#080a0e;border:1px solid #1a1a24;border-radius:3px;padding:8px;',
+    '    "></div>',
+    '  </div>',
+
+    '  <div class="ds-hud-modal-actions" style="margin-top:14px;">',
+    '    <button id="ds-csv-cancel" class="btn">Annuler</button>',
+    '    <button id="ds-csv-export" class="btn primary">⬇ Exporter</button>',
+    '  </div>',
+    '</div>',
+  ].join('');
+  document.body.appendChild(overlay);
+
+  // Radio: show/hide custom inputs
+  overlay.querySelectorAll('input[name="ds-csv-range"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      document.getElementById('ds-csv-custom-inputs').style.display =
+        radio.value === 'custom' ? 'inline' : 'none';
     });
-    return [...Object.values(r), t, soc, ...mPcts].join(',');
   });
 
-  const csv  = allKeys.join(',') + '\n' + rows.join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const name = (flightConfig['CONFIG_NAME']||'VTOL').replace(/[^a-zA-Z0-9_]/g,'_');
-  a.href = url; a.download = `${name}_filtered.csv`;
+  document.getElementById('ds-csv-sel-all').addEventListener('click', function() {
+    overlay.querySelectorAll('#ds-csv-cols input[type=checkbox]').forEach(function(cb) { cb.checked = true; });
+  });
+  document.getElementById('ds-csv-sel-none').addEventListener('click', function() {
+    overlay.querySelectorAll('#ds-csv-cols input[type=checkbox]').forEach(function(cb) { cb.checked = false; });
+  });
+  document.getElementById('ds-csv-cancel').addEventListener('click', function() {
+    overlay.style.display = 'none';
+  });
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) overlay.style.display = 'none';
+  });
+  document.getElementById('ds-csv-export').addEventListener('click', function() {
+    var selected = overlay.querySelectorAll('#ds-csv-cols input[type=checkbox]:checked');
+    if (!selected.length) {
+      if (typeof showToast === 'function') showToast('Sélectionnez au moins une colonne', 'warn');
+      return;
+    }
+    overlay.style.display = 'none';
+    _doCSVExport(overlay);
+  });
+
+  return overlay;
+}
+
+function openCSVExportModal() {
+  if (!flightData || !flightData.length) {
+    if (typeof showToast === 'function') showToast('Aucune donnée chargée', 'warn');
+    return;
+  }
+  if (!_csvModal) _csvModal = _buildCSVModal();
+
+  // Populate columns
+  var cells      = +(flightConfig['CELLS'] || 6);
+  var baseKeys   = Object.keys(flightData[0]);
+  var extraKeys  = ['time_s', 'vbat_soc_pct'].concat(activeMotors.map(function(m) { return 'm' + m + '_pct'; }));
+  var allKeys    = baseKeys.concat(extraKeys);
+  var colsDiv    = document.getElementById('ds-csv-cols');
+  colsDiv.innerHTML = '';
+  allKeys.forEach(function(k) {
+    var lbl = document.createElement('label');
+    lbl.style.cssText = 'font-size:10px;cursor:pointer;display:flex;align-items:center;gap:4px;color:var(--text);';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = k;
+    cb.checked = true;
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(k));
+    colsDiv.appendChild(lbl);
+  });
+
+  // Reset range to "view"
+  var viewRadio = _csvModal.querySelector('input[value="view"]');
+  if (viewRadio) { viewRadio.checked = true; document.getElementById('ds-csv-custom-inputs').style.display = 'none'; }
+
+  _csvModal.style.display = 'flex';
+}
+
+function _doCSVExport(overlay) {
+  if (!flightData || !flightData.length) return;
+
+  var cells     = +(flightConfig['CELLS'] || 6);
+  var batType   = document.getElementById('bat-type-select') ? document.getElementById('bat-type-select').value : 'lipo';
+  var span      = motorPWM_max - motorPWM_min || 1;
+
+  // Determine row range
+  var rangeVal = overlay.querySelector('input[name="ds-csv-range"]:checked').value;
+  var iStart, iEnd;
+  if (rangeVal === 'view') {
+    iStart = viewStart; iEnd = viewEnd + 1;
+  } else if (rangeVal === 'all') {
+    iStart = 0; iEnd = flightData.length;
+  } else {
+    var t0us = flightData[0].timestamp_us;
+    var tsVal = parseFloat(document.getElementById('ds-csv-tstart').value);
+    var teVal = parseFloat(document.getElementById('ds-csv-tend').value);
+    var startUs = t0us + (isNaN(tsVal) ? 0 : tsVal) * 1e6;
+    var endUs   = isNaN(teVal) ? Infinity : t0us + teVal * 1e6;
+    iStart = 0;
+    while (iStart < flightData.length && flightData[iStart].timestamp_us < startUs) iStart++;
+    iEnd = iStart;
+    while (iEnd < flightData.length && flightData[iEnd].timestamp_us <= endUs) iEnd++;
+  }
+
+  // Selected columns
+  var selectedKeys = [];
+  overlay.querySelectorAll('#ds-csv-cols input[type=checkbox]:checked').forEach(function(cb) {
+    selectedKeys.push(cb.value);
+  });
+  if (!selectedKeys.length) { if (typeof showToast === 'function') showToast('Sélectionnez au moins une colonne', 'warn'); return; }
+
+  var baseKeys  = Object.keys(flightData[0]);
+  var extraKeys = ['time_s', 'vbat_soc_pct'].concat(activeMotors.map(function(m) { return 'm' + m + '_pct'; }));
+
+  var rows = [];
+  for (var i = iStart; i < iEnd; i++) {
+    var r   = flightData[i];
+    var t   = (r.timestamp_us / 1e6).toFixed(3);
+    var soc = r.vbat_V > 0 ? voltToPercent(r.vbat_V / cells, batType).toFixed(1) : '';
+    var mPcts = activeMotors.map(function(m) {
+      var v = +(r['m' + m + '_PWM'] || 0);
+      return v >= motorPWM_min ? Math.max(0, Math.min(100, (v - motorPWM_min) / span * 100)).toFixed(1) : '0';
+    });
+    var rowObj = {};
+    baseKeys.forEach(function(k) { rowObj[k] = r[k]; });
+    rowObj['time_s']       = t;
+    rowObj['vbat_soc_pct'] = soc;
+    activeMotors.forEach(function(m, idx) { rowObj['m' + m + '_pct'] = mPcts[idx]; });
+
+    rows.push(selectedKeys.map(function(k) {
+      var v = rowObj[k];
+      return v === undefined ? '' : v;
+    }).join(','));
+  }
+
+  var csv  = selectedKeys.join(',') + '\n' + rows.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  var name = (flightConfig['CONFIG_NAME'] || 'VTOL').replace(/[^a-zA-Z0-9_]/g, '_');
+  a.href = url; a.download = name + '_export.csv';
   a.click(); URL.revokeObjectURL(url);
-  showToast(`⬇ CSV exporté — ${rows.length} lignes`);
+  if (typeof showToast === 'function') showToast('⬇ CSV exporté — ' + rows.length + ' lignes, ' + selectedKeys.length + ' colonnes', 'ok');
 }
 
 // ================================================================
