@@ -95,8 +95,8 @@
   /* ── SVG vue de dessus (marker IDs: conv-da, conv-dasm) ─────────────────── */
   const SVG_DESSUS = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 780" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
   <defs>
-    <marker id="conv-da" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
-    <marker id="conv-dasm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="conv-da" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="conv-dasm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
   </defs>
   <text x="340" y="24" text-anchor="middle" font-size="14" font-weight="500" fill="#2C2C2A">Vue de dessus</text>
   <line x1="40" y1="60" x2="40" y2="100" stroke="#5F5E5A" stroke-width="0.8" marker-end="url(#conv-da)"/>
@@ -161,7 +161,7 @@
   /* ── SVG vue de côté (marker ID: conv-ca) ───────────────────────────────── */
   const SVG_COTE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 400" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
   <defs>
-    <marker id="conv-ca" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="conv-ca" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
   </defs>
   <text x="340" y="22" text-anchor="middle" font-size="14" font-weight="500" fill="#2C2C2A">Vue de côté — convention α</text>
   <g transform="translate(60,80)">
@@ -313,26 +313,27 @@
     });
     document.addEventListener('mousemove', function (e) {
       if (!dragging) return;
-      panel.style.left = (e.clientX - dx) + 'px';
-      panel.style.top  = (e.clientY - dy) + 'px';
+      const newLeft = Math.max(0, Math.min(e.clientX - dx, window.innerWidth - 80));
+      const newTop  = Math.max(0, Math.min(e.clientY - dy, window.innerHeight - 40));
+      panel.style.left = newLeft + 'px';
+      panel.style.top  = newTop  + 'px';
     });
     document.addEventListener('mouseup', function () { dragging = false; });
   }
 
   /* ── State & public API ─────────────────────────────────────────────────── */
   let _panel = null;
-  let _open  = false;
 
   function toggleConventionsPanel() {
     if (!_panel) return;
-    _open = !_open;
-    _panel.style.display = _open ? 'flex' : 'none';
+    const isOpen = _panel.style.display === 'flex';
+    _panel.style.display = isOpen ? 'none' : 'flex';
   }
 
   window.toggleConventionsPanel = toggleConventionsPanel;
 
   /* ── Boot ───────────────────────────────────────────────────────────────── */
-  document.addEventListener('DOMContentLoaded', function () {
+  function boot() {
     const style = document.createElement('style');
     style.textContent = CSS;
     document.head.appendChild(style);
@@ -344,6 +345,12 @@
 
     setupDrag(_panel, document.getElementById('conv-titlebar'));
     _panel.querySelector('.conv-close').addEventListener('click', toggleConventionsPanel);
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
 
 })();
