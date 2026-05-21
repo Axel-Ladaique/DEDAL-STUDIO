@@ -47,6 +47,7 @@ class _SessionPatch(BaseModel):
 
 
 _sessions = APIRouter(prefix="/api/sessions", tags=["sessions"])
+_live = APIRouter(prefix="/api/live", tags=["live"])
 
 
 @_sessions.get("")
@@ -416,6 +417,75 @@ async def session_attach_video(
     return JSONResponse(s.to_dict())
 
 
+# ── live telemetry router ─────────────────────────────────────────────────
+
+
+class _ConnectBody(BaseModel):
+    port: str
+    baud: int = 921600
+
+
+@_live.get("/ports")
+def live_ports() -> JSONResponse:
+    """List available serial ports filtered for likely CRSF devices."""
+    import serial.tools.list_ports
+    ports = []
+    for p in serial.tools.list_ports.comports():
+        name = p.device
+        if any(k in name for k in ("usbmodem", "ttyACM", "ttyUSB", "COM")):
+            ports.append({"port": name, "description": p.description or ""})
+    return JSONResponse(ports)
+
+
+@_live.post("/connect")
+def live_connect(body: _ConnectBody) -> JSONResponse:
+    """Start CRSFReader on given port. Returns 400 if already connected or port invalid."""
+    from .live import _live_session
+    if _live_session.is_connected():
+        return JSONResponse({"error": "already connected"}, status_code=400)
+    try:
+        _live_session.connect(body.port, body.baud)
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse({"status": "connected", "port": body.port})
+
+
+@_live.post("/disconnect")
+def live_disconnect() -> JSONResponse:
+    """Stop CRSFReader and release serial port."""
+    from .live import _live_session
+    _live_session.disconnect()
+    return JSONResponse({"status": "disconnected"})
+
+
+@_live.get("/state")
+def live_state() -> JSONResponse:
+    """One-shot snapshot of current telemetry + stats (for page reconnect)."""
+    from .live import _live_session
+    return JSONResponse({
+        "connected": _live_session.is_connected(),
+        "telemetry": _live_session.get_state(),
+        "stats": _live_session.get_stats(),
+    })
+
+
+@_live.get("/stream")
+async def live_stream() -> StreamingResponse:
+    """SSE stream — pushes 'telemetry' and 'stats' events every 100ms."""
+    import asyncio
+    from .live import _live_session
+
+    async def _gen():
+        while True:
+            state = _live_session.get_state()
+            stats = _live_session.get_stats()
+            yield f"event: telemetry\ndata: {json.dumps(state)}\n\n"
+            yield f"event: stats\ndata: {json.dumps(stats)}\n\n"
+            await asyncio.sleep(0.1)
+
+    return StreamingResponse(_gen(), media_type="text/event-stream")
+
+
 # ── app factory ───────────────────────────────────────────────────────────
 
 
@@ -451,6 +521,14 @@ def create_app(cfg: Config) -> FastAPI:
         return FileResponse(index, headers=_no_cache)
 
     app.include_router(_sessions)
+    app.include_router(_live)
+
+    @app.get("/live.html")
+    def live_page() -> Response:
+        f = WEB_DIR / "live.html"
+        if not f.exists():
+            return JSONResponse({"error": "live.html not found"}, status_code=500)
+        return FileResponse(f, headers=_no_cache)
 
     # ── Panel templates persistence ──────────────────────────────────────────
     def _templates_path() -> Path:
@@ -548,6 +626,32 @@ def create_app(cfg: Config) -> FastAPI:
             return JSONResponse({"error": str(e)}, status_code=500)
 
     # ── Native folder picker (pywebview) ──────────────────────────────────
+    @app.post("/api/save-download")
+    async def save_download(request: Request) -> JSONResponse:
+        """Save base64-encoded content to ~/Downloads (used by PyWebView where
+        the `download` attribute on blob: links is silently ignored by WebKit)."""
+        import base64
+        body = await request.json()
+        filename = body.get("filename") or "dedal_export"
+        content_b64 = body.get("content", "")
+        if not content_b64:
+            return JSONResponse({"error": "no content"}, status_code=400)
+        try:
+            data = base64.b64decode(content_b64)
+        except Exception as exc:
+            return JSONResponse({"error": f"invalid base64: {exc}"}, status_code=400)
+        downloads = Path.home() / "Downloads"
+        downloads.mkdir(exist_ok=True)
+        dest = downloads / filename
+        if dest.exists():
+            stem, suffix = dest.stem, dest.suffix
+            i = 1
+            while dest.exists():
+                dest = downloads / f"{stem}_{i}{suffix}"
+                i += 1
+        dest.write_bytes(data)
+        return JSONResponse({"path": str(dest), "filename": dest.name})
+
     @app.get("/api/pick-folder/available")
     def pick_folder_available() -> JSONResponse:
         try:

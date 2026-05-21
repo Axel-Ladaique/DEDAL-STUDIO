@@ -69,3 +69,34 @@ class TestArmedStats:
         assert d["armed"] is True
         assert d["gps_alt_max"] is None
         assert d["sample_count"] == 1
+
+
+class TestLiveRoutes:
+    def test_ports_returns_200(self, client):
+        resp = client.get("/api/live/ports")
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)
+
+    def test_state_returns_disconnected_by_default(self, client):
+        resp = client.get("/api/live/state")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["connected"] is False
+        assert isinstance(data["telemetry"], dict)
+        assert isinstance(data["stats"], dict)
+
+    def test_connect_invalid_port_returns_400(self, client):
+        resp = client.post(
+            "/api/live/connect",
+            json={"port": "/dev/tty.doesnotexist999", "baud": 921600},
+        )
+        assert resp.status_code == 400
+        assert "error" in resp.json()
+
+    def test_connect_missing_port_returns_422(self, client):
+        resp = client.post("/api/live/connect", json={"baud": 921600})
+        assert resp.status_code == 422
+
+    def test_disconnect_when_not_connected_is_ok(self, client):
+        resp = client.post("/api/live/disconnect")
+        assert resp.status_code == 200
