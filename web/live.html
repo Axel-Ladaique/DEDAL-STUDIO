@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEDAL Studio · LIVE</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  --bg:#050810; --surface:#080d1a; --surface2:#0c1220;
+  --border:rgba(255,255,255,0.06); --border2:rgba(255,255,255,0.12);
+  --accent:#00ff9d; --accent2:#ffb340; --accent3:#00d4ff;
+  --warn:#ffb340; --red:#ff453a; --text:#c8d8f0;
+  --dim:#3a4a60; --dim2:#5a6a80;
+  --font-hud:'Orbitron',monospace; --font-mono:'Share Tech Mono',monospace;
+  --font-ui:'DM Mono',monospace; --r:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size:14px;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:9999;}
+
+/* ── TOPBAR ── */
+#topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:7px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.tb-logo{font-family:var(--font-hud);font-size:13px;letter-spacing:3px;color:var(--accent3);font-weight:700;}
+.tb-logo span{color:var(--dim2);font-size:9px;letter-spacing:2px;margin-left:6px;}
+#port-select{background:#0a1a2a;border:1px solid rgba(0,212,255,0.2);color:#7aaccc;padding:3px 10px;border-radius:4px;font-size:9px;font-family:var(--font-mono);letter-spacing:1px;}
+.btn-tb{font-family:var(--font-hud);font-size:8px;letter-spacing:1.5px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--dim2);padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;}
+.btn-tb:hover{background:rgba(255,255,255,0.08);color:var(--text);}
+.btn-rec{font-family:var(--font-hud);font-size:8px;letter-spacing:1.5px;background:rgba(255,69,58,0.1);border:1px solid rgba(255,69,58,0.3);color:var(--red);padding:4px 10px;border-radius:4px;cursor:pointer;}
+.badge{font-family:var(--font-mono);font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:3px;}
+.badge-ok{background:rgba(0,255,157,0.1);color:var(--accent);border:1px solid rgba(0,255,157,0.25);}
+.badge-dis{background:rgba(255,69,58,0.1);color:var(--red);border:1px solid rgba(255,69,58,0.25);}
+.badge-dim{background:rgba(255,255,255,0.04);color:var(--dim2);border:1px solid var(--border);}
+.badge-warn{background:rgba(255,179,64,0.1);color:var(--accent2);border:1px solid rgba(255,179,64,0.25);}
+#tb-right{margin-left:auto;display:flex;align-items:center;gap:6px;}
+
+/* ── STATS STRIP ── */
+#stats-strip{background:rgba(8,13,26,0.97);border-top:1px solid rgba(0,255,157,0.1);padding:5px 14px;display:flex;align-items:center;gap:0;flex-shrink:0;overflow-x:auto;}
+.ss-title{font-family:var(--font-hud);font-size:6px;letter-spacing:2px;color:rgba(0,255,157,0.35);padding-right:12px;margin-right:4px;border-right:1px solid var(--border);white-space:nowrap;line-height:1.4;}
+.ss-item{display:flex;flex-direction:column;align-items:center;padding:0 12px;border-right:1px solid var(--border);}
+.ss-item:last-child{border-right:none;}
+.ss-lbl{font-family:var(--font-hud);font-size:6px;letter-spacing:1px;color:var(--dim);margin-bottom:1px;white-space:nowrap;}
+.ss-row{display:flex;gap:6px;align-items:baseline;}
+.ss-max{font-family:var(--font-mono);font-size:13px;color:var(--accent2);}
+.ss-avg{font-family:var(--font-mono);font-size:10px;color:var(--dim2);}
+.ss-u{font-size:8px;color:var(--dim);margin-left:1px;}
+
+/* ── TELEM GRID (identique viewer) ── */
+#telem-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;grid-template-rows:1fr 1fr 0.55fr;gap:5px;padding:8px 8px 6px;flex:1;min-height:0;overflow:hidden;}
+.telem-cell{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.telem-cell-label{padding:4px 10px;font-family:var(--font-hud);font-size:8px;letter-spacing:2px;color:var(--dim2);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:6px;}
+.telem-cell-body{flex:1;overflow:hidden;position:relative;min-height:0;}
+.panel-badge{font-family:var(--font-mono);font-size:10px;padding:2px 6px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:3px;color:var(--dim2);}
+.panel-badge.ok{background:rgba(0,255,157,0.08);border-color:rgba(0,255,157,0.2);color:var(--accent);}
+
+/* ── DATA GRID ── */
+.data-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;}
+.data-label{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;}
+.data-value{font-family:var(--font-mono);font-size:16px;color:var(--text);}
+.data-value.accent{color:var(--accent);}
+.data-value.green{color:var(--accent);}
+.data-value.orange{color:var(--accent2);}
+.data-value.blue{color:var(--accent3);}
+.data-value.red{color:var(--red);}
+
+/* ── MAP ── */
+#live-map{flex:1;min-height:150px;}
+.map-footer{padding:6px 10px;border-top:1px solid var(--border);flex-shrink:0;}
+
+/* ── ATTITUDE ── */
+.imu-row{display:flex;gap:8px;padding:5px 8px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+.imu-val .k{font-size:8px;color:var(--dim);letter-spacing:1px;display:block;}
+.imu-val .v{font-family:var(--font-mono);font-size:20px;color:var(--accent3);}
+
+/* ── RADIO RC ── */
+.radio-inner{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.radio-analog-section{padding:5px 8px 4px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.radio-bar-row{display:grid;grid-template-columns:22px 1fr 52px;align-items:center;gap:0 5px;margin-bottom:3px;}
+.radio-bar-row:last-child{margin-bottom:0;}
+.radio-ch-num{font-family:var(--font-mono);font-size:9px;color:var(--dim2);}
+.radio-bar-wrap{background:rgba(255,255,255,0.04);border-radius:2px;height:8px;overflow:hidden;}
+.radio-bar{height:100%;border-radius:2px;transition:width .08s;}
+.radio-bar.analog{background:linear-gradient(90deg,var(--accent3),#0099bb);}
+.radio-bar.ch1{background:linear-gradient(90deg,#ff6b35,#cc4422);}
+.radio-ch-val{font-family:var(--font-mono);font-size:9px;color:var(--dim2);text-align:right;}
+.radio-sw-section{padding:5px 8px 4px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.radio-sw-line{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:3px;}
+.radio-sw-line:last-child{margin-bottom:0;}
+.radio-sw-item{background:rgba(255,255,255,0.02);border-radius:3px;padding:3px 5px;}
+.radio-sw-top{display:flex;align-items:center;justify-content:space-between;gap:4px;}
+.radio-sw-ch{font-family:var(--font-mono);font-size:8px;color:var(--dim);}
+.radio-sw-name{font-size:8px;color:var(--dim2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.radio-sw-mode{font-family:var(--font-mono);font-size:9px;font-weight:600;}
+.radio-sw-positions{display:flex;gap:3px;margin-top:2px;}
+.radio-sw-pos{width:14px;height:7px;border-radius:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);}
+.radio-sw-pos.active-g{background:rgba(0,255,157,0.3);border-color:rgba(0,255,157,0.5);}
+.radio-sw-pos.active-b{background:rgba(0,212,255,0.3);border-color:rgba(0,212,255,0.5);}
+.radio-sw-pos.active-r{background:rgba(255,69,58,0.35);border-color:rgba(255,69,58,0.55);}
+.radio-sw-pos.active-a{background:rgba(255,179,64,0.3);border-color:rgba(255,179,64,0.5);}
+.radio-sticks-row{flex:1;display:flex;align-items:center;justify-content:center;gap:20px;padding:8px 10px;min-height:0;}
+.radio-stick-box{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.radio-stick-title{font-family:var(--font-hud);font-size:7px;letter-spacing:1.5px;color:var(--dim2);}
+.radio-stick-frame{width:70px;height:70px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;position:relative;}
+.radio-stick-line{position:absolute;background:rgba(255,255,255,0.07);}
+.radio-stick-dot{width:8px;height:8px;background:var(--accent2);border-radius:50%;position:absolute;box-shadow:0 0 6px var(--accent2);transition:top .08s,left .08s;}
+
+/* ── MOTEURS & SERVOS ── */
+.telem-cell.cell-mot{grid-column:1;grid-row:3;border-color:rgba(255,179,64,0.18);background:rgba(8,13,26,0.95);}
+.telem-cell.cell-mot .telem-cell-label{background:rgba(255,179,64,0.05);}
+.mot-bande-body{flex:1;display:flex;align-items:stretch;min-height:0;overflow:hidden;}
+.mot-bande-motors{display:flex;gap:12px;align-items:flex-end;padding:5px 14px;border-right:1px solid var(--border);}
+.mot-bande-bar{display:flex;flex-direction:column;align-items:center;gap:2px;width:36px;}
+.mot-bande-track{width:26px;height:48px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;display:flex;flex-direction:column-reverse;}
+.mot-bande-fill{width:100%;border-radius:2px;transition:height .1s;}
+.mot-bande-fill.active{background:linear-gradient(180deg,rgba(0,255,157,0.9),rgba(0,255,157,0.4));}
+.mot-bande-fill.idle{background:rgba(255,255,255,0.08);}
+.mot-bande-lbl{font-family:var(--font-mono);font-size:9px;color:var(--dim);}
+.mot-bande-side{font-family:var(--font-hud);font-size:7px;color:var(--accent2);letter-spacing:1px;}
+.mot-bande-val{font-family:var(--font-mono);font-size:10px;color:var(--accent3);}
+.mot-bande-radar{width:84px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 6px;border-right:1px solid var(--border);}
+.mot-bande-servos{flex:1;display:flex;flex-direction:column;justify-content:center;padding:5px 10px;}
+.mot-bande-servo-row{display:flex;gap:5px;align-items:flex-end;}
+.mot-sbar{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.mot-sbar-track{width:10px;height:40px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;display:flex;flex-direction:column;position:relative;}
+.mot-sbar-fill{width:100%;border-radius:2px;position:absolute;}
+.mot-sbar-lbl{font-family:var(--font-mono);font-size:8px;color:var(--dim);}
+
+/* ── BATTERIE ── */
+.batt-main{font-family:var(--font-mono);font-size:28px;color:var(--accent);line-height:1;}
+.batt-bar{height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;margin:4px 0;}
+.batt-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--red) 0%,var(--accent2) 30%,var(--accent) 60%);transition:width .3s;}
+.cv-row{display:flex;gap:3px;margin-top:4px;}
+.cv{flex:1;background:rgba(0,255,157,0.05);border:1px solid rgba(0,255,157,0.15);border-radius:3px;text-align:center;padding:3px 2px;font-family:var(--font-mono);font-size:8px;color:var(--accent);}
+.cv-lbl{font-family:var(--font-hud);font-size:6px;letter-spacing:1px;color:var(--dim);}
+</style>
+</head>
+<body>
+
+<!-- ── TOPBAR ── -->
+<div id="topbar">
+  <div class="tb-logo">⚡ LIVE <span>DEDAL STUDIO</span></div>
+  <select id="port-select"><option value="">— sélectionner port —</option></select>
+  <button class="btn-tb" onclick="scanPorts()">↻ SCANNER</button>
+  <button class="btn-tb" id="btn-connect" onclick="connectDrone()">CONNECTER</button>
+  <span id="badge-conn" class="badge badge-dis" style="display:none;">● DÉCONNECTÉ</span>
+  <span id="badge-armed" class="badge badge-dim" style="display:none;">DISARMED</span>
+  <div id="tb-right">
+    <span id="badge-lq" class="badge badge-dim" style="display:none;">LQ --</span>
+    <span id="badge-rssi" class="badge badge-dim" style="display:none;">RSSI --</span>
+    <span id="badge-snr" class="badge badge-dim" style="display:none;">SNR --</span>
+    <span id="badge-rf" class="badge badge-dim" style="display:none;">--</span>
+    <button class="btn-tb" onclick="window.location.href='/'">← HOME</button>
+  </div>
+</div>
+
+<!-- ── STATS STRIP ── -->
+<div id="stats-strip">
+  <div class="ss-title">⏱ ARMÉ<br>STATS</div>
+  <div class="ss-item"><div class="ss-lbl">ALT GPS MAX/MOY</div><div class="ss-row"><span class="ss-max" id="ss-alt-max">--</span><span class="ss-avg" id="ss-alt-avg"></span></div></div>
+  <div class="ss-item"><div class="ss-lbl">VITESSE MAX/MOY</div><div class="ss-row"><span class="ss-max" id="ss-spd-max">--</span><span class="ss-avg" id="ss-spd-avg"></span></div></div>
+  <div class="ss-item"><div class="ss-lbl">DIST HOME MAX/MOY</div><div class="ss-row"><span class="ss-max" id="ss-dist-max">--</span><span class="ss-avg" id="ss-dist-avg"></span></div></div>
+  <div class="ss-item"><div class="ss-lbl">COURANT MAX/MOY</div><div class="ss-row"><span class="ss-max" id="ss-curr-max">--</span><span class="ss-avg" id="ss-curr-avg"></span></div></div>
+  <div class="ss-item"><div class="ss-lbl">VBAT MIN</div><div class="ss-row"><span class="ss-max" id="ss-vbat-min" style="color:var(--accent3);">--</span></div></div>
+  <div class="ss-item"><div class="ss-lbl">LOOP MAX/MOY</div><div class="ss-row"><span class="ss-max" id="ss-loop-max">--</span><span class="ss-avg" id="ss-loop-avg"></span></div></div>
+  <div class="ss-item"><div class="ss-lbl">ROLL MAX</div><div class="ss-row"><span class="ss-max" id="ss-roll-max">--</span></div></div>
+  <div class="ss-item"><div class="ss-lbl">VARIO MAX/MIN</div><div class="ss-row"><span class="ss-max" id="ss-vario-max">--</span><span class="ss-avg" id="ss-vario-min"></span></div></div>
+</div>
+
+<!-- ── TELEM GRID ── -->
+<div id="telem-grid">
+
+  <!-- Col 1, rows 1-2 : CARTE GPS -->
+  <div class="telem-cell" style="grid-column:1;grid-row:1/3;">
+    <div class="telem-cell-label">
+      <span style="color:var(--accent3)">◈</span> CARTE GPS
+      <span class="panel-badge" id="map-pos-badge" style="margin-left:auto;font-size:8px;">--°N --°E</span>
+    </div>
+    <div class="telem-cell-body" style="display:flex;flex-direction:column;">
+      <div id="live-map"></div>
+      <div class="map-footer">
+        <div class="data-grid" style="grid-template-columns:1fr 1fr 1fr;gap:4px 8px;">
+          <div class="data-item"><div class="data-label">Sats GPS</div><div class="data-value green" style="font-size:20px;" id="d-sats">--</div></div>
+          <div class="data-item"><div class="data-label">Alt GPS</div><div class="data-value orange" style="font-size:20px;" id="d-alt">-- m</div></div>
+          <div class="data-item"><div class="data-label">Vitesse sol</div><div class="data-value" style="font-size:18px;" id="d-speed">-- km/h</div></div>
+          <div class="data-item"><div class="data-label">Cap GPS</div><div class="data-value" style="font-size:14px;" id="d-hdg">--°</div></div>
+          <div class="data-item"><div class="data-label">Dist home</div><div class="data-value blue" style="font-size:14px;" id="d-dist-home">-- m</div></div>
+          <div class="data-item"><div class="data-label">Vario</div><div class="data-value orange" style="font-size:14px;" id="d-vario">-- m/s</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Col 2, row 1 : ÉTAT DE VOL -->
+  <div class="telem-cell" style="grid-column:2;grid-row:1;">
+    <div class="telem-cell-label">
+      <span style="color:var(--accent)">◈</span> ÉTAT DE VOL
+      <span class="panel-badge" id="armed-badge" style="margin-left:auto;font-size:8px;">DISARMED</span>
+    </div>
+    <div class="telem-cell-body">
+      <div style="height:100%;display:flex;flex-direction:column;">
+        <div style="flex:1;overflow:hidden;padding:8px 10px;">
+          <div class="data-grid" style="gap:5px 10px;">
+            <div class="data-item"><div class="data-label">Mode vol</div><div class="data-value accent" style="font-size:28px;" id="d-flightmode">--</div></div>
+            <div class="data-item"><div class="data-label">Temps armé</div><div class="data-value green" style="font-size:28px;" id="d-armed-time">--</div></div>
+            <div class="data-item"><div class="data-label">Throttle</div><div class="data-value" style="font-size:16px;" id="d-thro">-- %</div></div>
+            <div class="data-item"><div class="data-label">Loop time</div><div class="data-value" style="font-size:16px;" id="d-loop">-- µs</div></div>
+            <div class="data-item"><div class="data-label">Alt baro</div><div class="data-value orange" style="font-size:14px;" id="d-baro-alt">-- m</div></div>
+            <div class="data-item"><div class="data-label">Failsafe</div><div class="data-value green" style="font-size:14px;" id="d-failsafe">--</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Col 3, row 1 : BATTERIE -->
+  <div class="telem-cell" style="grid-column:3;grid-row:1;">
+    <div class="telem-cell-label"><span style="color:var(--accent)">◈</span> BATTERIE</div>
+    <div class="telem-cell-body">
+      <div style="height:100%;padding:8px 10px;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:2px;flex-shrink:0;">
+          <div>
+            <div class="data-label">Tension totale</div>
+            <div class="batt-main"><span id="d-vbat">--</span> <span style="font-size:16px;">V</span></div>
+          </div>
+          <div>
+            <div class="data-label">Charge</div>
+            <div style="font-family:var(--font-mono);font-size:20px;color:var(--accent);"><span id="d-batt-pct">--</span> %</div>
+          </div>
+        </div>
+        <div class="batt-bar" style="flex-shrink:0;"><div class="batt-fill" id="d-batt-bar" style="width:0%"></div></div>
+        <div class="data-grid" style="gap:4px 10px;margin-bottom:6px;flex-shrink:0;">
+          <div class="data-item"><div class="data-label">Courant</div><div class="data-value" style="font-size:14px;" id="d-curr">-- A</div></div>
+          <div class="data-item"><div class="data-label">Consommé</div><div class="data-value" style="font-size:14px;" id="d-capa">-- mAh</div></div>
+        </div>
+        <div class="data-label" style="margin-bottom:4px;flex-shrink:0;">CELLULES 6S</div>
+        <div class="cv-row" id="cv-row" style="flex-shrink:0;">
+          <div class="cv"><div class="cv-lbl">C1</div><span id="cv-1">--</span></div>
+          <div class="cv"><div class="cv-lbl">C2</div><span id="cv-2">--</span></div>
+          <div class="cv"><div class="cv-lbl">C3</div><span id="cv-3">--</span></div>
+          <div class="cv"><div class="cv-lbl">C4</div><span id="cv-4">--</span></div>
+          <div class="cv"><div class="cv-lbl">C5</div><span id="cv-5">--</span></div>
+          <div class="cv"><div class="cv-lbl">C6</div><span id="cv-6">--</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Col 2, rows 2-3 : ATTITUDE -->
+  <div class="telem-cell" style="grid-column:2;grid-row:2/4;">
+    <div class="telem-cell-label"><span style="color:var(--accent)">◈</span> ATTITUDE</div>
+    <div class="telem-cell-body" style="display:flex;flex-direction:column;overflow:hidden;">
+      <div class="imu-row">
+        <div class="imu-val"><span class="k">Roll</span><span class="v" id="d-roll">--°</span></div>
+        <div class="imu-val"><span class="k">Pitch</span><span class="v" id="d-pitch">--°</span></div>
+        <div class="imu-val"><span class="k">Yaw</span><span class="v" id="d-yaw">--°</span></div>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:10px;">
+        <canvas id="ahi-canvas" width="200" height="200" style="width:110px;height:110px;border-radius:50%;"></canvas>
+      </div>
+      <div style="padding:6px 10px;border-top:1px solid var(--border);flex-shrink:0;">
+        <div class="data-grid" style="grid-template-columns:1fr 1fr 1fr;gap:4px 8px;">
+          <div class="data-item"><div class="data-label">Cap mag</div><div class="data-value blue" style="font-size:14px;" id="d-mag-hdg">--°</div></div>
+          <div class="data-item"><div class="data-label">Alt baro</div><div class="data-value orange" style="font-size:14px;" id="d-baro-alt2">-- m</div></div>
+          <div class="data-item"><div class="data-label">Vario</div><div class="data-value orange" style="font-size:14px;" id="d-vario2">-- m/s</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Col 3, rows 2-3 : RADIO RC -->
+  <div class="telem-cell" style="grid-column:3;grid-row:2/4;">
+    <div class="telem-cell-label">
+      <span style="color:var(--accent2)">◈</span> RADIO RC
+      <span class="panel-badge" id="radio-link-badge" style="margin-left:auto;font-size:8px;background:rgba(255,107,53,0.12);color:#ff6b35;border-color:rgba(255,107,53,0.3);">NO LINK</span>
+      <span class="panel-badge" id="radio-rssi-badge" style="font-size:8px;">RSSI --</span>
+    </div>
+    <div class="telem-cell-body">
+      <div class="radio-inner">
+        <div class="radio-analog-section">
+          <div class="radio-bar-row"><span class="radio-ch-num" style="color:#4caf50;">CH1</span><div class="radio-bar-wrap"><div class="radio-bar ch1" id="rc-bar-1" style="width:0%"></div></div><span class="radio-ch-val" id="rc-val-1">--µs</span></div>
+          <div class="radio-bar-row"><span class="radio-ch-num">CH2</span><div class="radio-bar-wrap"><div class="radio-bar analog" id="rc-bar-2" style="width:50%"></div></div><span class="radio-ch-val" id="rc-val-2">--µs</span></div>
+          <div class="radio-bar-row"><span class="radio-ch-num">CH3</span><div class="radio-bar-wrap"><div class="radio-bar analog" id="rc-bar-3" style="width:50%"></div></div><span class="radio-ch-val" id="rc-val-3">--µs</span></div>
+          <div class="radio-bar-row"><span class="radio-ch-num" style="color:#ffb340;">CH4</span><div class="radio-bar-wrap"><div class="radio-bar analog" id="rc-bar-4" style="width:50%"></div></div><span class="radio-ch-val" id="rc-val-4">--µs</span></div>
+        </div>
+        <div class="radio-sw-section">
+          <div class="radio-sw-line">
+            <div class="radio-sw-item"><div class="radio-sw-top"><span class="radio-sw-ch">CH5</span><span class="radio-sw-name">ARM — SF</span><span class="radio-sw-mode" id="sw-mode-5" style="color:var(--red)">DISARM</span></div><div class="radio-sw-positions"><div class="radio-sw-pos active-r" id="sw-pos-5-0"></div><div class="radio-sw-pos" id="sw-pos-5-1"></div></div></div>
+            <div class="radio-sw-item"><div class="radio-sw-top"><span class="radio-sw-ch">CH6</span><span class="radio-sw-name">CTRL MODE — SE</span><span class="radio-sw-mode" id="sw-mode-6" style="color:var(--accent)">ANGLE</span></div><div class="radio-sw-positions"><div class="radio-sw-pos active-g" id="sw-pos-6-0"></div><div class="radio-sw-pos" id="sw-pos-6-1"></div><div class="radio-sw-pos" id="sw-pos-6-2"></div></div></div>
+          </div>
+          <div class="radio-sw-line">
+            <div class="radio-sw-item"><div class="radio-sw-top"><span class="radio-sw-ch">CH7</span><span class="radio-sw-name">SA</span><span class="radio-sw-mode" id="sw-mode-7" style="color:var(--accent2)">LOW</span></div><div class="radio-sw-positions"><div class="radio-sw-pos active-a" id="sw-pos-7-0"></div><div class="radio-sw-pos" id="sw-pos-7-1"></div><div class="radio-sw-pos" id="sw-pos-7-2"></div></div></div>
+            <div class="radio-sw-item"><div class="radio-sw-top"><span class="radio-sw-ch">CH8</span><span class="radio-sw-name">MODE VOL — SB</span><span class="radio-sw-mode" id="sw-mode-8" style="color:var(--accent3)">HOVER</span></div><div class="radio-sw-positions"><div class="radio-sw-pos active-b" id="sw-pos-8-0"></div><div class="radio-sw-pos" id="sw-pos-8-1"></div><div class="radio-sw-pos" id="sw-pos-8-2"></div></div></div>
+          </div>
+          <div class="radio-sw-line">
+            <div class="radio-sw-item"><div class="radio-sw-top"><span class="radio-sw-ch">CH9</span><span class="radio-sw-name">SC</span><span class="radio-sw-mode" id="sw-mode-9" style="color:var(--accent2)">LOW</span></div><div class="radio-sw-positions"><div class="radio-sw-pos active-a" id="sw-pos-9-0"></div><div class="radio-sw-pos" id="sw-pos-9-1"></div><div class="radio-sw-pos" id="sw-pos-9-2"></div></div></div>
+            <div class="radio-sw-item"><div class="radio-sw-top"><span class="radio-sw-ch">CH10</span><span class="radio-sw-name">INTER D</span><span class="radio-sw-mode" id="sw-mode-10" style="color:var(--accent2)">LOW</span></div><div class="radio-sw-positions"><div class="radio-sw-pos active-a" id="sw-pos-10-0"></div><div class="radio-sw-pos" id="sw-pos-10-1"></div><div class="radio-sw-pos" id="sw-pos-10-2"></div></div></div>
+          </div>
+        </div>
+        <div class="radio-sticks-row">
+          <div class="radio-stick-box">
+            <div class="radio-stick-title">GAUCHE (CH4←/CH1↑)</div>
+            <div class="radio-stick-frame">
+              <div class="radio-stick-line" style="top:50%;left:0;right:0;height:1px;"></div>
+              <div class="radio-stick-line" style="left:50%;top:0;bottom:0;width:1px;"></div>
+              <div class="radio-stick-dot" id="stick-left" style="top:31px;left:31px;"></div>
+            </div>
+          </div>
+          <div class="radio-stick-box">
+            <div class="radio-stick-title">DROIT (CH2→/CH3↑)</div>
+            <div class="radio-stick-frame">
+              <div class="radio-stick-line" style="top:50%;left:0;right:0;height:1px;"></div>
+              <div class="radio-stick-line" style="left:50%;top:0;bottom:0;width:1px;"></div>
+              <div class="radio-stick-dot" id="stick-right" style="top:31px;left:31px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Col 1, row 3 : MOTEURS & SERVOS -->
+  <div class="telem-cell cell-mot">
+    <div class="telem-cell-label">
+      <span style="color:rgba(255,179,64,0.8)">◈</span> MOTEURS &amp; SERVOS
+      <span class="panel-badge" id="motors-armed-badge" style="font-size:9px;">DISARMED</span>
+    </div>
+    <div class="telem-cell-body">
+      <div class="mot-bande-body">
+        <div class="mot-bande-motors">
+          <div class="mot-bande-bar">
+            <div class="mot-bande-track"><div class="mot-bande-fill idle" id="bande-m3-bar" style="height:0%"></div></div>
+            <div class="mot-bande-val" id="bande-m3-val">--</div>
+            <div class="mot-bande-lbl">M3</div>
+            <div class="mot-bande-side">GAUCHE</div>
+          </div>
+          <div class="mot-bande-bar">
+            <div class="mot-bande-track"><div class="mot-bande-fill idle" id="bande-m1-bar" style="height:0%"></div></div>
+            <div class="mot-bande-val" id="bande-m1-val">--</div>
+            <div class="mot-bande-lbl">M1</div>
+            <div class="mot-bande-side">DROIT</div>
+          </div>
+        </div>
+        <div class="mot-bande-radar">
+          <div style="font-family:var(--font-hud);font-size:7px;letter-spacing:1px;color:var(--dim);margin-bottom:3px;text-align:center;">SYMÉTRIE</div>
+          <canvas id="bande-radar" width="72" height="36" style="display:block;margin:0 auto;"></canvas>
+          <div id="bande-delta" style="text-align:center;font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-top:2px;">ΔM --</div>
+        </div>
+        <div class="mot-bande-servos">
+          <div style="font-family:var(--font-hud);font-size:7px;letter-spacing:1.5px;color:var(--dim);margin-bottom:4px;">SERVOS</div>
+          <div class="mot-bande-servo-row" id="servo-row">
+            <!-- S1-S7 générés par JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /telem-grid -->
+
+<script>
+(function () {
+'use strict';
+
+// ── Helpers ──
+const $ = id => document.getElementById(id);
+const setText = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+const fmt = (v, dec=1, fallback='--') => v == null ? fallback : (+v).toFixed(dec);
+
+// ── Leaflet map ──
+let _map = null, _marker = null, _mapReady = false;
+function initMap() {
+  _map = L.map('live-map', {zoomControl:true, attributionControl:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(_map);
+  _map.setView([48.856, 2.352], 15);
+  _mapReady = true;
+}
+function updateMap(lat, lon) {
+  if (!_mapReady || lat == null || lon == null) return;
+  const ll = [lat, lon];
+  if (!_marker) {
+    _marker = L.circleMarker(ll, {radius:7, color:'#00d4ff', fillColor:'#00d4ff', fillOpacity:0.9}).addTo(_map);
+    _map.setView(ll, 16);
+  } else {
+    _marker.setLatLng(ll);
+  }
+  $('map-pos-badge').textContent = `${lat.toFixed(5)}°N ${lon.toFixed(5)}°E`;
+}
+
+// ── AHI canvas ──
+function drawAHI(roll, pitch) {
+  const canvas = $('ahi-canvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height, cx = w/2, cy = h/2, r = w/2 - 2;
+  ctx.clearRect(0, 0, w, h);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
+  const rad = (roll||0) * Math.PI/180;
+  const pitchPx = ((pitch||0) / 90) * r;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(rad);
+  ctx.fillStyle = '#1a3a6a'; ctx.fillRect(-w, -h + pitchPx, w*2, h);
+  ctx.fillStyle = '#5a3010'; ctx.fillRect(-w, pitchPx, w*2, h);
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-w, pitchPx); ctx.lineTo(w, pitchPx); ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx-32, cy); ctx.lineTo(cx-10, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+10, cy); ctx.lineTo(cx+32, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy-8); ctx.lineTo(cx, cy+8); ctx.stroke();
+  ctx.restore();
+}
+
+// ── Motor bars ──
+function updateMotors(s) {
+  const armed = s.flag_armed || false;
+  const cls = armed ? 'active' : 'idle';
+  function _pct(us) { return Math.max(0, Math.min(100, ((us||1000) - 1000) / 10)); }
+  ['m1','m3'].forEach(m => {
+    const us = m === 'm1' ? (s.motor_M1_us||1000) : (s.motor_M3_us||1000);
+    const bar = $(`bande-${m}-bar`), val = $(`bande-${m}-val`);
+    if (bar) { bar.style.height = _pct(us) + '%'; bar.className = `mot-bande-fill ${cls}`; }
+    if (val) val.textContent = us;
+  });
+  const delta = Math.abs((s.motor_M1_us||1000) - (s.motor_M3_us||1000));
+  setText('bande-delta', `ΔM ${delta}`);
+  setText('motors-armed-badge', armed ? 'ARMED' : 'DISARMED');
+}
+
+// ── Servo row ──
+function initServos() {
+  const row = $('servo-row'); if (!row) return;
+  row.innerHTML = '';
+  for (let i = 1; i <= 7; i++) {
+    row.insertAdjacentHTML('beforeend', `
+      <div class="mot-sbar">
+        <div style="font-family:var(--font-mono);font-size:7px;color:var(--dim);text-align:center;" id="bsrv-val-${i}">--</div>
+        <div class="mot-sbar-track">
+          <div class="mot-sbar-fill" id="bsrv-fill-${i}" style="height:0%;bottom:50%;background:#ffb340;"></div>
+          <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,255,255,0.15);"></div>
+        </div>
+        <div class="mot-sbar-lbl">S${i}</div>
+      </div>`);
+  }
+}
+function updateServos(s) {
+  for (let i = 1; i <= 7; i++) {
+    const us = s[`servo_S${i}_us`] || 1500;
+    const deg = ((us - 1500) / 500 * 90).toFixed(0);
+    const pct = Math.abs((us - 1500) / 500 * 50);
+    const dir = us >= 1500 ? 'bottom' : 'top';
+    setText(`bsrv-val-${i}`, `${deg}°`);
+    const fill = $(`bsrv-fill-${i}`);
+    if (fill) { fill.style.height = pct + '%'; fill.style[dir] = '50%'; fill.style[dir === 'bottom' ? 'top' : 'bottom'] = 'auto'; }
+  }
+}
+
+// ── RC channels ──
+function updateRC(s) {
+  for (let i = 1; i <= 4; i++) {
+    const us = s[`rc_ch${i}_us`] || 1500;
+    const pct = ((us - 1000) / 1000 * 100).toFixed(1);
+    const bar = $(`rc-bar-${i}`), val = $(`rc-val-${i}`);
+    if (bar) bar.style.width = pct + '%';
+    if (val) val.textContent = us + 'µs';
+  }
+  const ch4 = s.rc_ch4_us||1500, ch1 = s.rc_ch1_us||1500;
+  const ch2 = s.rc_ch2_us||1500, ch3 = s.rc_ch3_us||1500;
+  const stickPct = us => (us-1000)/1000;
+  const sl = $('stick-left'), sr = $('stick-right');
+  if (sl) { sl.style.left = (31 + stickPct(ch4)*31) + 'px'; sl.style.top = (31 - stickPct(ch1)*31) + 'px'; }
+  if (sr) { sr.style.left = (31 + stickPct(ch2)*31) + 'px'; sr.style.top = (31 - stickPct(ch3)*31) + 'px'; }
+}
+
+// ── Telemetry update ──
+const _RF_MODES = ['4Hz','25Hz','50Hz','100Hz','200Hz','250Hz','500Hz'];
+
+function updateTelemetry(s) {
+  // GPS
+  updateMap(s.gps_lat, s.gps_lon);
+  setText('d-sats', s.gps_sats != null ? s.gps_sats : '--');
+  setText('d-alt', s.gps_alt_m != null ? fmt(s.gps_alt_m, 0) + ' m' : '-- m');
+  setText('d-speed', s.gps_speed_kmh != null ? fmt(s.gps_speed_kmh, 1) + ' km/h' : '-- km/h');
+  setText('d-hdg', s.gps_heading != null ? fmt(s.gps_heading, 0) + '°' : '--°');
+  const dist = s.distance_home_m;
+  setText('d-dist-home', dist != null ? fmt(dist, 0) + ' m' : '-- m');
+  const vario = s.vario_m_s;
+  const varioStr = vario != null ? (vario >= 0 ? '+' : '') + fmt(vario, 1) + ' m/s' : '-- m/s';
+  setText('d-vario', varioStr); setText('d-vario2', varioStr);
+
+  // État de vol
+  setText('d-flightmode', s.flight_mode || '--');
+  const armed = s.flag_armed || false;
+  const armedTime = s.arming_time_s;
+  if (armedTime != null) {
+    const m = Math.floor(armedTime/60), sec = Math.floor(armedTime%60);
+    setText('d-armed-time', `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`);
+  } else {
+    setText('d-armed-time', '--');
+  }
+  const armedBadge = $('armed-badge');
+  if (armedBadge) {
+    armedBadge.textContent = armed ? 'ARMED' : 'DISARMED';
+    armedBadge.className = 'badge ' + (armed ? 'badge-ok' : 'badge-dim');
+    armedBadge.style.color = armed ? '' : 'var(--red)';
+  }
+  // Fix A: throttle derived from CH1
+  const thro = Math.max(0, Math.min(100, Math.round(((s.rc_ch1_us||1000)-1000)/10)));
+  setText('d-thro', thro + ' %');
+  setText('d-baro-alt', s.baro_alt_m != null ? fmt(s.baro_alt_m, 1) + ' m' : '-- m');
+  setText('d-baro-alt2', s.baro_alt_m != null ? fmt(s.baro_alt_m, 1) + ' m' : '-- m');
+  setText('d-loop', s.loop_time_us != null ? s.loop_time_us + ' µs' : '-- µs');
+  const fs = s.flag_failsafe;
+  const fsEl = $('d-failsafe');
+  if (fsEl) { fsEl.textContent = fs ? 'FAILSAFE' : (armed ? 'OK' : '--'); fsEl.style.color = fs ? 'var(--red)' : 'var(--accent)'; }
+
+  // Batterie
+  const vbat = s.battery_voltage;
+  setText('d-vbat', vbat != null ? fmt(vbat, 2) : '--');
+  const pct = s.battery_percent;
+  setText('d-batt-pct', pct != null ? pct : '--');
+  const bar = $('d-batt-bar');
+  if (bar && pct != null) bar.style.width = Math.min(100, pct) + '%';
+  setText('d-curr', s.battery_current != null ? fmt(s.battery_current, 2) + ' A' : '-- A');
+  setText('d-capa', s.battery_capacity != null ? s.battery_capacity + ' mAh' : '-- mAh');
+  const nc = s.cell_count || 6;
+  for (let i = 1; i <= nc; i++) {
+    const v = s[`cell_${i}_V`];
+    setText(`cv-${i}`, v != null ? fmt(v, 3) : '--');
+  }
+
+  // Attitude
+  const roll = s.attitude_roll_deg, pitch = s.attitude_pitch_deg, yaw = s.attitude_yaw_deg;
+  setText('d-roll', roll != null ? (roll >= 0 ? '+' : '') + fmt(roll, 1) + '°' : '--°');
+  setText('d-pitch', pitch != null ? (pitch >= 0 ? '+' : '') + fmt(pitch, 1) + '°' : '--°');
+  setText('d-yaw', yaw != null ? fmt(yaw, 1) + '°' : '--°');
+  if (roll != null && pitch != null) drawAHI(roll, pitch);
+  setText('d-mag-hdg', s.mag_heading_deg != null ? fmt(s.mag_heading_deg, 0) + '°' : '--°');
+
+  // Radio
+  const lq = s.link_lq, rssi = s.link_rssi_1;
+  const linkBadge = $('radio-link-badge');
+  if (linkBadge) { linkBadge.textContent = lq != null ? `LQ ${lq}%` : 'NO LINK'; linkBadge.style.color = lq != null && lq > 70 ? 'var(--accent)' : 'var(--red)'; }
+  setText('radio-rssi-badge', rssi != null ? `RSSI ${rssi}` : 'RSSI --');
+  // Topbar badges
+  setText('badge-lq', `LQ ${lq ?? '--'}%`);
+  setText('badge-rssi', `RSSI ${rssi ?? '--'} dBm`);
+  setText('badge-snr', `SNR ${s.link_snr != null ? (s.link_snr >= 0 ? '+' : '') + s.link_snr : '--'} dB`);
+  // Fix B: RF mode badge
+  const rfBadge = $('badge-rf');
+  if (rfBadge && s.link_rf_mode != null) {
+    rfBadge.textContent = _RF_MODES[s.link_rf_mode] || `RF${s.link_rf_mode}`;
+  }
+  updateRC(s);
+  updateMotors(s);
+  updateServos(s);
+}
+
+// ── Stats strip ──
+function updateStats(s) {
+  const fmtS = (v, unit, dec=0) => v != null ? `${(+v).toFixed(dec)}${unit}` : '--';
+  const fmtAvg = (v, unit, dec=0) => v != null ? `/ ${(+v).toFixed(dec)}${unit}` : '';
+  setText('ss-alt-max', fmtS(s.gps_alt_max, 'm'));
+  setText('ss-alt-avg', fmtAvg(s.gps_alt_avg, 'm'));
+  setText('ss-spd-max', fmtS(s.gps_speed_max, 'km/h', 1));
+  setText('ss-spd-avg', fmtAvg(s.gps_speed_avg, 'km/h', 1));
+  setText('ss-dist-max', fmtS(s.distance_home_max, 'm'));
+  setText('ss-dist-avg', fmtAvg(s.distance_home_avg, 'm'));
+  setText('ss-curr-max', fmtS(s.battery_current_max, 'A', 1));
+  setText('ss-curr-avg', fmtAvg(s.battery_current_avg, 'A', 1));
+  setText('ss-vbat-min', fmtS(s.battery_voltage_min, 'V', 2));
+  setText('ss-loop-max', fmtS(s.loop_time_max, 'µs'));
+  setText('ss-loop-avg', fmtAvg(s.loop_time_avg, 'µs'));
+  setText('ss-roll-max', fmtS(s.roll_abs_max, '°', 1));
+  setText('ss-vario-max', fmtS(s.vario_max, 'm/s', 1));
+  setText('ss-vario-min', s.vario_min != null ? `/ ${(+s.vario_min).toFixed(1)}m/s` : '');
+}
+
+// ── Connection ──
+let _es = null;
+
+async function scanPorts() {
+  const sel = $('port-select');
+  sel.innerHTML = '<option value="">— scan en cours… —</option>';
+  const resp = await fetch('/api/live/ports');
+  const ports = await resp.json();
+  sel.innerHTML = '<option value="">— sélectionner port —</option>';
+  ports.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.port; opt.textContent = `${p.port} — ${p.description}`;
+    sel.appendChild(opt);
+  });
+  if (!ports.length) sel.innerHTML = '<option value="">— aucun port détecté —</option>';
+}
+
+async function connectDrone() {
+  const port = $('port-select').value;
+  if (!port) return alert('Sélectionner un port série.');
+  const resp = await fetch('/api/live/connect', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({port, baud: 921600}),
+  });
+  const data = await resp.json();
+  if (!resp.ok) return alert(`Erreur connexion : ${data.error}`);
+  setConnected(true);
+  startStream();
+}
+
+async function disconnectDrone() {
+  if (_es) { _es.close(); _es = null; }
+  await fetch('/api/live/disconnect', {method:'POST'});
+  setConnected(false);
+}
+
+function setConnected(on) {
+  $('btn-connect').textContent = on ? 'DÉCONNECTER' : 'CONNECTER';
+  $('btn-connect').onclick = on ? disconnectDrone : connectDrone;
+  const bc = $('badge-conn');
+  bc.style.display = '';
+  bc.textContent = on ? '● CONNECTÉ' : '● DÉCONNECTÉ';
+  bc.className = 'badge ' + (on ? 'badge-ok' : 'badge-dis');
+  ['badge-armed','badge-lq','badge-rssi','badge-snr','badge-rf'].forEach(id => {
+    $(id).style.display = on ? '' : 'none';
+  });
+}
+
+function startStream() {
+  _es = new EventSource('/api/live/stream');
+  _es.addEventListener('telemetry', e => updateTelemetry(JSON.parse(e.data)));
+  _es.addEventListener('stats', e => updateStats(JSON.parse(e.data)));
+  _es.onerror = () => {
+    const bc = $('badge-conn');
+    if (bc) { bc.textContent = '⚠ ERREUR'; bc.className = 'badge badge-dis'; }
+  };
+}
+
+// ── Init ──
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+function init() {
+  initMap();
+  initServos();
+  drawAHI(0, 0);
+  scanPorts();
+  fetch('/api/live/state').then(r => r.json()).then(d => {
+    if (d.connected) { setConnected(true); startStream(); }
+  });
+}
+
+})();
+</script>
+</body>
+</html>
