@@ -170,6 +170,11 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 | POST | `/api/sessions/{lid}/reload-meta` | Recharger les métadonnées depuis `log.meta` sur disque |
 | GET | `/api/pick-folder/available` | Vérifie si pywebview a une fenêtre ouverte |
 | GET | `/api/pick-folder` | Ouvre le sélecteur de dossier natif (pywebview) |
+| GET | `/api/live/ports` | Liste ports série disponibles (filtre usbmodem/ttyACM/COM) |
+| POST | `/api/live/connect` | Démarre CRSFReader sur le port donné (body: {port, baud}) |
+| POST | `/api/live/disconnect` | Arrête le CRSFReader, libère le port |
+| GET | `/api/live/state` | Snapshot JSON télémétrie + stats (pour reconnexion) |
+| GET | `/api/live/stream` | SSE — events `telemetry` + `stats` toutes les 100ms |
 
 ---
 
@@ -189,6 +194,7 @@ Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
 | 8 | Sync vidéo automatique | ⬜ |
 | 9 | Graph explorer — améliorations UX (panels, templates, drag-to-swap) | ✅ |
 | 10 | Support fichiers .meta (timezone, dates, onglet INFOS, notes) | ✅ |
+| 11 | Télémétrie live CRSF (TX16S USB → SSE → live.html) | ✅ |
 
 ---
 
