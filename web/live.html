@@ -423,15 +423,16 @@ function drawAHI(roll, pitch) {
 function updateMotors(s) {
   const armed = s.flag_armed || false;
   const cls = armed ? 'active' : 'idle';
-  function _pct(us) { return Math.max(0, Math.min(100, ((us||1000) - 1000) / 10)); }
+  // Motors: raw range 125-250
+  function _pct(v) { return v != null ? Math.max(0, Math.min(100, (v - 125) / 125 * 100)) : 0; }
   ['m1','m3'].forEach(m => {
-    const us = m === 'm1' ? (s.motor_M1_us||1000) : (s.motor_M3_us||1000);
+    const v = m === 'm1' ? s.motor_M1_us : s.motor_M3_us;
     const bar = $(`bande-${m}-bar`), val = $(`bande-${m}-val`);
-    if (bar) { bar.style.height = _pct(us) + '%'; bar.className = `mot-bande-fill ${cls}`; }
-    if (val) val.textContent = us;
+    if (bar) { bar.style.height = _pct(v) + '%'; bar.className = `mot-bande-fill ${cls}`; }
+    if (val) val.textContent = v != null ? v : '--';
   });
-  const delta = Math.abs((s.motor_M1_us||1000) - (s.motor_M3_us||1000));
-  setText('bande-delta', `ΔM ${delta}`);
+  const v1 = s.motor_M1_us, v3 = s.motor_M3_us;
+  setText('bande-delta', v1 != null && v3 != null ? `ΔM ${Math.abs(v1 - v3)}` : 'ΔM --');
   setText('motors-armed-badge', armed ? 'ARMED' : 'DISARMED');
 }
 
@@ -452,12 +453,13 @@ function initServos() {
   }
 }
 function updateServos(s) {
+  // Servos: range 0-180°, center at 90°
   for (let i = 1; i <= 7; i++) {
-    const us = s[`servo_S${i}_us`] || 1500;
-    const deg = ((us - 1500) / 500 * 90).toFixed(0);
-    const pct = Math.abs((us - 1500) / 500 * 50);
-    const dir = us >= 1500 ? 'bottom' : 'top';
-    setText(`bsrv-val-${i}`, `${deg}°`);
+    const deg = s[`servo_S${i}_us`];
+    if (deg == null) { setText(`bsrv-val-${i}`, '--'); continue; }
+    const pct = Math.abs((deg - 90) / 90 * 50);
+    const dir = deg >= 90 ? 'bottom' : 'top';
+    setText(`bsrv-val-${i}`, `${Math.round(deg)}°`);
     const fill = $(`bsrv-fill-${i}`);
     if (fill) { fill.style.height = pct + '%'; fill.style[dir] = '50%'; fill.style[dir === 'bottom' ? 'top' : 'bottom'] = 'auto'; }
   }
