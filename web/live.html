@@ -518,6 +518,19 @@ function updateRC(s) {
   }
 }
 
+// ── Flight mode expansion ──
+const _FM = {
+  'HVR':   'HOVER',   'TRANS': 'TRANSITION', 'PLN':  'PLANE',
+  'FW':    'FORWARD', 'LAND':  'ATTERRISSAGE','RTH':  'RETOUR BASE',
+  'ANG':   'ANGLE',   'AN2':   'ANGLE 2',     'ACRO': 'ACRO',
+  'RATE':  'RATE',    'STAB':  'STABILISÉ',   'ALT':  'ALTITUDE',
+  'POS':   'POSITION','HOLD':  'HOLD',        'AUTO': 'AUTO',
+};
+function expandFlightMode(mode) {
+  if (!mode) return '--';
+  return mode.split('-').map(p => _FM[p] || p).join(' · ');
+}
+
 // ── Telemetry update ──
 const _RF_MODES = ['4Hz','25Hz','50Hz','100Hz','200Hz','250Hz','500Hz'];
 
@@ -535,7 +548,7 @@ function updateTelemetry(s) {
   setText('d-vario', varioStr); setText('d-vario2', varioStr);
 
   // État de vol
-  setText('d-flightmode', s.flight_mode || '--');
+  setText('d-flightmode', expandFlightMode(s.flight_mode));
   const armed = s.flag_armed || false;
   const armedTime = s.arming_time_s;
   if (armedTime != null) {
