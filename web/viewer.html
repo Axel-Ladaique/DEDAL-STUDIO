@@ -3260,6 +3260,17 @@ function init3D() {
   animate3D();
 }
 
+function resizeDrone3D() {
+  if (!renderer3d || !camera3d) return;
+  const c3d = document.getElementById('drone3d-canvas');
+  if (!c3d) return;
+  const W = c3d.clientWidth, H = c3d.clientHeight;
+  if (!W || !H) return;
+  renderer3d.setSize(W, H);
+  camera3d.aspect = W / H;
+  camera3d.updateProjectionMatrix();
+}
+
 // ── VTOL : fuselage torpille + aile rectangulaire + boom T-tail + moteurs basculants ──
 function buildDroneMesh() {
   tiltPivotL = null; tiltPivotR = null;
@@ -3697,7 +3708,10 @@ function setAttiMode(mode) {
       if(c3d) { c3d.dispatchEvent(new Event('resize')); if(typeof resizeDrone3D==='function') resizeDrone3D(); }
     }
     if(mode !== '3d') {
-      if(typeof drawAHI === 'function') drawAHI();
+      if(typeof drawAHI === 'function') {
+        const row = flightData[currentIdx];
+        drawAHI(row?.roll_IMU || 0, row?.pitch_IMU || 0);
+      }
     }
   }, 50);
 }
@@ -5424,6 +5438,29 @@ function updateMotorRadar() {
 }
 
 // ================================================================
+//  DOWNLOAD HELPER — routes via Python API in PyWebView (WebKit
+//  ignores the `download` attribute on blob: links)
+// ================================================================
+function dsDownload(blobOrDataUrl, filename) {
+  var doSave = function(b64) {
+    fetch('/api/save-download', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({filename: filename, content: b64})
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.error) showToast('Erreur sauvegarde : ' + d.error, 'error');
+    }).catch(function(e){ showToast('Erreur sauvegarde : ' + e, 'error'); });
+  };
+  if (typeof blobOrDataUrl === 'string') {
+    doSave(blobOrDataUrl.split(',')[1]);
+  } else {
+    var reader = new FileReader();
+    reader.onload = function() { doSave(reader.result.split(',')[1]); };
+    reader.readAsDataURL(blobOrDataUrl);
+  }
+}
+
+// ================================================================
 //  EXPORT CSV
 // ================================================================
 // ── Modale export CSV ─────────────────────────────────────────────────────
@@ -5603,11 +5640,8 @@ function _doCSVExport(overlay) {
 
   var csv  = selectedKeys.join(',') + '\n' + rows.join('\n');
   var blob = new Blob([csv], { type: 'text/csv' });
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
   var name = (flightConfig['CONFIG_NAME'] || 'VTOL').replace(/[^a-zA-Z0-9_]/g, '_');
-  a.href = url; a.download = name + '_export.csv';
-  a.click(); URL.revokeObjectURL(url);
+  dsDownload(blob, name + '_export.csv');
   if (typeof showToast === 'function') showToast('⬇ CSV exporté — ' + rows.length + ' lignes, ' + selectedKeys.length + ' colonnes', 'ok');
 }
 
@@ -5668,11 +5702,8 @@ function exportPIDReport() {
   lines.push(''); lines.push(sep);
 
   const blob = new Blob([lines.join('\n')], { type:'text/plain' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
   const name = (flightConfig['CONFIG_NAME']||'VTOL').replace(/[^a-zA-Z0-9_]/g,'_');
-  a.href = url; a.download = `${name}_PID_report.txt`;
-  a.click(); URL.revokeObjectURL(url);
+  dsDownload(blob, `${name}_PID_report.txt`);
 }
 // ================================================================
 //  ARM SESSIONS DETECTION
@@ -7295,20 +7326,14 @@ function setupMinimapInteraction() {
 function exportChartPNG() {
   const canvas = document.getElementById('explorer-canvas');
   if(!canvas || !activeColumns.size) { showToast('Aucune courbe à exporter', 'warn'); return; }
-  const link = document.createElement('a');
-  link.download = `vtol_chart_${Date.now()}.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
+  dsDownload(canvas.toDataURL('image/png'), `vtol_chart_${Date.now()}.png`);
   showToast('📸 Graphe exporté en PNG');
 }
 
 function exportModalPNG() {
   const canvas = document.getElementById('modal-canvas');
   if(!canvas) return;
-  const link = document.createElement('a');
-  link.download = `vtol_modal_chart_${Date.now()}.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
+  dsDownload(canvas.toDataURL('image/png'), `vtol_modal_chart_${Date.now()}.png`);
   showToast('📸 Graphe exporté en PNG');
 }
 
@@ -8252,21 +8277,11 @@ ${markerSection}
 </body></html>`;
 
   // --- Download HTML report ---
-  const blobHtml = new Blob([reportHTML], {type:'text/html'});
-  const aHtml = document.createElement('a');
-  aHtml.href = URL.createObjectURL(blobHtml);
-  aHtml.download = `vib_report_${Date.now()}.html`;
-  aHtml.click();
-  URL.revokeObjectURL(aHtml.href);
+  dsDownload(new Blob([reportHTML], {type:'text/html'}), `vib_report_${Date.now()}.html`);
 
   // --- Download CSV data ---
   setTimeout(() => {
-    const blobCsv = new Blob([csvContent], {type:'text/csv'});
-    const aCsv = document.createElement('a');
-    aCsv.href = URL.createObjectURL(blobCsv);
-    aCsv.download = `vib_data_${lo}_${hi}.csv`;
-    aCsv.click();
-    URL.revokeObjectURL(aCsv.href);
+    dsDownload(new Blob([csvContent], {type:'text/csv'}), `vib_data_${lo}_${hi}.csv`);
     showToast('⬇ Rapport HTML + CSV exportés');
   }, 300);
 }
@@ -8816,9 +8831,7 @@ function exportRangeCSV(tMin, tMax) {
   const cols = ['timestamp_us', ...activeColumns];
   const rows = flightData.filter(r => { const t=r.timestamp_us/1e6; return t>=tMin && t<=tMax; });
   const csv  = cols.join(',') + '\n' + rows.map(r => cols.map(c=>r[c]??'').join(',')).join('\n');
-  const blob = new Blob([csv], { type:'text/csv' });
-  const a    = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `vtol_chart_${Date.now()}.csv`; a.click();
+  dsDownload(new Blob([csv], { type:'text/csv' }), `vtol_chart_${Date.now()}.csv`);
   showToast('⬇ CSV exporté (' + rows.length + ' lignes)');
 }
 
@@ -8831,15 +8844,15 @@ function exportModalCSV() {
 function exportChartPNG() {
   const canvas = document.getElementById('explorer-canvas');
   if(!canvas || !activeColumns.size) { showToast('Aucune courbe à exporter','warn'); return; }
-  const a = document.createElement('a'); a.download = `vtol_chart_${Date.now()}.png`;
-  a.href = canvas.toDataURL('image/png'); a.click(); showToast('📸 PNG exporté');
+  dsDownload(canvas.toDataURL('image/png'), `vtol_chart_${Date.now()}.png`);
+  showToast('📸 PNG exporté');
 }
 
 function exportModalPNG() {
   const canvas = document.getElementById('modal-canvas');
   if(!canvas) return;
-  const a = document.createElement('a'); a.download = `vtol_modal_${Date.now()}.png`;
-  a.href = canvas.toDataURL('image/png'); a.click(); showToast('📸 PNG exporté');
+  dsDownload(canvas.toDataURL('image/png'), `vtol_modal_${Date.now()}.png`);
+  showToast('📸 PNG exporté');
 }
 
 /* ---------- attach to explorer chart after each redraw ---------- */
