@@ -60,6 +60,7 @@ FT_DEDAL_OUTPUTS      = 0xA0
 FT_DEDAL_STATE        = 0xA1
 FT_DEDAL_CELLS        = 0xA2
 FT_DEDAL_MAG          = 0xA3
+FT_DEDAL_RC_CHANNELS  = 0xA4   # canaux RC reçus en µs
 
 # Flags DEDAL_STATE
 FLAG_ARMED       = 1 << 0
@@ -248,6 +249,15 @@ def decode_dedal_mag(p: bytes) -> dict:
     }
 
 
+def decode_dedal_rc_channels(p: bytes) -> dict:
+    """DEDAL_RC_CHANNELS (0xA4) - 1 + 2*N octets : canaux RC reçus en µs"""
+    n = p[0]
+    if n == 0 or len(p) < 1 + 2 * n:
+        return {}
+    channels = struct.unpack(f'>{n}H', p[1:1 + 2 * n])
+    return {f'rc_ch{i+1}_us': channels[i] for i in range(n)}
+
+
 def decode_rc_channels(p: bytes) -> dict:
     """RC_CHANNELS_PACKED (0x16) - 22 octets, 16 canaux x 11 bits"""
     bits = int.from_bytes(p[0:22], 'little')
@@ -272,7 +282,8 @@ DECODERS: Dict[int, Callable[[bytes], dict]] = {
     FT_DEDAL_OUTPUTS:  decode_dedal_outputs,
     FT_DEDAL_STATE:    decode_dedal_state,
     FT_DEDAL_CELLS:    decode_dedal_cells,
-    FT_DEDAL_MAG:      decode_dedal_mag,
+    FT_DEDAL_MAG:          decode_dedal_mag,
+    FT_DEDAL_RC_CHANNELS:  decode_dedal_rc_channels,
 }
 
 FRAME_NAMES = {
@@ -287,7 +298,8 @@ FRAME_NAMES = {
     FT_DEDAL_OUTPUTS:   'DEDAL_OUTPUTS',
     FT_DEDAL_STATE:     'DEDAL_STATE',
     FT_DEDAL_CELLS:     'DEDAL_CELLS',
-    FT_DEDAL_MAG:       'DEDAL_MAG',
+    FT_DEDAL_MAG:           'DEDAL_MAG',
+    FT_DEDAL_RC_CHANNELS:   'DEDAL_RC_CHANNELS',
 }
 
 
@@ -497,6 +509,9 @@ def main():
                 ss = [s.get(f'servo_S{i+1}_us', 0) for i in range(7)]
                 print(f"MOTORS : " + " ".join(f"{v:4d}" for v in ms))
                 print(f"SERVOS : " + " ".join(f"{v:4d}" for v in ss))
+            if 'rc_ch1_us' in s:
+                rc = [s.get(f'rc_ch{i+1}_us', 0) for i in range(10)]
+                print(f"RC     : " + " ".join(f"{v:4d}" for v in rc))
             if 'mag_heading_deg' in s:
                 print(f"MAG    : hdg={s['mag_heading_deg']:6.2f} deg  ({s.get('mag_x_uT',0):+.1f}, {s.get('mag_y_uT',0):+.1f}, {s.get('mag_z_uT',0):+.1f}) uT")
 
