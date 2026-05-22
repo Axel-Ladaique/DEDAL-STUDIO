@@ -484,7 +484,8 @@ function updateRC(s) {
   const hasRC = s.rc_ch1_us != null;
   const sl = $('stick-left'), sr = $('stick-right');
   if (hasRC) {
-    const p = u => (u - 1000) / 1000;
+    // -1 (1000µs) → 0 (1500µs, centre) → +1 (2000µs), clampé
+    const p = u => Math.max(-1, Math.min(1, (u - 1500) / 500));
     const ch4 = s.rc_ch4_us||1500, ch1 = s.rc_ch1_us||1500;
     const ch2 = s.rc_ch2_us||1500, ch3 = s.rc_ch3_us||1500;
     if (sl) { sl.style.left=(31+p(ch4)*31)+'px'; sl.style.top=(31-p(ch1)*31)+'px'; sl.style.opacity='1'; }
