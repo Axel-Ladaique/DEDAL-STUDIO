@@ -142,7 +142,7 @@ Birotor :
 - **S1 = microtilt gauche**, **S2 = microtilt droit**
 - S3/S4 = ailerons (flaps en hover), S5 = élevateur, S6 = mode, S7 = dérive
 
-Batterie : alerte 3.6V/cellule (LiPo 6S → 21.6V).
+Batterie : LiIon 6S 4500mAh. Seuils par cellule : warning < 3.5V, critique < 3.2V (min ~3.0V).
 
 ---
 

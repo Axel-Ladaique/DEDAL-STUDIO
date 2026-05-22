@@ -533,6 +533,12 @@ function expandFlightMode(mode) {
 
 // ── Telemetry update ──
 const _RF_MODES = ['4Hz','25Hz','50Hz','100Hz','200Hz','250Hz','500Hz'];
+const BATT_TOTAL_MAH = 4500;
+const BATT_CELLS = 6;
+// LiIon 6S thresholds (per cell)
+function cellColor(v) {
+  return v < 3.2 ? 'var(--red)' : v < 3.5 ? 'var(--accent2)' : 'var(--accent)';
+}
 
 function updateTelemetry(s) {
   // GPS
@@ -575,17 +581,33 @@ function updateTelemetry(s) {
 
   // Batterie
   const vbat = s.battery_voltage;
-  setText('d-vbat', vbat != null ? fmt(vbat, 2) : '--');
+  const vbatEl = $('d-vbat');
+  if (vbatEl) {
+    vbatEl.textContent = vbat != null ? fmt(vbat, 2) : '--';
+    if (vbat != null) vbatEl.style.color = cellColor(vbat / BATT_CELLS);
+  }
   const pct = s.battery_percent;
   setText('d-batt-pct', pct != null ? pct : '--');
   const bar = $('d-batt-bar');
   if (bar && pct != null) bar.style.width = Math.min(100, pct) + '%';
   setText('d-curr', s.battery_current != null ? fmt(s.battery_current, 2) + ' A' : '-- A');
-  setText('d-capa', s.battery_capacity != null ? s.battery_capacity + ' mAh' : '-- mAh');
-  const nc = s.cell_count || 6;
+  const consumed = s.battery_capacity;
+  setText('d-capa', consumed != null ? `${consumed} / ${BATT_TOTAL_MAH} mAh` : '-- mAh');
+  const nc = s.cell_count || BATT_CELLS;
   for (let i = 1; i <= nc; i++) {
     const v = s[`cell_${i}_V`];
-    setText(`cv-${i}`, v != null ? fmt(v, 3) : '--');
+    const el = $(`cv-${i}`);
+    if (!el) continue;
+    if (v != null) {
+      el.textContent = fmt(v, 3);
+      el.style.color = cellColor(v);
+    } else if (vbat != null) {
+      el.textContent = '~' + fmt(vbat / BATT_CELLS, 2);
+      el.style.color = 'var(--dim2)';
+    } else {
+      el.textContent = '--';
+      el.style.color = '';
+    }
   }
 
   // Attitude
