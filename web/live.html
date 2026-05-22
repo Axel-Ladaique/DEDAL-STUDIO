@@ -579,7 +579,10 @@ function updateStats(s) {
 // ── Connection ──
 let _es = null;
 
-async function scanPorts() {
+const BAUD = 921600;
+const LS_PORT_KEY = 'dedal_live_last_port';
+
+async function scanPorts(autoConnect = false) {
   const sel = $('port-select');
   sel.innerHTML = '<option value="">— scan en cours… —</option>';
   const resp = await fetch('/api/live/ports');
@@ -590,20 +593,31 @@ async function scanPorts() {
     opt.value = p.port; opt.textContent = `${p.port} — ${p.description}`;
     sel.appendChild(opt);
   });
-  if (!ports.length) sel.innerHTML = '<option value="">— aucun port détecté —</option>';
+  if (!ports.length) { sel.innerHTML = '<option value="">— aucun port détecté —</option>'; return; }
+
+  if (autoConnect) {
+    const lastPort = localStorage.getItem(LS_PORT_KEY);
+    const match = ports.find(p => p.port === lastPort) || (ports.length === 1 ? ports[0] : null);
+    if (match) { sel.value = match.port; await connectDrone(); }
+  }
 }
 
 async function connectDrone() {
   const port = $('port-select').value;
-  if (!port) return alert('Sélectionner un port série.');
-  const resp = await fetch('/api/live/connect', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({port, baud: 921600}),
-  });
-  const data = await resp.json();
-  if (!resp.ok) return alert(`Erreur connexion : ${data.error}`);
-  setConnected(true);
-  startStream();
+  if (!port) { alert('Sélectionner un port série.'); return; }
+  try {
+    const resp = await fetch('/api/live/connect', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({port, baud: BAUD}),
+    });
+    const data = await resp.json();
+    if (!resp.ok) { alert(`Erreur connexion : ${data.error}`); return; }
+    localStorage.setItem(LS_PORT_KEY, port);
+    setConnected(true);
+    startStream();
+  } catch (e) {
+    alert(`Erreur réseau : ${e.message}`);
+  }
 }
 
 async function disconnectDrone() {
@@ -645,11 +659,15 @@ function init() {
   initMap();
   initServos();
   drawAHI(0, 0);
-  scanPorts();
   fetch('/api/live/state').then(r => r.json()).then(d => {
     if (d.connected) { setConnected(true); startStream(); }
+    else { scanPorts(true); }  // auto-connect si pas déjà connecté
   });
 }
+
+window.scanPorts = scanPorts;
+window.connectDrone = connectDrone;
+window.disconnectDrone = disconnectDrone;
 
 })();
 </script>

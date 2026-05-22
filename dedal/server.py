@@ -481,7 +481,7 @@ async def live_stream() -> StreamingResponse:
             stats = _live_session.get_stats()
             yield f"event: telemetry\ndata: {json.dumps(state)}\n\n"
             yield f"event: stats\ndata: {json.dumps(stats)}\n\n"
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.05)
 
     return StreamingResponse(_gen(), media_type="text/event-stream")
 

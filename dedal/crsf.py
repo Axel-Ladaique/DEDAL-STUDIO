@@ -42,6 +42,7 @@ import serial
 # ---------------------------------------------------------------------------
 
 CRSF_SYNC_BYTE = 0xC8
+CRSF_VALID_SYNC = {0xC8, 0xEA, 0xEE, 0x00}  # EdgeTX mirror uses 0xEA
 CRSF_MAX_PACKET = 64
 
 # Types standard
@@ -320,7 +321,7 @@ class CRSFReader:
         }
 
     def start(self):
-        self.ser = serial.Serial(self.port, self.baud, timeout=0.1)
+        self.ser = serial.Serial(self.port, self.baud, timeout=0.02)
         self._stop.clear()
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
@@ -336,11 +337,10 @@ class CRSFReader:
         ser = self.ser
         while not self._stop.is_set():
             try:
-                # Sync sur 0xC8
                 b = ser.read(1)
                 if not b:
                     continue
-                if b[0] != CRSF_SYNC_BYTE:
+                if b[0] not in CRSF_VALID_SYNC:
                     continue
 
                 # Lire length
