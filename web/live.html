@@ -421,7 +421,7 @@ function drawAHI(roll, pitch) {
 
 // ── Motor bars ──
 function updateMotors(s) {
-  const armed = s.flag_armed || false;
+  const armed = s.armed || false;
   const cls = armed ? 'active' : 'idle';
   // Motors: raw range 125-250
   function _pct(v) { return v != null ? Math.max(0, Math.min(100, (v - 125) / 125 * 100)) : 0; }
@@ -547,7 +547,7 @@ function updateTelemetry(s) {
   setText('d-alt', s.gps_alt_m != null ? fmt(s.gps_alt_m, 0) + ' m' : '-- m');
   setText('d-speed', s.gps_speed_kmh != null ? fmt(s.gps_speed_kmh, 1) + ' km/h' : '-- km/h');
   setText('d-hdg', s.gps_heading != null ? fmt(s.gps_heading, 0) + '°' : '--°');
-  const dist = s.distance_home_m;
+  const dist = s.distance_m;
   setText('d-dist-home', dist != null ? fmt(dist, 0) + ' m' : '-- m');
   const vario = s.vario_m_s;
   const varioStr = vario != null ? (vario >= 0 ? '+' : '') + fmt(vario, 1) + ' m/s' : '-- m/s';
@@ -555,9 +555,9 @@ function updateTelemetry(s) {
 
   // État de vol
   setText('d-flightmode', expandFlightMode(s.flight_mode));
-  const armed = s.flag_armed || false;
-  const armedTime = s.arming_time_s;
-  if (armedTime != null) {
+  const armed = s.armed || false;
+  const armedTime = s.arming_s;
+  if (armed && armedTime != null) {
     const m = Math.floor(armedTime/60), sec = Math.floor(armedTime%60);
     setText('d-armed-time', `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`);
   } else {
@@ -574,8 +574,8 @@ function updateTelemetry(s) {
   setText('d-thro', thro + ' %');
   setText('d-baro-alt', s.baro_alt_m != null ? fmt(s.baro_alt_m, 1) + ' m' : '-- m');
   setText('d-baro-alt2', s.baro_alt_m != null ? fmt(s.baro_alt_m, 1) + ' m' : '-- m');
-  setText('d-loop', s.loop_time_us != null ? s.loop_time_us + ' µs' : '-- µs');
-  const fs = s.flag_failsafe;
+  setText('d-loop', s.loop_us != null ? s.loop_us + ' µs' : '-- µs');
+  const fs = s.failsafe;
   const fsEl = $('d-failsafe');
   if (fsEl) { fsEl.textContent = fs ? 'FAILSAFE' : (armed ? 'OK' : '--'); fsEl.style.color = fs ? 'var(--red)' : 'var(--accent)'; }
 

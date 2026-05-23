@@ -33,7 +33,7 @@ class ArmedStats:
     armed_duration_s: float = 0.0
 
     def update(self, state: dict) -> None:
-        if not state.get("flag_armed", False):
+        if not state.get("armed", False):
             return
 
         if self.sample_count == 0:
@@ -53,9 +53,9 @@ class ArmedStats:
             self.gps_speed_max, self.gps_speed_avg = _max_avg(
                 self.gps_speed_max, self.gps_speed_avg, state["gps_speed_kmh"]
             )
-        if "distance_home_m" in state:
+        if "distance_m" in state:
             self.distance_home_max, self.distance_home_avg = _max_avg(
-                self.distance_home_max, self.distance_home_avg, state["distance_home_m"]
+                self.distance_home_max, self.distance_home_avg, state["distance_m"]
             )
         if "battery_current" in state:
             self.battery_current_max, self.battery_current_avg = _max_avg(
@@ -63,9 +63,9 @@ class ArmedStats:
             )
         if "battery_voltage" in state:
             self.battery_voltage_min = min(self.battery_voltage_min, state["battery_voltage"])
-        if "loop_time_us" in state:
+        if "loop_us" in state:
             self.loop_time_max, self.loop_time_avg = _max_avg(
-                self.loop_time_max, self.loop_time_avg, state["loop_time_us"]
+                self.loop_time_max, self.loop_time_avg, state["loop_us"]
             )
         if "attitude_roll_deg" in state:
             self.roll_abs_max = max(self.roll_abs_max, abs(state["attitude_roll_deg"]))
@@ -154,7 +154,7 @@ class LiveSession:
         while not self._stop_stats.is_set():
             with TELEMETRY_LOCK:
                 state = dict(TELEMETRY_STATE)
-            armed = state.get("flag_armed", False)
+            armed = state.get("armed", False)
             if armed and not self._last_armed:
                 # Reset stats at the start of each new arm cycle
                 with self._stats_lock:

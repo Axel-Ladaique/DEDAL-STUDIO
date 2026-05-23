@@ -207,21 +207,22 @@ def decode_dedal_state(p: bytes) -> dict:
     arming_ms = struct.unpack('>I', p[0:4])[0]
     dist = struct.unpack('>H', p[4:6])[0]
     bearing = struct.unpack('>H', p[6:8])[0] / 100.0
-    loop_us = struct.unpack('>H', p[8:10])[0]
+    loop_us_val = struct.unpack('>H', p[8:10])[0]
     flags = p[10]
     return {
-        'arming_time_s':   arming_ms / 1000.0,
-        'distance_home_m': dist,
-        'bearing_home':    bearing,
-        'loop_time_us':    loop_us,
-        'flag_armed':       bool(flags & FLAG_ARMED),
-        'flag_gps_valid':   bool(flags & FLAG_GPS_VALID),
-        'flag_baro_valid':  bool(flags & FLAG_BARO_VALID),
-        'flag_mag_valid':   bool(flags & FLAG_MAG_VALID),
-        'flag_home_set':    bool(flags & FLAG_HOME_SET),
-        'flag_failsafe':    bool(flags & FLAG_FAILSAFE),
-        'flag_low_batt':    bool(flags & FLAG_LOW_BATT),
-        'flag_high_vibe':   bool(flags & FLAG_HIGH_VIBE),
+        'arming_s':    arming_ms / 1000.0,
+        'distance_m':  dist,
+        'bearing_deg': bearing,
+        'loop_us':     loop_us_val,
+        'loop_hz':     round(1_000_000 / loop_us_val, 1) if loop_us_val else None,
+        'armed':       bool(flags & FLAG_ARMED),
+        'gps_valid':   bool(flags & FLAG_GPS_VALID),
+        'baro_valid':  bool(flags & FLAG_BARO_VALID),
+        'mag_valid':   bool(flags & FLAG_MAG_VALID),
+        'home_set':    bool(flags & FLAG_HOME_SET),
+        'failsafe':    bool(flags & FLAG_FAILSAFE),
+        'low_batt':    bool(flags & FLAG_LOW_BATT),
+        'high_vibe':   bool(flags & FLAG_HIGH_VIBE),
     }
 
 
@@ -499,10 +500,11 @@ def main():
                 print(f"MODE   : {s['flight_mode']}")
             if 'link_lq' in s:
                 print(f"LINK   : LQ={s['link_lq']:3d}%  RSSI={s['link_rssi_1']} dBm  SNR={s['link_snr']} dB")
-            if 'arming_time_s' in s:
-                t = s['arming_time_s']
-                print(f"ARMING : {int(t//60):02d}:{int(t%60):02d}  dist_home={s.get('distance_home_m',0)} m  bearing={s.get('bearing_home',0):.1f} deg  loop={s.get('loop_time_us',0)} us")
-                flags = [k.replace('flag_','').upper() for k in s if k.startswith('flag_') and s[k]]
+            if 'arming_s' in s:
+                t = s['arming_s']
+                print(f"ARMING : {int(t//60):02d}:{int(t%60):02d}  dist_home={s.get('distance_m',0)} m  bearing={s.get('bearing_deg',0):.1f} deg  loop={s.get('loop_us',0)} us ({s.get('loop_hz',0)} Hz)")
+                flag_keys = ['armed','gps_valid','baro_valid','mag_valid','home_set','failsafe','low_batt','high_vibe']
+                flags = [k.upper() for k in flag_keys if s.get(k)]
                 print(f"FLAGS  : " + " ".join(flags))
             if 'motor_M1_us' in s:
                 ms = [s.get(f'motor_M{i+1}_us', 0) for i in range(6)]
