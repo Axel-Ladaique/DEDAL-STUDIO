@@ -1,1 +1,27 @@
+# Git worktrees
 .worktrees
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Node
+node_modules/
+
+# macOS
+.DS_Store
+
+# Local tooling
+.claude/settings.local.json
+.superpowers/
+
+# Local build of the app bundle
+DEDAL Studio.app/
+
+# Real flight data and personal files (never publish)
+INPUT_4_CLAUDE/
+flights/*
+!flights/.gitkeep
+*.xlsx
