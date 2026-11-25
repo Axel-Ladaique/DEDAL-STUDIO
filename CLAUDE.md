@@ -5,6 +5,14 @@ Communication : **français**. Code / docstrings : **anglais**.
 
 ---
 
+## Branche `px4` — lire d'abord
+
+Cette branche prépare la prise en charge d'un deuxième appareil (avion sous PX4, Pixhawk 6X), la vidéo live des lunettes DJI Goggles 3 et la synchro automatique des vidéos. **Le cadrage est en cours, rien n'est conçu.** Tout le contexte est dans [`docs/px4/HANDOFF.md`](docs/px4/HANDOFF.md) : le lire avant de répondre.
+
+Sur cette branche, **Windows compte autant que macOS** (le poste du travail est sous Windows) : la décision figée « macOS d'abord » ci-dessous ne s'y applique plus.
+
+---
+
 ## Projet
 
 **DEDAL** = Drone Expérimental à Décollage et Atterrissage Localisé — VTOL birotor ~1m envergure, firmware dRehmFlight Beta 1.3 (customisé). Développeur solo.

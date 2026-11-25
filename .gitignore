@@ -25,3 +25,7 @@ INPUT_4_CLAUDE/
 flights/*
 !flights/.gitkeep
 *.xlsx
+
+# Output of spikes/goggles3_probe.py
+goggles3_capture.h264
+goggles3_report.txt
